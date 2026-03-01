@@ -1,4 +1,6 @@
-﻿import { Game } from "../models/Game.js";
+﻿import db from "../db/models/index.js";
+
+const { Game } = db;
 
 export async function getLeaderboard(_req, res) {
   try {
