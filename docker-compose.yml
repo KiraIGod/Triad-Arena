@@ -1,0 +1,49 @@
+﻿services:
+  db:
+    image: postgres:15
+    container_name: triad-db
+    restart: always
+    environment:
+      POSTGRES_DB: findmysong
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  server:
+    build: ./server
+    container_name: triad-server
+    restart: always
+    depends_on:
+      - db
+    environment:
+      PORT: 3001
+      CLIENT_URL: http://localhost
+      DB_NAME: findmysong
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_HOST: db
+      DB_PORT: 5432
+      JWT_SECRET: super_secret_key
+
+  client:
+    build: ./client
+    container_name: triad-client
+    restart: always
+    depends_on:
+      - server
+
+  nginx:
+    image: nginx:alpine
+    container_name: triad-nginx
+    restart: always
+    depends_on:
+      - client
+      - server
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+
+volumes:
+  postgres_data:

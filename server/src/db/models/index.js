@@ -8,9 +8,17 @@ const rawConfig = require("../config/config.js");
 const env = process.env.NODE_ENV || "development";
 const config = rawConfig[env] || rawConfig.development;
 
-const sequelize = config.use_env_variable
-  ? new Sequelize(process.env[config.use_env_variable], config)
-  : new Sequelize(config.database, config.username, config.password, config);
+const sequelize = new Sequelize(
+  config.database,
+  config.username,
+  config.password,
+  {
+    host: config.host,
+    port: config.port,
+    dialect: config.dialect,
+    logging: false
+  }
+);
 
 const db = {};
 
