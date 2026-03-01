@@ -4,7 +4,7 @@
     container_name: triad-db
     restart: always
     environment:
-      POSTGRES_DB: findmysong
+      POSTGRES_DB: triad_arena
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:

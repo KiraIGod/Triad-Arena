@@ -13,7 +13,7 @@ cd client && npm install
 PORT=3001
 CLIENT_URL=http://localhost
 
-DB_NAME=findmysong
+DB_NAME=triad_arena
 DB_USER=postgres
 DB_PASSWORD=postgres
 DB_HOST=db
