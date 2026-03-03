@@ -1,0 +1,21 @@
+.ant-typography h1,
+.ant-typography h2,
+.ant-typography h3,
+.ant-typography h4,
+.ant-typography h5 {
+  font-family: var(--font-heading);
+  letter-spacing: 0.02em;
+  text-transform: uppercase; /* если надо “Darkest Dungeon” вайб */
+}
+
+.ant-tooltip .ant-tooltip-inner {
+  background-color: var(--card); /* #1A1612 */
+  color: var(--foreground);      /* #D9C7A8 */
+  border: 2px solid var(--border);
+  box-shadow: 0 0 0 1px rgba(217, 199, 168, 0.18);
+  font-family: var(--font-body);
+}
+
+.ant-tooltip .ant-tooltip-arrow::before {
+  background-color: var(--card);
+}
