@@ -1,0 +1,48 @@
+:root {
+  --font-heading: "Cinzel", serif;
+  --font-body: "Crimson Text", serif;
+  --font-accent: "Cormorant Garamond", serif;
+
+  --background: #0e0e0e;
+  --foreground: #d9c7a8;
+
+  --card: #1a1612;
+  --card-foreground: #d9c7a8;
+  --muted: #2a241e;
+  --muted-foreground: #6b625a;
+  --secondary: #1f1d26;
+
+  --primary: #d9c7a8;
+  --primary-foreground: #1a1612;
+  --accent: #a83e36;
+  --accent-foreground: #d9c7a8;
+  --destructive: #8b1e1e;
+  --destructive-foreground: #d9c7a8;
+
+  --gold-accent: #c9a962;
+  --warning-orange: #d97d42;
+
+  --border: #000000;
+  --ring: #a83e36;
+
+  --text-aged: #d9c7a8;
+  --text-faded: #8b7e6f;
+
+  --blood-red: #a83e36;
+  --blood-dark: #6b1e1a;
+  --blood-bright: #d94f44;
+  --ember-glow: #d97d42;
+
+  --parchment-light: #3a332a;
+  --parchment-medium: #2a241e;
+  --parchment-dark: #1a1612;
+
+  --stone-dark: #14131a;
+  --stone-medium: #1f1d26;
+  --stone-light: #2a2733;
+  --shadow-dark: #0e0e0e;
+
+  --radius: 0px;
+
+  --blood-red:var(--blood-dark)
+}

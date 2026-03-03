@@ -1,0 +1,57 @@
+.parchment-texture {
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.12'/%3E%3C/svg%3E");
+  background-blend-mode: multiply;
+}
+
+.ink-border {
+  border: 3px solid #000000;
+  box-shadow:
+    0 0 0 1px rgba(217, 199, 168, 0.2),
+    inset 0 2px 0 rgba(0, 0, 0, 0.8),
+    inset 0 -2px 0 rgba(217, 199, 168, 0.1);
+}
+
+.stress-warning {
+  background: linear-gradient(180deg, #8b1e1e 0%, #6b1e1a 100%);
+  border: 2px solid #000000;
+}
+
+.darkest-vignette {
+  background:
+    radial-gradient(circle at 50% 40%, transparent 0%, rgba(0, 0, 0, 0.1) 35%, rgba(0, 0, 0, 0.75) 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.15) 0%, rgba(0, 0, 0, 0.55) 100%);
+}
+
+.parchment-panel {
+  background:
+    linear-gradient(180deg, rgba(58, 51, 42, 0.95) 0%, rgba(26, 22, 18, 0.98) 100%);
+}
+
+.comic-text-shadow {
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.85),
+    0 0 16px rgba(217, 125, 66, 0.15);
+}
+
+.ink-drip {
+  position: relative;
+}
+
+.ink-drip::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 4px);
+  width: 2px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  transform: translateX(-50%);
+}
+
+.angular-divider {
+  height: 2px;
+  background:
+    linear-gradient(90deg, transparent 0%, var(--gold-accent) 20%, var(--gold-accent) 80%, transparent 100%);
+  clip-path: polygon(0 50%, 6% 0, 94% 0, 100% 50%, 94% 100%, 6% 100%);
+}

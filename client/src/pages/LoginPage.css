@@ -1,0 +1,154 @@
+.authPage {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.authBg {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 15%, rgba(217, 125, 66, 0.08), transparent 45%),
+    linear-gradient(180deg, rgba(20, 19, 26, 0.85), rgba(14, 14, 14, 0.95));
+}
+
+.authTexture {
+  position: absolute;
+  inset: 0;
+  background-color: var(--background);
+}
+
+.authVignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.authContainer {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 32rem;
+  padding: 0 24px;
+}
+
+.authOrnament {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.authOrnamentTop {
+  margin-bottom: 32px;
+}
+
+.authOrnamentBottom {
+  margin-top: 32px;
+}
+
+.authOrnamentLine {
+  width: 128px;
+  height: 2px;
+  background: #000;
+}
+
+.authOrnamentDiamond {
+  width: 12px;
+  height: 12px;
+  background: var(--blood-red);
+  margin: 0 16px;
+  transform: rotate(45deg);
+  border: 2px solid #000;
+}
+
+.authPanel {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.6), inset 0 0 24px rgba(0, 0, 0, 0.8);
+}
+
+.authPanelInner {
+  padding: 48px 40px;
+  background-color: rgb(39, 34, 28);
+}
+
+.authTitle {
+  font-family: var(--font-heading);
+  font-size: 42px;
+  color: var(--foreground);
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  margin: 0 0 12px;
+  text-align: center;
+}
+
+.authSubtitle {
+  font-family: var(--font-accent);
+  font-size: 16px;
+  color: var(--text-faded);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0;
+}
+
+.authFields {
+  display: grid;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.authInput {
+  padding: 16px !important;
+  letter-spacing: 0.08em;
+  font-family: var(--font-body);
+  font-weight: 600;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.authSubmit {
+  margin-top: 24px;
+  height: auto;
+  padding: 18px !important;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+}
+
+.authActions {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.authLink {
+  color: var(--blood-red);
+}
+
+.authLink:hover {
+  color: var(--blood-bright);
+}
+
+@media (max-width: 640px) {
+  .authContainer {
+    max-width: 100%;
+    padding: 0 16px;
+  }
+
+  .authPanelInner {
+    padding: 32px 20px;
+  }
+
+  .authTitle {
+    font-size: 32px;
+    letter-spacing: 0.1em;
+  }
+
+  .authOrnamentLine {
+    width: 80px;
+  }
+}
