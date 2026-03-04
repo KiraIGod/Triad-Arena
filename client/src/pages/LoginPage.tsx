@@ -6,7 +6,7 @@ import { useAppDispatch } from "../store";
 import { setCredentials } from "../features/auth/authSlice";
 import api from "../shared/api/axios";
 
-import "./LoginPage.css";
+import "./LoginRegister.css";
 
 type LoginFields = {
   username: string;
@@ -111,7 +111,7 @@ export default function LoginPage() {
               onFinish={onFinish}
               autoComplete="off"
               requiredMark={false}
-              className="authFields"
+              className="authFields auth-form"
             >
               <Form.Item
                 name="username"

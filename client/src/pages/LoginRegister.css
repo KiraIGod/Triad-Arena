@@ -1,0 +1,296 @@
+.authPage {
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.authBg {
+  position: absolute;
+  inset: 0;
+  background-image: url("/assets/login-bg.png");
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.15) contrast(1.3) saturate(0.5);
+}
+
+.authTexture {
+  position: absolute;
+  inset: 0;
+  background-color: var(--background);
+}
+
+.authVignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.authContainer {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 28rem;
+  padding: 0 24px;
+}
+
+.authOrnament {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.authOrnamentTop {
+  margin-bottom: 32px;
+}
+
+.authOrnamentBottom {
+  margin-top: 32px;
+}
+
+.authOrnamentLine {
+  width: 128px;
+  height: 2px;
+  background: #402020;
+}
+
+.authOrnamentDiamond {
+  width: 12px;
+  height: 12px;
+  background: #6c5a3b7e;
+  margin: 0 16px;
+  transform: rotate(45deg);
+  border: 2px solid #402020;
+}
+
+.authPanel {
+  position: relative;
+  overflow: hidden;
+}
+
+.authPanelInner {
+  position: relative;
+  padding: 48px 40px;
+  background-color: rgb(39, 34, 28);
+  box-shadow:
+    inset 0 0 24px rgba(0, 0, 0, 0.8),
+    inset 0 2px 0 rgba(0, 0, 0, 0.7),
+    0 8px 0 rgba(0, 0, 0, 0.6);
+}
+
+.authTitle {
+  font-family: var(--font-heading);
+  color: var(--foreground);
+  font-weight: 900;
+  font-size: 42px;
+  line-height: 1.5;
+  letter-spacing: 0.15em;
+  margin: 0 0 12px;
+  text-align: center;
+}
+
+.authDivider {
+  margin: 16px 0;
+}
+
+.authSubtitle {
+  font-family: var(--font-accent);
+  font-size: 16px;
+  color: var(--text-faded);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0;
+}
+
+.authFields {
+  display: grid;
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.authFields .ant-form-item {
+  margin-bottom: 0;
+}
+
+.authFields .ant-form-item-label {
+  padding-bottom: 8px;
+}
+
+.authFields .ant-form-item-label > label {
+  color: var(--foreground) !important;
+  font-family: var(--font-accent);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.authFields .ant-input,
+.authFields .ant-input-affix-wrapper {
+  min-height: 52px;
+  border: 2px solid #000 !important;
+  border-radius: 0 !important;
+  background: var(--parchment-dark) !important;
+  color: var(--text-aged) !important;
+  box-shadow:
+    0 0 0 1px rgba(217, 199, 168, 0.15),
+    inset 0 1px 0 rgba(0, 0, 0, 0.6),
+    inset 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.authFields .ant-input::placeholder,
+.authFields .ant-input-affix-wrapper input::placeholder {
+  color: #b9b9b89d;
+  letter-spacing: 0.08em;
+}
+
+.authFields .ant-input:focus,
+.authFields .ant-input:hover,
+.authFields .ant-input-affix-wrapper-focused,
+.authFields .ant-input-affix-wrapper:focus,
+.authFields .ant-input-affix-wrapper:hover {
+  border-color: var(--blood-red);
+}
+
+.authInput {
+  letter-spacing: 0.08em;
+  font-family: var(--font-body);
+  font-weight: 600;
+}
+
+.authSubmitWrap {
+  margin-top: 30px;
+  margin-bottom: 0;
+}
+
+.authSubmit {
+  border: 2px solid #000;
+  min-height: 65px;
+  padding: 18px !important;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  font-family: var(--font-heading);
+  text-transform: uppercase;
+  box-shadow:
+    0 0 28px rgba(127, 30, 29, 0.7),
+    inset 0 3px 6px rgba(0, 0, 0, 0.55),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.08);
+}
+
+.authSubmit:hover,
+.authSubmit:focus {
+  background: linear-gradient(180deg, #9a2b29 0%, #7a2321 100%) !important;
+  filter: brightness(1.1);
+  border-color: #000 !important;
+}
+
+.authSubmitText {
+  color: var(--text-aged);
+}
+
+.authActions {
+  margin-top: 24px;
+  text-align: center;
+  font-family: var(--font-body);
+  font-size: 13px;
+  letter-spacing: 0.05em;
+}
+
+.authActions a.authLink,
+.authActions a.authLink:visited {
+  color: var(--blood-red);
+  font-weight: 900;
+  text-decoration: underline;
+}
+
+.authLink:hover {
+  color: var(--blood-bright);
+}
+
+.registerCard {
+  max-width: 560px;
+  margin: 48px auto;
+  background: linear-gradient(135deg, #2a241e 0%, #1a1612 100%);
+  border: 3px solid #000;
+  box-shadow:
+    inset 0 0 24px rgba(0, 0, 0, 0.75),
+    0 8px 0 rgba(0, 0, 0, 0.6);
+}
+
+.registerTitle {
+  margin-bottom: 20px !important;
+  color: var(--foreground) !important;
+  text-align: center;
+  font-family: var(--font-heading) !important;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.registerForm {
+  display: grid;
+  gap: 16px;
+}
+
+.registerForm .ant-form-item-label > label {
+  color: var(--foreground) !important;
+  font-family: var(--font-accent);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.registerForm .ant-btn {
+  min-height: 56px;
+  border: 2px solid #000 !important;
+  background: linear-gradient(180deg, #7f1e1d 0%, #6b1e1a 100%) !important;
+  color: var(--text-aged) !important;
+  font-family: var(--font-heading) !important;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  box-shadow:
+    0 0 20px rgba(127, 30, 29, 0.5),
+    inset 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+
+.registerForm .ant-btn:hover,
+.registerForm .ant-btn:focus {
+  background: linear-gradient(180deg, #9a2b29 0%, #7a2321 100%) !important;
+  filter: brightness(1.1);
+}
+
+.registerActions {
+  margin-top: 12px;
+}
+
+.registerLink {
+  color: var(--blood-red);
+  font-weight: 700;
+}
+
+.registerLink:hover {
+  color: var(--blood-bright);
+}
+
+@media (max-width: 640px) {
+  .authContainer {
+    max-width: 100%;
+    padding: 0 16px;
+  }
+
+  .authPanelInner {
+    padding: 32px 20px;
+  }
+
+  .authTitle {
+    font-size: 32px;
+    letter-spacing: 0.1em;
+  }
+
+  .authOrnamentLine {
+    width: 80px;
+  }
+}
