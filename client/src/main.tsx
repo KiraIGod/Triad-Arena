@@ -2,10 +2,11 @@
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { Provider } from "react-redux";
-import "antd/dist/reset.css";
 import App from "./App";
 import { store } from "./store";
-import "./styles/antd-overrides.css"
+
+import "antd/dist/reset.css";
+import "./styles/index.css"
 import { themeConfig } from "./theme/themeConfig"
 import { ConfigProvider, theme as antdTheme } from "antd";
 

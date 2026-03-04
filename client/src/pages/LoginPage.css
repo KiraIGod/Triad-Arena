@@ -48,22 +48,22 @@
 .authOrnamentLine {
   width: 128px;
   height: 2px;
-  background: #000;
+  background: #402020;
 }
 
 .authOrnamentDiamond {
   width: 12px;
   height: 12px;
-  background: var(--blood-red);
+  background: #6c5a3b7e;
   margin: 0 16px;
   transform: rotate(45deg);
-  border: 2px solid #000;
+  border: 2px solid #402020;
 }
 
 .authPanel {
   position: relative;
   overflow: hidden;
-  box-shadow: 0 8px 0 rgba(0, 0, 0, 0.6), inset 0 0 24px rgba(0, 0, 0, 0.8);
+  
 }
 
 .authCorner {
@@ -72,22 +72,27 @@
   height: 24px;
   pointer-events: none;
 }
-.authCornerTL { top: 0; left: 0; border-top: 2px solid var(--gold-accent); border-left: 2px solid var(--gold-accent); }
+/* .authCornerTL { top: 0; left: 0; border-top: 2px solid var(--gold-accent); border-left: 2px solid var(--gold-accent); }
 .authCornerTR { top: 0; right: 0; border-top: 2px solid var(--gold-accent); border-right: 2px solid var(--gold-accent); }
 .authCornerBL { bottom: 0; left: 0; border-bottom: 2px solid var(--gold-accent); border-left: 2px solid var(--gold-accent); }
-.authCornerBR { bottom: 0; right: 0; border-bottom: 2px solid var(--gold-accent); border-right: 2px solid var(--gold-accent); }
+.authCornerBR { bottom: 0; right: 0; border-bottom: 2px solid var(--gold-accent); border-right: 2px solid var(--gold-accent); } */
 
 .authPanelInner {
   position: relative;
   padding: 48px 40px;
   background-color: rgb(39, 34, 28);
+  box-shadow:
+    inset 0 0 24px rgba(0, 0, 0, 0.8),   /* внутренняя тень */
+    inset 0 2px 0 rgba(0, 0, 0, 0.7),    /* внутренний верхний край */
+    0 8px 0 rgba(0, 0, 0, 0.6);  
 }
 
 .authTitle {
   font-family: var(--font-heading);
-  font-size: 42px;
   color: var(--foreground);
   font-weight: 900;
+  font-size: 42px;
+  line-height: 1.5;
   letter-spacing: 0.15em;
   margin: 0 0 12px;
   text-align: center;
@@ -106,7 +111,7 @@
   margin: 0;
 }
 
-.authFields { display: grid; gap: 16px; margin-top: 16px; }
+.authFields { display: grid; gap: 16px; margin-top: 40px; }
 
 .authFields .ant-form-item { margin-bottom: 0; }
 .authFields .ant-form-item-label { padding-bottom: 8px; }
@@ -133,7 +138,7 @@
 
 .authFields .ant-input::placeholder,
 .authFields .ant-input-affix-wrapper input::placeholder {
-  color: #706e6a;
+  color: #b9b9b89d;
   letter-spacing: 0.08em;
 }
 
@@ -142,7 +147,7 @@
 .authFields .ant-input-affix-wrapper-focused,
 .authFields .ant-input-affix-wrapper:focus,
 .authFields .ant-input-affix-wrapper:hover {
-  border-color: var(--blood-red) !important;
+  border-color: var(--blood-red);
 }
 
 .authInput {
@@ -151,23 +156,29 @@
   font-weight: 600;
 }
 
-.authSubmitWrap { margin-top: 8px; margin-bottom: 0 !important; }
+.authSubmitWrap { margin-top: 30px; margin-bottom: 0 }
 
 .authSubmit {
-  /* background: #7f1e1d; */
-  background: linear-gradient(180deg, #7f1e1d 0%, #6b1e1a 100%) !important;
-  min-height: 56px;
+  border: 2px solid #000;
+  min-height: 65px;
   padding: 18px !important;
   font-size: 16px;
   font-weight: 900;
   letter-spacing: 0.2em;
   font-family: var(--font-heading);
   text-transform: uppercase;
+  box-shadow:
+    0 0 28px rgba(127, 30, 29, 0.7),
+    inset 0 3px 6px rgba(0, 0, 0, 0.55),
+    inset 0 -2px 3px rgba(255, 255, 255, 0.08);
 }
+
+
 
 .authSubmit:hover,
 .authSubmit:focus {
-  filter: brightness(1.25);
+  background: linear-gradient(180deg, #9a2b29 0%, #7a2321 100%) !important;
+  filter: brightness(1.1) ;
   border-color: #000 !important;
 }
 
