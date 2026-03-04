@@ -1,10 +1,10 @@
-﻿import dotenv from "dotenv";
-import express from "express";
-import cors from "cors";
-import http from "http";
-import authRoutes from "./routes/auth.js";
-import leaderboardRoutes from "./routes/leaderboard.js";
-import { initSocket } from "./sockets/index.js";
+const dotenv = require("dotenv");
+const express = require("express");
+const cors = require("cors");
+const http = require("http");
+const authRoutes = require("./routes/auth");
+const leaderboardRoutes = require("./routes/leaderboard");
+const { initSocket } = require("./sockets/index");
 
 dotenv.config();
 
@@ -13,7 +13,7 @@ const server = http.createServer(app);
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true
   })
 );

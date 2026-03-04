@@ -1,4 +1,6 @@
-﻿// TODO: Implement status effects processing.
-export function applyStatusEffects(state) {
+// TODO: Implement status effects processing.
+function applyStatusEffects(state) {
   return state;
 }
+
+module.exports = { applyStatusEffects };

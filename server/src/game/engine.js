@@ -1,4 +1,6 @@
-﻿// TODO: Implement game engine orchestration.
-export function runEngineTick(gameState) {
+// TODO: Implement game engine orchestration.
+function runEngineTick(gameState) {
   return gameState;
 }
+
+module.exports = { runEngineTick };

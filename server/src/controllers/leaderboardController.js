@@ -1,16 +1,18 @@
-﻿import db from "../db/models/index.js";
+const db = require("../db/models/index");
 
-const { Game } = db;
+const { Match } = db;
 
-export async function getLeaderboard(_req, res) {
+async function getLeaderboard(_req, res) {
   try {
-    const games = await Game.findAll({
+    const matches = await Match.findAll({
       limit: 10,
-      order: [["createdAt", "DESC"]]
+      order: [["created_at", "DESC"]]
     });
 
-    return res.json({ leaderboard: games });
+    return res.json({ leaderboard: matches });
   } catch (_error) {
     return res.status(500).json({ message: "Failed to fetch leaderboard" });
   }
 }
+
+module.exports = { getLeaderboard };

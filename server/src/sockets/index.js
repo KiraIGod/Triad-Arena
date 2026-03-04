@@ -1,8 +1,8 @@
-﻿import { Server } from "socket.io";
+const { Server } = require("socket.io");
 
-export const activeGames = new Map();
+const activeGames = new Map();
 
-export function initSocket(httpServer) {
+function initSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: {
       origin: "*"
@@ -22,3 +22,5 @@ export function initSocket(httpServer) {
 
   return io;
 }
+
+module.exports = { activeGames, initSocket };

@@ -1,6 +1,6 @@
-import { DataTypes, Model } from "sequelize";
+const { DataTypes, Model } = require("sequelize");
 
-export default function initMatchModel(sequelize) {
+function initMatchModel(sequelize) {
   class Match extends Model {}
 
   Match.init(
@@ -58,3 +58,5 @@ export default function initMatchModel(sequelize) {
 
   return Match;
 }
+
+module.exports = initMatchModel;
