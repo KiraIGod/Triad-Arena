@@ -128,7 +128,7 @@ export default function LoginPage() {
                 name="password"
                 rules={[{ required: true, message: "Enter password" }]}
               >
-                <Input
+                <Input.Password
                   placeholder="PASSWORD"
                   autoComplete="current-password"
                   className="authInput parchment-texture"

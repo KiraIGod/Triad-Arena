@@ -121,7 +121,7 @@
 }
 
 .authFields .ant-form-item-label > label {
-  color: var(--foreground) !important;
+  color: var(--foreground) ;
   font-family: var(--font-accent);
   font-size: 14px;
   letter-spacing: 0.08em;
@@ -131,10 +131,8 @@
 .authFields .ant-input,
 .authFields .ant-input-affix-wrapper {
   min-height: 52px;
-  border: 2px solid #000 !important;
-  border-radius: 0 !important;
-  background: var(--parchment-dark) !important;
-  color: var(--text-aged) !important;
+  background: var(--parchment-dark);
+  color: var(--text-aged);
   box-shadow:
     0 0 0 1px rgba(217, 199, 168, 0.15),
     inset 0 1px 0 rgba(0, 0, 0, 0.6),
@@ -169,7 +167,7 @@
 .authSubmit {
   border: 2px solid #000;
   min-height: 65px;
-  padding: 18px !important;
+  padding: 18px;
   font-size: 16px;
   font-weight: 900;
   letter-spacing: 0.2em;
@@ -181,11 +179,17 @@
     inset 0 -2px 3px rgba(255, 255, 255, 0.08);
 }
 
-.authSubmit:hover,
-.authSubmit:focus {
-  background: linear-gradient(180deg, #9a2b29 0%, #7a2321 100%) !important;
+.authPage .auth-form .ant-btn.authSubmit:hover {
+  background: linear-gradient(180deg, #9a2b29 0%, #7a2321 100%);
   filter: brightness(1.1);
-  border-color: #000 !important;
+  border-color: #000;
+}
+
+.authPage .auth-form .ant-btn.authSubmit:active {
+  background: linear-gradient(180deg, #9a2b29 0%, #7a2321 100%);
+  filter: brightness(1.2);
+  border-color: #000;
+  box-shadow: 0 0 20px rgba(224, 67, 64, 0.63);
 }
 
 .authSubmitText {
@@ -222,10 +226,10 @@
 }
 
 .registerTitle {
-  margin-bottom: 20px !important;
-  color: var(--foreground) !important;
+  margin-bottom: 20px;
+  color: var(--foreground);
   text-align: center;
-  font-family: var(--font-heading) !important;
+  font-family: var(--font-heading) ;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -236,7 +240,7 @@
 }
 
 .registerForm .ant-form-item-label > label {
-  color: var(--foreground) !important;
+  color: var(--foreground);
   font-family: var(--font-accent);
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -244,10 +248,10 @@
 
 .registerForm .ant-btn {
   min-height: 56px;
-  border: 2px solid #000 !important;
-  background: linear-gradient(180deg, #7f1e1d 0%, #6b1e1a 100%) !important;
-  color: var(--text-aged) !important;
-  font-family: var(--font-heading) !important;
+  border: 2px solid #000;
+  background: linear-gradient(180deg, #7f1e1d 0%, #6b1e1a 100%);
+  color: var(--text-aged);
+  font-family: var(--font-heading);
   font-weight: 900;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -258,7 +262,7 @@
 
 .registerForm .ant-btn:hover,
 .registerForm .ant-btn:focus {
-  background: linear-gradient(180deg, #9a2b29 0%, #7a2321 100%) !important;
+  background: linear-gradient(180deg, #9a2b29 0%, #7a2321 100%);
   filter: brightness(1.1);
 }
 
@@ -274,6 +278,7 @@
 .registerLink:hover {
   color: var(--blood-bright);
 }
+
 
 @media (max-width: 640px) {
   .authContainer {

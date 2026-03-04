@@ -32,7 +32,6 @@
 .auth-form .ant-input-affix-wrapper input {
   min-height: 52px;
   border: 2px solid #000;
-  border-radius: 0;
   background: var(--parchment-dark);
   color: #d9c7a8;
   font-size: 20px;
@@ -46,7 +45,9 @@
 .auth-form .ant-input::placeholder,
 .auth-form .ant-input-affix-wrapper input::placeholder {
   color: #706e6a;
-    font-size: 13px;
+  font-size: 13px;
+  font-family: var(--font-body);
+  font-weight: 700;
   letter-spacing: 0.08em;
 }
 
@@ -55,5 +56,14 @@
 .auth-form .ant-input-affix-wrapper-focused,
 .auth-form .ant-input-affix-wrapper:focus,
 .auth-form .ant-input-affix-wrapper:hover {
-  border-color: var(--blood-red);
+  border: 1px solid;
+  border-color: var(--destructive);
+}
+
+
+.auth-form .ant-input-affix-wrapper .ant-input {
+  min-height: unset;
+  border: none;
+  box-shadow: none;
+  background: transparent;
 }

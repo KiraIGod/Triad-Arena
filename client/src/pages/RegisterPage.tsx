@@ -143,7 +143,7 @@ export default function RegisterPage() {
                 name="password"
                 rules={[{ required: true, message: "Введите пароль" }]}
               >
-                <Input
+                <Input.Password
                   placeholder="PASSWORD"
                   autoComplete="new-password"
                   className="authInput parchment-texture"
@@ -165,7 +165,7 @@ export default function RegisterPage() {
                   }),
                 ]}
               >
-                <Input
+                <Input.Password
                   placeholder="CONFIRM PASSWORD"
                   autoComplete="new-password"
                   className="authInput parchment-texture"
