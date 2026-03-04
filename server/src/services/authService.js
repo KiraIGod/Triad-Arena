@@ -11,13 +11,17 @@ async function registerUser(payload) {
     throw new Error("username and password are required");
   }
 
-  const existing = await User.findOne({ where: { username } });
+  const existing = await User.findOne({ where: { nickname: username } });
   if (existing) {
     throw new Error("username already exists");
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
-  const user = await User.create({ username, passwordHash });
+  const password_hash = await bcrypt.hash(password, 10);
+  const user = await User.create({
+    nickname: username,
+    email: `${username.toLowerCase()}@triad-arena.local`,
+    password_hash
+  });
 
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || "dev_secret", {
     expiresIn: "7d"
@@ -33,12 +37,12 @@ async function loginUser(payload) {
     throw new Error("username and password are required");
   }
 
-  const user = await User.findOne({ where: { username } });
+  const user = await User.findOne({ where: { nickname: username } });
   if (!user) {
     throw new Error("invalid credentials");
   }
 
-  const isValid = await bcrypt.compare(password, user.passwordHash);
+  const isValid = await bcrypt.compare(password, user.password_hash);
   if (!isValid) {
     throw new Error("invalid credentials");
   }
