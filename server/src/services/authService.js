@@ -1,10 +1,10 @@
-﻿import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import db from "../db/models/index.js";
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
+const db = require("../db/models/index");
 
 const { User } = db;
 
-export async function registerUser(payload) {
+async function registerUser(payload) {
   const { username, password } = payload;
 
   if (!username || !password) {
@@ -26,7 +26,7 @@ export async function registerUser(payload) {
   return { token, userId: user.id };
 }
 
-export async function loginUser(payload) {
+async function loginUser(payload) {
   const { username, password } = payload;
 
   if (!username || !password) {
@@ -49,3 +49,5 @@ export async function loginUser(payload) {
 
   return { token, userId: user.id };
 }
+
+module.exports = { registerUser, loginUser };

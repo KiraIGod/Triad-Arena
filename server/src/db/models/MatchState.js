@@ -1,6 +1,6 @@
-import { DataTypes, Model } from "sequelize";
+const { DataTypes, Model } = require("sequelize");
 
-export default function initMatchStateModel(sequelize) {
+function initMatchStateModel(sequelize) {
   class MatchState extends Model {}
 
   MatchState.init(
@@ -35,3 +35,5 @@ export default function initMatchStateModel(sequelize) {
 
   return MatchState;
 }
+
+module.exports = initMatchStateModel;

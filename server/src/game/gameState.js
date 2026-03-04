@@ -1,4 +1,6 @@
-﻿// TODO: Implement initial game state creation.
-export function createInitialGameState() {
+// TODO: Implement initial game state creation.
+function createInitialGameState() {
   return {};
 }
+
+module.exports = { createInitialGameState };
