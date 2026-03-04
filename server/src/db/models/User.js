@@ -1,4 +1,4 @@
-﻿import { DataTypes, Model } from "sequelize";
+import { DataTypes, Model } from "sequelize";
 
 export default function initUserModel(sequelize) {
   class User extends Model {}
@@ -6,25 +6,31 @@ export default function initUserModel(sequelize) {
   User.init(
     {
       id: {
-        type: DataTypes.INTEGER,
-        autoIncrement: true,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true
       },
-      username: {
+      email: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true
       },
-      passwordHash: {
+      password_hash: {
         type: DataTypes.STRING,
         allowNull: false
+      },
+      nickname: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
       }
     },
     {
       sequelize,
       modelName: "User",
       tableName: "users",
-      timestamps: true
+      createdAt: "created_at",
+      updatedAt: "updated_at"
     }
   );
 

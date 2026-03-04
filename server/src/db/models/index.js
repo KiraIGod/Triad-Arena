@@ -1,29 +1,49 @@
-﻿import { Sequelize } from "sequelize";
-import { createRequire } from "module";
+import { Sequelize } from "sequelize";
+import { sequelize } from "../index.js";
 import initUserModel from "./User.js";
-import initGameModel from "./Game.js";
-
-const require = createRequire(import.meta.url);
-const rawConfig = require("../config/config.js");
-const env = process.env.NODE_ENV || "development";
-const config = rawConfig[env] || rawConfig.development;
-
-const sequelize = new Sequelize(
-  config.database,
-  config.username,
-  config.password,
-  {
-    host: config.host,
-    port: config.port,
-    dialect: config.dialect,
-    logging: false
-  }
-);
+import initPlayerStatsModel from "./PlayerStats.js";
+import initCardModel from "./Card.js";
+import initDeckModel from "./Deck.js";
+import initDeckCardModel from "./DeckCard.js";
+import initMatchModel from "./Match.js";
+import initMatchStateModel from "./MatchState.js";
+import initMatchHistoryModel from "./MatchHistory.js";
 
 const db = {};
 
 db.User = initUserModel(sequelize);
-db.Game = initGameModel(sequelize);
+db.PlayerStats = initPlayerStatsModel(sequelize);
+db.Card = initCardModel(sequelize);
+db.Deck = initDeckModel(sequelize);
+db.DeckCard = initDeckCardModel(sequelize);
+db.Match = initMatchModel(sequelize);
+db.MatchState = initMatchStateModel(sequelize);
+db.MatchHistory = initMatchHistoryModel(sequelize);
+
+db.User.hasOne(db.PlayerStats, { foreignKey: "user_id", onDelete: "CASCADE" });
+db.PlayerStats.belongsTo(db.User, { foreignKey: "user_id" });
+
+db.User.hasMany(db.Deck, { foreignKey: "user_id", onDelete: "CASCADE" });
+db.Deck.belongsTo(db.User, { foreignKey: "user_id" });
+
+db.Deck.hasMany(db.DeckCard, { foreignKey: "deck_id", onDelete: "CASCADE" });
+db.DeckCard.belongsTo(db.Deck, { foreignKey: "deck_id" });
+db.DeckCard.belongsTo(db.Card, { foreignKey: "card_id" });
+
+db.Match.belongsTo(db.User, { as: "player_one", foreignKey: "player_one_id" });
+db.Match.belongsTo(db.User, { as: "player_two", foreignKey: "player_two_id" });
+db.Match.belongsTo(db.User, { as: "winner", foreignKey: "winner_id" });
+db.Match.belongsTo(db.Deck, { as: "player_one_deck", foreignKey: "player_one_deck_id" });
+db.Match.belongsTo(db.Deck, { as: "player_two_deck", foreignKey: "player_two_deck_id" });
+
+db.Match.hasOne(db.MatchState, { foreignKey: "match_id", onDelete: "CASCADE" });
+db.MatchState.belongsTo(db.Match, { foreignKey: "match_id" });
+
+db.Match.hasOne(db.MatchHistory, { foreignKey: "match_id" });
+db.MatchHistory.belongsTo(db.Match, { foreignKey: "match_id" });
+db.MatchHistory.belongsTo(db.User, { as: "history_player_one", foreignKey: "player_one_id" });
+db.MatchHistory.belongsTo(db.User, { as: "history_player_two", foreignKey: "player_two_id" });
+db.MatchHistory.belongsTo(db.User, { as: "history_winner", foreignKey: "winner_id" });
 
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
