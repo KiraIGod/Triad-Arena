@@ -1,0 +1,115 @@
+.parchment-texture {
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' /%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.7'/%3E%3C/svg%3E");
+  background-blend-mode: normal;
+}
+
+.darkest-vignette {
+  background: radial-gradient(ellipse at center, transparent 50%, rgb(4, 7, 8) 100%);
+}
+
+.ink-border {
+  border: 3px solid #000000;
+  box-shadow:
+    0 0 0 1px rgba(217, 199, 168, 0.2),
+    inset 0 2px 0 rgba(0, 0, 0, 0.8),
+    inset 0 -2px 0 rgba(217, 199, 168, 0.1);
+}
+
+.ink-border-thin {
+  border: 2px solid #000000;
+  box-shadow:
+    0 0 0 1px rgba(217, 199, 168, 0.15),
+    inset 0 1px 0 rgba(0, 0, 0, 0.6);
+}
+
+.stress-warning {
+  background: linear-gradient(180deg, #7f1e1d 0%, #6b1e1a 100%) ;
+  box-shadow:
+    0 0 20px rgba(127, 30, 29, 0.5),
+    inset 0 2px 4px rgba(0, 0, 0, 0.6);
+  border: 2px solid #000000;
+}
+
+.parchment-panel {
+  background: linear-gradient(135deg, #2A241E 0%, #1A1612 100%);
+  border: 3px solid #000000;
+  box-shadow:
+    inset 0 0 20px rgba(0, 0, 0, 0.6),
+    0 4px 0 rgba(0, 0, 0, 0.4);
+}
+
+.comic-text-shadow {
+  text-shadow:
+    2px 2px 0 #000000,
+    -1px -1px 0 #000000,
+    1px -1px 0 #000000,
+    -1px 1px 0 #000000;
+}
+
+.ink-drip {
+  filter: drop-shadow(0 2px 0 #000000) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.8));
+}
+
+.angular-divider {
+  position: relative;
+  height: 2px;
+  background: linear-gradient(90deg, transparent 0%, #000000 20%, #000000 80%, transparent 100%);
+}
+
+.angular-divider::before,
+.angular-divider::after {
+  content: "";
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: #000000;
+  transform: rotate(45deg);
+  top: -3px;
+}
+
+.angular-divider::before { left: 20%; }
+.angular-divider::after { right: 20%; }
+
+
+.blood-glow {
+  box-shadow:
+    0 0 16px rgba(168, 62, 54, 0.6),
+    inset 0 0 8px rgba(168, 62, 54, 0.2);
+}
+
+.ornate-corners {
+  position: relative;
+}
+
+.ornate-corners::before,
+.ornate-corners::after {
+  content: "";
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--gold-accent);
+}
+
+.ornate-corners::before {
+  top: -2px;
+  left: -2px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.ornate-corners::after {
+  bottom: -2px;
+  right: -2px;
+  border-left: none;
+  border-top: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
