@@ -1,13 +1,13 @@
-import { Sequelize } from "sequelize";
-import { sequelize } from "../index.js";
-import initUserModel from "./User.js";
-import initPlayerStatsModel from "./PlayerStats.js";
-import initCardModel from "./Card.js";
-import initDeckModel from "./Deck.js";
-import initDeckCardModel from "./DeckCard.js";
-import initMatchModel from "./Match.js";
-import initMatchStateModel from "./MatchState.js";
-import initMatchHistoryModel from "./MatchHistory.js";
+const { Sequelize } = require("sequelize");
+const { sequelize } = require("../index");
+const initUserModel = require("./User");
+const initPlayerStatsModel = require("./PlayerStats");
+const initCardModel = require("./Card");
+const initDeckModel = require("./Deck");
+const initDeckCardModel = require("./DeckCard");
+const initMatchModel = require("./Match");
+const initMatchStateModel = require("./MatchState");
+const initMatchHistoryModel = require("./MatchHistory");
 
 const db = {};
 
@@ -19,6 +19,7 @@ db.DeckCard = initDeckCardModel(sequelize);
 db.Match = initMatchModel(sequelize);
 db.MatchState = initMatchStateModel(sequelize);
 db.MatchHistory = initMatchHistoryModel(sequelize);
+db.Game = db.Match;
 
 db.User.hasOne(db.PlayerStats, { foreignKey: "user_id", onDelete: "CASCADE" });
 db.PlayerStats.belongsTo(db.User, { foreignKey: "user_id" });
@@ -48,5 +49,4 @@ db.MatchHistory.belongsTo(db.User, { as: "history_winner", foreignKey: "winner_i
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-export { sequelize, Sequelize, db };
-export default db;
+module.exports = db;

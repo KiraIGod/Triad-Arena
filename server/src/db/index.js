@@ -1,8 +1,6 @@
-import { Sequelize } from "sequelize";
-import { createRequire } from "module";
+const { Sequelize } = require("sequelize");
+const rawConfig = require("./config");
 
-const require = createRequire(import.meta.url);
-const rawConfig = require("./config.js");
 const env = process.env.NODE_ENV || "development";
 const config = rawConfig[env] || rawConfig.development;
 
@@ -18,4 +16,4 @@ const sequelize = new Sequelize(
   }
 );
 
-export { sequelize, Sequelize };
+module.exports = { sequelize, Sequelize };

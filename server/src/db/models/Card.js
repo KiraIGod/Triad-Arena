@@ -1,6 +1,6 @@
-import { DataTypes, Model } from "sequelize";
+const { DataTypes, Model } = require("sequelize");
 
-export default function initCardModel(sequelize) {
+module.exports = function initCardModel(sequelize) {
   class Card extends Model {}
 
   Card.init(
@@ -57,4 +57,4 @@ export default function initCardModel(sequelize) {
   );
 
   return Card;
-}
+};

@@ -1,8 +1,8 @@
-﻿import db from "../db/models/index.js";
+const db = require("../db/models");
 
 const { Game } = db;
 
-export async function getLeaderboard(_req, res) {
+async function getLeaderboard(_req, res) {
   try {
     const games = await Game.findAll({
       limit: 10,
@@ -14,3 +14,5 @@ export async function getLeaderboard(_req, res) {
     return res.status(500).json({ message: "Failed to fetch leaderboard" });
   }
 }
+
+module.exports = { getLeaderboard };

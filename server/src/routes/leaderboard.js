@@ -1,9 +1,9 @@
-﻿import { Router } from "express";
-import { getLeaderboard } from "../controllers/leaderboardController.js";
-import { jwtMiddleware } from "../middlewares/jwt.js";
+const { Router } = require("express");
+const { getLeaderboard } = require("../controllers/leaderboardController");
+const { jwtMiddleware } = require("../middlewares/jwt");
 
 const router = Router();
 
 router.get("/", jwtMiddleware, getLeaderboard);
 
-export default router;
+module.exports = router;
