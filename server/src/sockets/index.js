@@ -1,4 +1,5 @@
 const { Server } = require("socket.io");
+const registerMatchSocket = require("./matchSocket");
 
 const activeGames = new Map();
 
@@ -19,6 +20,8 @@ function initSocket(httpServer) {
       // Placeholder for cleanup logic.
     });
   });
+
+  registerMatchSocket(io);
 
   return io;
 }
