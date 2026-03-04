@@ -86,49 +86,22 @@ export default function LoginPage() {
     // </Card>
 
     <div className="authPage">
-      {/* Background */}
-      <div
-        className="authBg"
-
-      />
-
-      {/* Overlay + vignette */}
+      <div className="authBg" />
       <div className="authTexture parchment-texture" />
       <div className="authVignette darkest-vignette" />
 
       <div className="authContainer">
-        {/* Ornament top */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            marginBottom: 32,
-          }}
-        >
-          <div style={{ width: 128, height: 2, background: "#000" }} />
-          <div
-            style={{
-              width: 12,
-              height: 12,
-              background: "var(--blood-red)",
-              margin: "0 16px",
-              transform: "rotate(45deg)",
-              border: "2px solid #000",
-            }}
-          />
-          <div style={{ width: 128, height: 2, background: "#000" }} />
+        <div className="authOrnament authOrnamentTop">
+          <div className="authOrnamentLine" />
+          <div className="authOrnamentDiamond" />
+          <div className="authOrnamentLine" />
         </div>
 
-        {/* Panel */}
         <div className="authPanel ink-border parchment-panel">
+
           <div className="authPanelInner">
-            <h1 className="authTitle comic-text-shadow ink-drip">
-              TRIAD ARENA
-            </h1>
-
-            <div className="angular-divider" style={{ margin: "16px 0" }} />
-
+            <h1 className="authTitle comic-text-shadow ink-drip">TRIAD ARENA</h1>
+            <div className="angular-divider authDivider" />
             <p className="authSubtitle">Return to Darkness</p>
 
             <Form<LoginFields>
@@ -141,8 +114,7 @@ export default function LoginPage() {
             >
               <Form.Item
                 name="username"
-                label="Имя пользователя"
-                rules={[{ required: true, message: "Введите имя пользователя" }]}
+                rules={[{ required: true, message: "Enter username" }]}
               >
                 <Input
                   placeholder="USERNAME"
@@ -153,58 +125,38 @@ export default function LoginPage() {
 
               <Form.Item
                 name="password"
-                label="Пароль"
-                rules={[{ required: true, message: "Введите пароль" }]}
+                rules={[{ required: true, message: "Enter password" }]}
               >
-                <Input.Password
+                <Input
                   placeholder="PASSWORD"
                   autoComplete="current-password"
                   className="authInput parchment-texture"
                 />
               </Form.Item>
 
-              <Form.Item style={{ marginBottom: 0 }}>
+              <Form.Item className="authSubmitWrap">
                 <Button
                   htmlType="submit"
                   loading={loading}
-                  className="authSubmit stress-warning comic-text-shadow"
-                  style={{ width: "100%" }}
+                  className="authSubmit stress-warning"
+                  block
                 >
-                  Enter Battle
+                  <span className="comic-text-shadow authSubmitText">ENTER BATTLE</span>
                 </Button>
               </Form.Item>
 
-              <div style={{ marginTop: 24, textAlign: "center" }}>
+              <div className="authActions">
                 <Typography.Text type="secondary">New recruit? </Typography.Text>
-                <Link to="/register" style={{ color: "var(--blood-red)" }}>
-                  Join
-                </Link>
+                <Link to="/register" className="authLink">Join</Link>
               </div>
             </Form>
           </div>
         </div>
 
-        {/* Ornament bottom */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            marginTop: 32,
-          }}
-        >
-          <div style={{ width: 128, height: 2, background: "#000" }} />
-          <div
-            style={{
-              width: 12,
-              height: 12,
-              background: "var(--blood-red)",
-              margin: "0 16px",
-              transform: "rotate(45deg)",
-              border: "2px solid #000",
-            }}
-          />
-          <div style={{ width: 128, height: 2, background: "#000" }} />
+        <div className="authOrnament authOrnamentBottom">
+          <div className="authOrnamentLine" />
+          <div className="authOrnamentDiamond" />
+          <div className="authOrnamentLine" />
         </div>
       </div>
     </div>

@@ -26,7 +26,7 @@
   --ring: #a83e36;
 
   --text-aged: #d9c7a8;
-  --text-faded: #8b7e6f;
+  --text-faded: #706e6a;
 
   --blood-red: #a83e36;
   --blood-dark: #6b1e1a;
@@ -44,5 +44,11 @@
 
   --radius: 0px;
 
-  --blood-red:var(--blood-dark)
+  --font-size: 16px;
+  --popover: #1A1612;
+  --popover-foreground: #D9C7A8;
+  --input: #1A1612;
+  --font-weight-medium: 700;
+  --font-weight-normal: 400;
+
 }

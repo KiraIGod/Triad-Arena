@@ -144,7 +144,7 @@ export default function RegisterPage() {
 
             <p className="authSubtitle">Return to Darkness</p>
 
-            <Form<LoginFields>
+            <Form
               name="login"
               layout="vertical"
               onFinish={onFinish}

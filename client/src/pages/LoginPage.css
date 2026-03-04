@@ -10,8 +10,10 @@
 .authBg {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 15%, rgba(217, 125, 66, 0.08), transparent 45%),
-    linear-gradient(180deg, rgba(20, 19, 26, 0.85), rgba(14, 14, 14, 0.95));
+  background-image: url("/assets/login-bg.png");
+  background-size: cover;
+  background-position: center;
+  filter: brightness(0.15) contrast(1.3) saturate(0.5);
 }
 
 .authTexture {
@@ -30,7 +32,7 @@
   position: relative;
   z-index: 10;
   width: 100%;
-  max-width: 32rem;
+  max-width: 28rem;
   padding: 0 24px;
 }
 
@@ -40,13 +42,8 @@
   align-items: center;
 }
 
-.authOrnamentTop {
-  margin-bottom: 32px;
-}
-
-.authOrnamentBottom {
-  margin-top: 32px;
-}
+.authOrnamentTop { margin-bottom: 32px; }
+.authOrnamentBottom { margin-top: 32px; }
 
 .authOrnamentLine {
   width: 128px;
@@ -69,7 +66,19 @@
   box-shadow: 0 8px 0 rgba(0, 0, 0, 0.6), inset 0 0 24px rgba(0, 0, 0, 0.8);
 }
 
+.authCorner {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+}
+.authCornerTL { top: 0; left: 0; border-top: 2px solid var(--gold-accent); border-left: 2px solid var(--gold-accent); }
+.authCornerTR { top: 0; right: 0; border-top: 2px solid var(--gold-accent); border-right: 2px solid var(--gold-accent); }
+.authCornerBL { bottom: 0; left: 0; border-bottom: 2px solid var(--gold-accent); border-left: 2px solid var(--gold-accent); }
+.authCornerBR { bottom: 0; right: 0; border-bottom: 2px solid var(--gold-accent); border-right: 2px solid var(--gold-accent); }
+
 .authPanelInner {
+  position: relative;
   padding: 48px 40px;
   background-color: rgb(39, 34, 28);
 }
@@ -84,6 +93,8 @@
   text-align: center;
 }
 
+.authDivider { margin: 16px 0; }
+
 .authSubtitle {
   font-family: var(--font-accent);
   font-size: 16px;
@@ -95,23 +106,57 @@
   margin: 0;
 }
 
-.authFields {
-  display: grid;
-  gap: 16px;
-  margin-top: 16px;
+.authFields { display: grid; gap: 16px; margin-top: 16px; }
+
+.authFields .ant-form-item { margin-bottom: 0; }
+.authFields .ant-form-item-label { padding-bottom: 8px; }
+.authFields .ant-form-item-label > label {
+  color: var(--foreground) !important;
+  font-family: var(--font-accent);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.authFields .ant-input,
+.authFields .ant-input-affix-wrapper {
+  min-height: 52px;
+  border: 2px solid #000 !important;
+  border-radius: 0 !important;
+  background: var(--parchment-dark) !important;
+  color: var(--text-aged) !important;
+  box-shadow:
+    0 0 0 1px rgba(217, 199, 168, 0.15),
+    inset 0 1px 0 rgba(0, 0, 0, 0.6),
+    inset 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+.authFields .ant-input::placeholder,
+.authFields .ant-input-affix-wrapper input::placeholder {
+  color: #706e6a;
+  letter-spacing: 0.08em;
+}
+
+.authFields .ant-input:focus,
+.authFields .ant-input:hover,
+.authFields .ant-input-affix-wrapper-focused,
+.authFields .ant-input-affix-wrapper:focus,
+.authFields .ant-input-affix-wrapper:hover {
+  border-color: var(--blood-red) !important;
 }
 
 .authInput {
-  padding: 16px !important;
   letter-spacing: 0.08em;
   font-family: var(--font-body);
   font-weight: 600;
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
+.authSubmitWrap { margin-top: 8px; margin-bottom: 0 !important; }
+
 .authSubmit {
-  margin-top: 24px;
-  height: auto;
+  /* background: #7f1e1d; */
+  background: linear-gradient(180deg, #7f1e1d 0%, #6b1e1a 100%) !important;
+  min-height: 56px;
   padding: 18px !important;
   font-size: 16px;
   font-weight: 900;
@@ -120,35 +165,34 @@
   text-transform: uppercase;
 }
 
+.authSubmit:hover,
+.authSubmit:focus {
+  filter: brightness(1.25);
+  border-color: #000 !important;
+}
+
+.authSubmitText { color: var(--text-aged); }
+
 .authActions {
   margin-top: 24px;
   text-align: center;
+  font-family: var(--font-body);
+  font-size: 13px;
+  letter-spacing: 0.05em;
 }
 
-.authLink {
+.authActions a.authLink,
+.authActions a.authLink:visited {
   color: var(--blood-red);
+  font-weight: 900;
+  text-decoration: underline;
 }
 
-.authLink:hover {
-  color: var(--blood-bright);
-}
+.authLink:hover { color: var(--blood-bright); }
 
 @media (max-width: 640px) {
-  .authContainer {
-    max-width: 100%;
-    padding: 0 16px;
-  }
-
-  .authPanelInner {
-    padding: 32px 20px;
-  }
-
-  .authTitle {
-    font-size: 32px;
-    letter-spacing: 0.1em;
-  }
-
-  .authOrnamentLine {
-    width: 80px;
-  }
+  .authContainer { max-width: 100%; padding: 0 16px; }
+  .authPanelInner { padding: 32px 20px; }
+  .authTitle { font-size: 32px; letter-spacing: 0.1em; }
+  .authOrnamentLine { width: 80px; }
 }
