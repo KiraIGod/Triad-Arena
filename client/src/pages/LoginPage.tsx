@@ -88,7 +88,7 @@ export default function LoginPage() {
 
     <div className="authPage">
       <div className="authBg" />
-      <div className="authTexture parchment-texture" />
+      <div className="authTexture" />
       <div className="authVignette darkest-vignette" />
 
       <div className="authContainer">

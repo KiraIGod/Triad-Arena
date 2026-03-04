@@ -20,6 +20,7 @@
   position: absolute;
   inset: 0;
   background-color: var(--background);
+  opacity: 50%;
 }
 
 .authVignette {
