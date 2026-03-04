@@ -1,0 +1,282 @@
+Lobby — dark arena UI
+
+.page {
+  min-height: 100vh;
+  background: #0d0d0f;
+  color: #c8c8c8;
+  padding: 1rem 1.5rem 2rem;
+  box-sizing: border-box;
+} 
+
+/* ——— Top bar ——— */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #2a2a2e;
+  margin-bottom: 1.5rem;
+}
+
+.brand {
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+}
+
+.title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #e8e8e8;
+  margin: 0 0 0.2rem 0;
+}
+
+.subtitle {
+  font-size: 0.7rem;
+  color: #888;
+  letter-spacing: 0.15em;
+  margin: 0;
+}
+
+.headerRight {
+  text-align: right;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.status {
+  margin-bottom: 0.25rem;
+}
+
+.statusOnline {
+  color: #2ecc71;
+}
+
+.statusOffline {
+  color: #e74c3c;
+}
+
+.userLabel {
+  color: #888;
+}
+
+/* ——— Main 3 columns ——— */
+.layout {
+  display: grid;
+  grid-template-columns: 1fr minmax(280px, 400px) 1fr;
+  gap: 2rem;
+  align-items: start;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ——— Left: Active deck ——— */
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.sectionTitle {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #888;
+  margin: 0 0 0.5rem 0;
+}
+
+.deckCard {
+  border: 1px solid #2a2a2e;
+  background: #141416;
+  padding: 1rem 1.25rem;
+}
+
+.deckName {
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #e0e0e0;
+  margin: 0 0 0.5rem 0;
+}
+
+.deckMeta {
+  font-size: 0.75rem;
+  color: #888;
+  margin-bottom: 0.75rem;
+}
+
+.deckStats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stat {
+  color: #888;
+}
+
+.statValue {
+  color: #c8c8c8;
+}
+
+.btnEdit {
+  padding: 0.5rem 1rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: transparent;
+  border: 1px solid #3a3a3e;
+  color: #c8c8c8;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btnEdit:hover {
+  border-color: #5a5a5e;
+  color: #e8e8e8;
+}
+
+/* ——— Center: Enter Arena ——— */
+.centerColumn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btnArena {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 320px;
+  padding: 1.25rem 2rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  background: transparent;
+  border: 2px solid #8b0000;
+  color: #e8e8e8;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.btnArena:hover:not(:disabled) {
+  background: rgba(139, 0, 0, 0.2);
+  border-color: #a00;
+}
+
+.btnArena:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+  border-color: #4a4a4e;
+}
+
+.btnArenaIcon {
+  font-size: 1.25em;
+  opacity: 0.9;
+}
+
+.searchingText {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin: 0;
+}
+
+.loader {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #3a3a3e;
+  border-top-color: #8b0000;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.ratingBlock {
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.ratingLine {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #888;
+  margin: 0.25rem 0;
+}
+
+.ratingValue {
+  color: #c8c8c8;
+}
+
+/* ——— Right: Match history ——— */
+.matchList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.matchCard {
+  border: 1px solid #2a2a2e;
+  background: #141416;
+  padding: 0.75rem 1rem;
+  font-size: 0.75rem;
+}
+
+.matchRow {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.25rem;
+}
+
+.matchRow:last-child {
+  margin-bottom: 0;
+}
+
+.matchOpponent {
+  color: #c8c8c8;
+}
+
+.matchResultVictory {
+  color: #2ecc71;
+  font-weight: 600;
+}
+
+.matchResultDefeat {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.matchMeta {
+  color: #666;
+  font-size: 0.7rem;
+}
+
+.btnViewAll {
+  margin-top: 0.5rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: transparent;
+  border: 1px solid #3a3a3e;
+  color: #888;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.btnViewAll:hover {
+  border-color: #5a5a5e;
+  color: #c8c8c8;
+} 
