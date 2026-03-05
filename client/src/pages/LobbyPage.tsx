@@ -226,7 +226,27 @@ export default function LobbyPage() {
                 <span className={styles.btnArenaIcon} aria-hidden>
                   ⚔
                 </span>
-                Enter Arena
+                Find Arena
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            className={styles.btnArena}
+            disabled={isSearching}
+            onClick={handleEnterArena}
+          >
+            {isSearching ? (
+              <>
+                <span className={styles.loader} />
+                Searching for opponent…
+              </>
+            ) : (
+              <>
+                <span className={styles.btnArenaIcon} aria-hidden>
+                  ⚔
+                </span>
+                Create Arena
               </>
             )}
           </button>
