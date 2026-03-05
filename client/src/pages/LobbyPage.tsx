@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "../store";
 import styles from "./LobbyPage.module.css";
+import socket from "../shared/socket/socket";
+import { fetchUserDeck } from "../shared/api/deckBuilderApi";
 
 type DeckSummary = {
   name: string;
