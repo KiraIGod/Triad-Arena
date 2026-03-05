@@ -17,7 +17,7 @@ export default function CardModal({
   canRemove,
   onClose,
   onAdd,
-  onRemove
+  onRemove,
 }: CardModalProps) {
   if (!isOpen || !card) {
     return null;
