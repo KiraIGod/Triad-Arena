@@ -1,9 +1,9 @@
 ﻿import { useEffect, useState } from "react";
-import matchSocket from "./matchSocket";
+import matchSocket from "./socket";
 
 
 
-export default function GamePage() {
+function GamePage() {
   const matchId = "test-match-1"
 
   const [status, setStatus] = useState("idle"); // idle | connecting | in_match
