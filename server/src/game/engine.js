@@ -2,6 +2,7 @@ const {
   GAME_CONSTANTS,
   INVALID_ACTION,
   STATE_OUTDATED,
+  DUPLICATE_ACTION,
   STATUS_TYPES
 } = require("./constants");
 const { applyDamage } = require("./damage");
@@ -28,7 +29,7 @@ function withSafety(handler) {
   try {
     return handler();
   } catch (error) {
-    if (error?.type === INVALID_ACTION || error?.type === STATE_OUTDATED) {
+    if (error?.type === INVALID_ACTION || error?.type === STATE_OUTDATED || error?.type === DUPLICATE_ACTION) {
       throw error;
     }
     throw createError(INVALID_ACTION, "Unexpected engine error");
@@ -57,11 +58,11 @@ function parseActorInput(input) {
 }
 
 function validateVersion(expectedVersion, currentVersion) {
-  if (!Number.isFinite(expectedVersion)) return;
+  if (!Number.isFinite(expectedVersion)) failOutdated();
   if (expectedVersion !== currentVersion) failOutdated();
 }
 
-function validatePlayableState(state, playerId, expectedVersion) {
+function validatePlayableState(state, playerId, expectedVersion, options = {}) {
   if (!state?.player1 || !state?.player2) failInvalid("Invalid game state");
   if (state.finished) failInvalid("Game already finished");
   validateVersion(expectedVersion, state.version);
@@ -69,10 +70,37 @@ function validatePlayableState(state, playerId, expectedVersion) {
   const playerKey = getPlayerKey(state, playerId);
   if (!playerKey) failInvalid("Invalid player");
   if (state.activePlayer !== playerId) failInvalid("Not your turn");
-  if ((state[playerKey]?.statuses || []).some((status) => status?.type === STATUS_TYPES.STUN)) {
+  const allowStunned = Boolean(options.allowStunned);
+  const isStunned = (state[playerKey]?.statuses || []).some((status) => status?.type === STATUS_TYPES.STUN);
+  if (!allowStunned && isStunned) {
     failInvalid("Player is stunned");
   }
   return playerKey;
+}
+
+function clampPlayer(player) {
+  const hp = Number.isFinite(player?.hp) ? player.hp : 0;
+  const shield = Number.isFinite(player?.shield) ? player.shield : 0;
+  const energy = Number.isFinite(player?.energy) ? player.energy : 0;
+
+  return {
+    ...player,
+    hp: Math.max(0, Math.min(hp, GAME_CONSTANTS.MAX_HP)),
+    shield: Math.max(0, Math.min(shield, GAME_CONSTANTS.MAX_SHIELD)),
+    energy: Math.max(0, energy)
+  };
+}
+
+function sanitizeState(state) {
+  if (!state?.player1 || !state?.player2) {
+    return state;
+  }
+
+  return {
+    ...state,
+    player1: clampPlayer(state.player1),
+    player2: clampPlayer(state.player2)
+  };
 }
 
 function getCardTriadType(card) {
@@ -83,6 +111,14 @@ function validateCard(card) {
   if (!card?.id) failInvalid("Card is required");
   if (!VALID_CARD_TYPES.has(card.type)) failInvalid("Invalid card type");
   if (!VALID_TRIAD_TYPES.has(getCardTriadType(card))) failInvalid("Invalid card triad type");
+}
+
+function getActionId(card) {
+  const actionId = card?.actionId ?? card?.action_id;
+  if (typeof actionId !== "string" || actionId.length === 0) {
+    failInvalid("actionId is required");
+  }
+  return actionId;
 }
 
 function getCardManaCost(card) {
@@ -159,11 +195,14 @@ function playCard(state, playerInput, card) {
   return withSafety(() => {
     const { playerId, expectedVersion: playerExpected } = parseActorInput(playerInput);
     const actionVersion = card?.expectedVersion ?? card?.stateVersion ?? card?.version ?? playerExpected;
-    const playerKey = validatePlayableState(state, playerId, actionVersion);
+    const playerKey = validatePlayableState(state, playerId, actionVersion, { allowStunned: false });
     const opponentKey = getOpponentKey(playerKey);
 
     validateCard(card);
-    if (isDuplicateAction(state, playerId, card)) failInvalid("Duplicate action");
+    const actionId = getActionId(card);
+    if (isDuplicateAction(state, playerId, card)) {
+      throw createError(DUPLICATE_ACTION, "Duplicate action");
+    }
 
     const manaCost = getCardManaCost(card);
     const actions = (state.turnActions || []).filter((action) => action?.playerId === playerId).length;
@@ -180,32 +219,34 @@ function playCard(state, playerInput, card) {
     const attackerAfterStatuses = applyStatuses(attacker, collectStatuses(card, "selfStatuses"));
     const defenderAfterStatuses = applyStatuses(defenderAfterDamage, collectStatuses(card, "statuses"));
     const energy = Math.max(0, (attackerAfterStatuses.energy || 0) - manaCost);
-    const actionId = card?.actionId ?? card?.action_id ?? null;
+    const actionIndex = (state.turnActions || []).length + 1;
+    const turnOwnerId = state.activePlayer;
 
     const nextState = {
       ...state,
       [playerKey]: { ...attackerAfterStatuses, energy },
       [opponentKey]: defenderAfterStatuses,
-      playedCards: [...(state.playedCards || []), { playerId, cardId: card.id, triadType: getCardTriadType(card), actionId }],
-      turnActions: [...(state.turnActions || []), { playerId, cardId: card.id, actionId }],
+      playedCards: [...(state.playedCards || []), { playerId, cardId: card.id, triadType: getCardTriadType(card), actionId, actionIndex, turnOwnerId }],
+      turnActions: [...(state.turnActions || []), { actionId, actionIndex, playerId, turnOwnerId, cardId: card.id, timestamp: Date.now() }],
       version: (state.version || 0) + 1
     };
 
-    return { ...nextState, finished: isFinished(nextState) };
+    const safeState = sanitizeState(nextState);
+    return { ...safeState, finished: isFinished(safeState) };
   });
 }
 
 function endTurn(state, playerInput) {
   return withSafety(() => {
     const { playerId, expectedVersion } = parseActorInput(playerInput);
-    validatePlayableState(state, playerId, expectedVersion);
-    const nextState = resolveTurn(state);
+    validatePlayableState(state, playerId, expectedVersion, { allowStunned: true });
+    const nextState = sanitizeState(resolveTurn(state));
     return { ...nextState, finished: isFinished(nextState) };
   });
 }
 
 function runEngineTick(gameState) {
-  return withSafety(() => resolveTurn(gameState));
+  return withSafety(() => sanitizeState(resolveTurn(gameState)));
 }
 
 module.exports = {

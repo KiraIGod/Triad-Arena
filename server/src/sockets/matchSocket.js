@@ -1,11 +1,18 @@
 const db = require("../db/models");
 const { playCard, endTurn } = require("../game/engine");
 const { INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
+const { serializeGameState } = require("../game/stateSerializer");
+const { validateGameState } = require("../game/stateValidator");
 const {
   loadMatchState,
   saveMatchState,
-  getPlayerFromSocket
+  getPlayerFromSocket,
+  appendMatchEvents,
+  clearMatchRuntime
 } = require("../services/matchService");
+const DEBUG_GAME_STATE = String(process.env.DEBUG_GAME_STATE || "").toLowerCase() === "true";
+const RATE_LIMIT_WINDOW_MS = 1000;
+const RATE_LIMIT_MAX_ACTIONS = 10;
 
 function createSocketError(type, message) {
   return { type, message };
@@ -23,6 +30,30 @@ function emitSocketError(socket, error) {
   const type = error?.type || INVALID_ACTION;
   const message = error?.message || "Match action failed";
   socket.emit("match:error", { type, message });
+}
+
+function getSerializedState(matchId, gameState) {
+  const safeState = serializeGameState({ ...(gameState || {}), matchId: String(matchId) });
+  validateGameState(safeState);
+  if (DEBUG_GAME_STATE) {
+    console.log("GAME STATE UPDATE", safeState);
+  }
+  return safeState;
+}
+
+function enforceActionRateLimit(socket) {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+  const history = Array.isArray(socket?.data?.matchActionHistory)
+    ? socket.data.matchActionHistory.filter((stamp) => stamp > windowStart)
+    : [];
+
+  if (history.length >= RATE_LIMIT_MAX_ACTIONS) {
+    throw createSocketError("RATE_LIMIT", "Too many actions");
+  }
+
+  history.push(now);
+  socket.data.matchActionHistory = history;
 }
 
 function validateMatchAccess(match, playerId) {
@@ -49,11 +80,11 @@ function resolvePlayerState(state, playerId) {
 
 function validateCardPlayPreconditions(state, playerId, card) {
   if (state?.finished) {
-    throw createSocketError(INVALID_ACTION, "Game already finished");
+    throw createSocketError("MATCH_FINISHED", "Game already finished");
   }
 
   if (state?.activePlayer !== playerId) {
-    throw createSocketError(INVALID_ACTION, "Not your turn");
+    throw createSocketError("INVALID_TURN", "Not your turn");
   }
 
   const playerState = resolvePlayerState(state, playerId);
@@ -99,9 +130,10 @@ async function handleJoin(io, socket, payload = {}) {
   const playerId = getPlayerFromSocket(socket);
   const { match, state } = await loadMatchState(matchId);
   validateMatchAccess(match, playerId);
+  const safeState = getSerializedState(matchId, state);
 
   socket.join(String(matchId));
-  socket.emit("match:state", { gameState: state });
+  socket.emit("match:state", { state: safeState });
   return io;
 }
 
@@ -111,6 +143,7 @@ async function handlePlayCard(io, socket, payload = {}) {
     throw createSocketError(INVALID_ACTION, "matchId and cardId are required");
   }
   const incomingVersion = parseIncomingVersion(version);
+  enforceActionRateLimit(socket);
 
   const { match, state } = await loadMatchState(matchId);
   const playerId = getPlayerFromSocket(socket);
@@ -119,10 +152,16 @@ async function handlePlayCard(io, socket, payload = {}) {
   if (incomingVersion !== state.version) {
     throw createSocketError(STATE_OUTDATED, "Client state outdated");
   }
+  if (state?.finished) {
+    throw createSocketError("MATCH_FINISHED", "Game already finished");
+  }
+  if (state?.activePlayer !== playerId) {
+    throw createSocketError("INVALID_TURN", "Not your turn");
+  }
 
   const card = await db.Card.findByPk(cardId);
   if (!card) {
-    throw createSocketError(INVALID_ACTION, "Card not found");
+    throw createSocketError("INVALID_CARD", "Card not found");
   }
 
   const cardData = card.get({ plain: true });
@@ -134,11 +173,29 @@ async function handlePlayCard(io, socket, payload = {}) {
     { ...cardData, actionId }
   );
   const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
+  const safeState = getSerializedState(matchId, persistedState);
+  const events = appendMatchEvents(matchId, {
+    turn: state.turn,
+    type: "CARD_PLAYED",
+    payload: { playerId, cardId, actionId: actionId || null }
+  });
 
-  io.to(String(matchId)).emit("match:update", { gameState: persistedState });
   if (persistedState.finished) {
-    io.to(String(matchId)).emit("match:finish", { winnerId: getWinnerId(match, persistedState) });
+    const winnerId = getWinnerId(match, persistedState);
+    events.push(
+      ...appendMatchEvents(matchId, {
+        turn: persistedState.turn,
+        type: "MATCH_FINISHED",
+        payload: { winnerId }
+      })
+    );
+    io.to(String(matchId)).emit("match:update", { state: safeState, events });
+    io.to(String(matchId)).emit("match:finish", { winnerId });
+    clearMatchRuntime(matchId);
+    return;
   }
+
+  io.to(String(matchId)).emit("match:update", { state: safeState, events });
 }
 
 async function handleEndTurn(io, socket, payload = {}) {
@@ -147,6 +204,7 @@ async function handleEndTurn(io, socket, payload = {}) {
     throw createSocketError(INVALID_ACTION, "matchId is required");
   }
   const incomingVersion = parseIncomingVersion(version);
+  enforceActionRateLimit(socket);
 
   const { match, state } = await loadMatchState(matchId);
   const playerId = getPlayerFromSocket(socket);
@@ -155,40 +213,55 @@ async function handleEndTurn(io, socket, payload = {}) {
   if (incomingVersion !== state.version) {
     throw createSocketError(STATE_OUTDATED, "Client state outdated");
   }
+  if (state?.finished) {
+    throw createSocketError("MATCH_FINISHED", "Game already finished");
+  }
+  if (state?.activePlayer !== playerId) {
+    throw createSocketError("INVALID_TURN", "Not your turn");
+  }
 
   const nextState = endTurn(state, { playerId, expectedVersion: incomingVersion });
   const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
+  const safeState = getSerializedState(matchId, persistedState);
+  const events = appendMatchEvents(matchId, {
+    turn: state.turn,
+    type: "TURN_ENDED",
+    payload: { playerId, nextActivePlayer: safeState.activePlayer }
+  });
 
-  io.to(String(matchId)).emit("match:update", { gameState: persistedState });
   if (persistedState.finished) {
-    io.to(String(matchId)).emit("match:finish", { winnerId: getWinnerId(match, persistedState) });
+    const winnerId = getWinnerId(match, persistedState);
+    events.push(
+      ...appendMatchEvents(matchId, {
+        turn: persistedState.turn,
+        type: "MATCH_FINISHED",
+        payload: { winnerId }
+      })
+    );
+    io.to(String(matchId)).emit("match:update", { state: safeState, events });
+    io.to(String(matchId)).emit("match:finish", { winnerId });
+    clearMatchRuntime(matchId);
+    return;
   }
+
+  io.to(String(matchId)).emit("match:update", { state: safeState, events });
+}
+
+function wrapSocketHandler(socket, handler) {
+  return async (payload) => {
+    try {
+      await handler(payload);
+    } catch (error) {
+      emitSocketError(socket, error);
+    }
+  };
 }
 
 module.exports = function registerMatchSocket(io) {
   io.on("connection", (socket) => {
-    socket.on("match:join", async (payload) => {
-      try {
-        await handleJoin(io, socket, payload);
-      } catch (error) {
-        emitSocketError(socket, error);
-      }
-    });
-
-    socket.on("match:playCard", async (payload) => {
-      try {
-        await handlePlayCard(io, socket, payload);
-      } catch (error) {
-        emitSocketError(socket, error);
-      }
-    });
-
-    socket.on("match:endTurn", async (payload) => {
-      try {
-        await handleEndTurn(io, socket, payload);
-      } catch (error) {
-        emitSocketError(socket, error);
-      }
-    });
+    socket.data.matchActionHistory = [];
+    socket.on("match:join", wrapSocketHandler(socket, (payload) => handleJoin(io, socket, payload)));
+    socket.on("match:playCard", wrapSocketHandler(socket, (payload) => handlePlayCard(io, socket, payload)));
+    socket.on("match:endTurn", wrapSocketHandler(socket, (payload) => handleEndTurn(io, socket, payload)));
   });
 };

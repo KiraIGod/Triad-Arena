@@ -1,4 +1,4 @@
-const { GAME_CONSTANTS, STATUS_TYPES } = require("./constants");
+const { GAME_CONSTANTS } = require("./constants");
 const { applyStatusEffects, removeExpiredStatuses, tickStatuses } = require("./status");
 
 function getActivePlayerKey(state) {
@@ -11,10 +11,6 @@ function getActivePlayerKey(state) {
   }
 
   return null;
-}
-
-function hasStatus(player, type) {
-  return (player?.statuses || []).some((status) => status?.type === type);
 }
 
 function getFinished(state) {
@@ -36,17 +32,16 @@ function resolveTurn(state) {
   const withEffects = applyStatusEffects(state);
   const currentKey = getActivePlayerKey(withEffects) || "player1";
   const nextKey = currentKey === "player1" ? "player2" : "player1";
-  const nextStunned = hasStatus(withEffects[nextKey], STATUS_TYPES.STUN);
-
-  const player1 = removeExpiredStatuses(tickStatuses(withEffects.player1));
-  const player2 = removeExpiredStatuses(tickStatuses(withEffects.player2));
-  const activeKey = nextStunned ? currentKey : nextKey;
-  const nextActivePlayer = withRefreshedEnergy(activeKey === "player1" ? player1 : player2);
+  const endedPlayer = removeExpiredStatuses(tickStatuses(withEffects[currentKey]));
+  const waitingPlayer = withEffects[nextKey];
+  const player1 = currentKey === "player1" ? endedPlayer : waitingPlayer;
+  const player2 = currentKey === "player2" ? endedPlayer : waitingPlayer;
+  const nextActivePlayer = withRefreshedEnergy(nextKey === "player1" ? player1 : player2);
 
   return {
     ...withEffects,
-    player1: activeKey === "player1" ? nextActivePlayer : player1,
-    player2: activeKey === "player2" ? nextActivePlayer : player2,
+    player1: nextKey === "player1" ? nextActivePlayer : player1,
+    player2: nextKey === "player2" ? nextActivePlayer : player2,
     activePlayer: nextActivePlayer.id,
     turn: (withEffects.turn || 1) + 1,
     version: (withEffects.version || 0) + 1,

@@ -1,6 +1,9 @@
 const db = require("../db/models");
 const { createInitialGameState } = require("../game/gameState");
 const { INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
+const matchStateCache = new Map();
+const eventLogCache = new Map();
+const lastStateCache = new Map();
 
 function createError(type, message) {
   return { type, message };
@@ -27,6 +30,10 @@ function getPlayerFromSocket(socket) {
   return playerId || null;
 }
 
+function cloneValue(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
 async function ensureMatchState(match) {
   const where = { match_id: match.id };
   let matchState = await db.MatchState.findOne({ where });
@@ -50,10 +57,24 @@ async function loadMatchState(matchId) {
     throw createError(INVALID_ACTION, "Match not found");
   }
 
+  const cachedState = matchStateCache.get(String(matchId));
+  if (cachedState) {
+    lastStateCache.set(String(matchId), cachedState);
+    return {
+      match,
+      state: cachedState,
+      matchState: null
+    };
+  }
+
   const matchState = await ensureMatchState(match);
+  const state = matchState.game_state || {};
+  const cacheKey = String(matchId);
+  matchStateCache.set(cacheKey, state);
+  lastStateCache.set(cacheKey, state);
   return {
     match,
-    state: matchState.game_state || {},
+    state,
     matchState
   };
 }
@@ -85,12 +106,63 @@ async function saveMatchState(matchId, state, expectedVersion) {
       { transaction }
     );
 
-    return matchState.game_state;
+    const persistedState = matchState.game_state || state;
+    const cacheKey = String(matchId);
+    matchStateCache.set(cacheKey, persistedState);
+    lastStateCache.set(cacheKey, persistedState);
+
+    return persistedState;
   });
+}
+
+function appendMatchEvents(matchId, entries) {
+  const cacheKey = String(matchId);
+  const current = eventLogCache.get(cacheKey) || [];
+  const inputList = Array.isArray(entries) ? entries : [entries];
+  const nextEvents = inputList
+    .filter((entry) => entry && entry.type)
+    .map((entry, index) => ({
+      eventId: current.length + index + 1,
+      turn: Number.isFinite(entry.turn) ? entry.turn : null,
+      type: entry.type,
+      timestamp: Number.isFinite(entry.timestamp) ? entry.timestamp : Date.now(),
+      payload: entry.payload && typeof entry.payload === "object" ? cloneValue(entry.payload) : {}
+    }));
+
+  if (nextEvents.length === 0) {
+    return [];
+  }
+
+  const merged = current.concat(nextEvents);
+  eventLogCache.set(cacheKey, merged);
+  return nextEvents;
+}
+
+function getMatchEventLog(matchId) {
+  return cloneValue(eventLogCache.get(String(matchId)) || []);
+}
+
+function getLastState(matchId) {
+  const state = lastStateCache.get(String(matchId));
+  return state ? cloneValue(state) : null;
+}
+
+function clearMatchRuntime(matchId) {
+  const cacheKey = String(matchId);
+  matchStateCache.delete(cacheKey);
+  eventLogCache.delete(cacheKey);
+  lastStateCache.delete(cacheKey);
 }
 
 module.exports = {
   loadMatchState,
   saveMatchState,
-  getPlayerFromSocket
+  getPlayerFromSocket,
+  appendMatchEvents,
+  getMatchEventLog,
+  getLastState,
+  clearMatchRuntime,
+  matchStateCache,
+  eventLogCache,
+  lastStateCache
 };
