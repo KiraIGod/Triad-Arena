@@ -20,6 +20,8 @@ function initSocket(httpServer) {
     });
   });
 
+  registerMatchSocket(io);
+
   return io;
 }
 
