@@ -131,6 +131,10 @@ async function handleJoin(io, socket, payload = {}) {
   const { match, state } = await loadMatchState(matchId);
   validateMatchAccess(match, playerId);
   const safeState = getSerializedState(matchId, state);
+  console.log(`[MATCH] Player ${playerId} joined match ${matchId}`);
+  if (match.player_one_id && match.player_two_id) {
+    console.log(`[MATCH] Match started: ${match.player_one_id} vs ${match.player_two_id}`);
+  }
 
   socket.join(String(matchId));
   socket.emit("match:state", { state: safeState });
@@ -166,6 +170,7 @@ async function handlePlayCard(io, socket, payload = {}) {
 
   const cardData = card.get({ plain: true });
   validateCardPlayPreconditions(state, playerId, cardData);
+  console.log(`[ACTION] ${playerId} played card ${cardId}`);
 
   const nextState = playCard(
     state,
@@ -189,12 +194,23 @@ async function handlePlayCard(io, socket, payload = {}) {
         payload: { winnerId }
       })
     );
+    const latestAction = events.find((event) => event.type === "CARD_PLAYED");
+    if (latestAction) {
+      const lastTurnAction = persistedState.turnActions[persistedState.turnActions.length - 1];
+      if (lastTurnAction && Number.isFinite(lastTurnAction.actionIndex)) {
+        console.log(`[ACTION] Turn action #${lastTurnAction.actionIndex}`);
+      }
+    }
     io.to(String(matchId)).emit("match:update", { state: safeState, events });
     io.to(String(matchId)).emit("match:finish", { winnerId });
     clearMatchRuntime(matchId);
     return;
   }
 
+  const lastTurnAction = persistedState.turnActions[persistedState.turnActions.length - 1];
+  if (lastTurnAction && Number.isFinite(lastTurnAction.actionIndex)) {
+    console.log(`[ACTION] Turn action #${lastTurnAction.actionIndex}`);
+  }
   io.to(String(matchId)).emit("match:update", { state: safeState, events });
 }
 
@@ -219,6 +235,7 @@ async function handleEndTurn(io, socket, payload = {}) {
   if (state?.activePlayer !== playerId) {
     throw createSocketError("INVALID_TURN", "Not your turn");
   }
+  console.log(`[TURN] ${playerId} ended turn`);
 
   const nextState = endTurn(state, { playerId, expectedVersion: incomingVersion });
   const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
