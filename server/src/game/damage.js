@@ -1,6 +1,43 @@
-// TODO: Implement damage calculation rules.
-function calculateDamage(attacker, defender) {
-  return { attacker, defender, damage: 0 };
+const { GAME_CONSTANTS } = require("./constants");
+
+function toNonNegativeNumber(value) {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+
+  return Math.max(0, value);
 }
 
-module.exports = { calculateDamage };
+function applyDamage(defender, damage) {
+  const safeDefender = defender || {};
+  const incomingDamage = toNonNegativeNumber(damage);
+  const initialShield = toNonNegativeNumber(safeDefender.shield);
+  const initialHp = toNonNegativeNumber(safeDefender.hp);
+
+  const absorbed = Math.min(initialShield, incomingDamage);
+  const shield = Math.max(0, initialShield - absorbed);
+  const hpDamage = incomingDamage - absorbed;
+  const hp = Math.max(0, initialHp - hpDamage);
+
+  return {
+    ...safeDefender,
+    shield: Math.min(shield, GAME_CONSTANTS.MAX_SHIELD),
+    hp: Math.min(hp, GAME_CONSTANTS.MAX_HP)
+  };
+}
+
+function calculateDamage(attacker, defender) {
+  const base = Number.isFinite(attacker?.attack) ? attacker.attack : 0;
+  const updatedDefender = applyDamage(defender, base);
+
+  return {
+    attacker,
+    defender: updatedDefender,
+    damage: Math.max(0, base)
+  };
+}
+
+module.exports = {
+  applyDamage,
+  calculateDamage
+};

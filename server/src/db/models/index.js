@@ -19,6 +19,7 @@ db.DeckCard = initDeckCardModel(sequelize);
 db.Match = initMatchModel(sequelize);
 db.MatchState = initMatchStateModel(sequelize);
 db.MatchHistory = initMatchHistoryModel(sequelize);
+db.Game = db.Match;
 
 db.User.hasOne(db.PlayerStats, { foreignKey: "user_id", onDelete: "CASCADE" });
 db.PlayerStats.belongsTo(db.User, { foreignKey: "user_id" });
