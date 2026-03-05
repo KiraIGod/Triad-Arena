@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "../store";
-import socket from "../shared/socket/socket";
-import { fetchUserDeck } from "../shared/api/deckBuilderApi";
+import socket from "../shared/socket/matchSocket";
 import styles from "./LobbyPage.module.css";
 
 type DeckSummary = {
