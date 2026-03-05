@@ -1,4 +1,5 @@
 const { Server } = require("socket.io");
+const registerMatchSocket = require('./matchSocket')
 
 const activeGames = new Map();
 
