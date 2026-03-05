@@ -33,3 +33,5 @@ module.exports = {
   STATE_OUTDATED,
   DUPLICATE_ACTION
 };
+
+module.exports = { GAME_CONSTANTS };

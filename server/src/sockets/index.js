@@ -1,5 +1,4 @@
 const { Server } = require("socket.io");
-const registerMatchSocket = require("./matchSocket");
 
 const activeGames = new Map();
 
@@ -26,4 +25,4 @@ function initSocket(httpServer) {
   return io;
 }
 
-module.exports = { initSocket, activeGames };
+module.exports = { activeGames, initSocket };

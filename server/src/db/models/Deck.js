@@ -1,6 +1,6 @@
 const { DataTypes, Model } = require("sequelize");
 
-module.exports = function initDeckModel(sequelize) {
+function initDeckModel(sequelize) {
   class Deck extends Model {}
 
   Deck.init(
@@ -29,4 +29,6 @@ module.exports = function initDeckModel(sequelize) {
   );
 
   return Deck;
-};
+}
+
+module.exports = initDeckModel;

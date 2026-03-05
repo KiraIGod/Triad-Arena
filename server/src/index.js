@@ -4,7 +4,7 @@ const cors = require("cors");
 const http = require("http");
 const authRoutes = require("./routes/auth");
 const leaderboardRoutes = require("./routes/leaderboard");
-const { initSocket } = require("./sockets");
+const { initSocket } = require("./sockets/index");
 
 dotenv.config();
 
@@ -13,7 +13,7 @@ const server = http.createServer(app);
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL,
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true
   })
 );

@@ -1,6 +1,6 @@
 const { DataTypes, Model } = require("sequelize");
 
-module.exports = function initMatchStateModel(sequelize) {
+function initMatchStateModel(sequelize) {
   class MatchState extends Model {}
 
   MatchState.init(
@@ -34,4 +34,6 @@ module.exports = function initMatchStateModel(sequelize) {
   );
 
   return MatchState;
-};
+}
+
+module.exports = initMatchStateModel;

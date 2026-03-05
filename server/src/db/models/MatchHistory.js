@@ -1,6 +1,6 @@
 const { DataTypes, Model } = require("sequelize");
 
-module.exports = function initMatchHistoryModel(sequelize) {
+function initMatchHistoryModel(sequelize) {
   class MatchHistory extends Model {}
 
   MatchHistory.init(
@@ -52,4 +52,6 @@ module.exports = function initMatchHistoryModel(sequelize) {
   );
 
   return MatchHistory;
-};
+}
+
+module.exports = initMatchHistoryModel;
