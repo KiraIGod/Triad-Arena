@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { GameCard, type CardModel } from "../components/Card";
+
 
 const DEMO_CARDS: CardModel[] = [
   // ДЕМО ТЕМА ДЛЯ ОТРИСОВКИ !!!
@@ -38,6 +40,17 @@ const DEMO_CARDS: CardModel[] = [
 ];
 
 export default function GamePage() {
+  const matchId = "test-match-1"
+
+  const [status, setStatus] = useState("idle"); // idle | connecting | in_match
+  const [gameState, setGameState] = useState(null);
+  const [error, setError] = useState(null);
+
+
+ 
+
+  
+
   const handleCardClick = (card: CardModel) => {
     console.log("Card clicked:", card.id, card.name);
   };
@@ -56,6 +69,8 @@ export default function GamePage() {
           />
         ))}
       </section>
+      <div></div>
     </div>
+
   );
 }

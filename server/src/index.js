@@ -4,7 +4,8 @@ const cors = require("cors");
 const http = require("http");
 const authRoutes = require("./routes/auth");
 const leaderboardRoutes = require("./routes/leaderboard");
-const { initSocket } = require("./sockets/index");
+const { initSocket } = require("./game/sockets/match");
+
 
 dotenv.config();
 
