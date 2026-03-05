@@ -1,6 +1,7 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const db = require("../db/models/index");
+const { ensureUserCollection } = require("./deckBuilderService");
 
 const { User } = db;
 
@@ -17,10 +18,17 @@ async function registerUser(payload) {
   }
 
   const password_hash = await bcrypt.hash(password, 10);
-  const user = await User.create({
-    nickname: username,
-    email: `${username.toLowerCase()}@triad-arena.local`,
-    password_hash
+  const user = await db.sequelize.transaction(async (transaction) => {
+    const createdUser = await User.create(
+      {
+        nickname: username,
+        email: `${username.toLowerCase()}@triad-arena.local`,
+        password_hash
+      },
+      { transaction }
+    );
+    await ensureUserCollection(createdUser.id, transaction);
+    return createdUser;
   });
 
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || "dev_secret", {

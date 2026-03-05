@@ -2,16 +2,16 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "../store";
 import socket from "../shared/socket/socket";
+import { fetchUserDeck } from "../shared/api/deckBuilderApi";
 import styles from "./LobbyPage.module.css";
 
-// ——— Mock data ———
-const MOCK_DECK = {
-  name: "Strike Force Alpha",
-  cardsTotal: 20,
-  cardsMax: 20,
-  assault: 7,
-  precision: 8,
-  arcane: 5,
+type DeckSummary = {
+  name: string;
+  cardsTotal: number;
+  cardsMax: number;
+  assault: number;
+  precision: number;
+  arcane: number;
 };
 
 const MOCK_MATCHES: Array<{
@@ -61,9 +61,26 @@ const MOCK_MATCHES: Array<{
 const RATING_MOCK = "1,847";
 const RANK_MOCK = "#24";
 
-// ——— Small internal components ———
-function DeckPanel() {
-  const d = MOCK_DECK;
+function summarizeDeck(totalCards: number, maxCards: number, cards: Array<{ cardId: string; quantity: number; card: { triad_type: string } }>): DeckSummary {
+  const triadCounts = { assault: 0, precision: 0, arcane: 0 };
+  for (const item of cards) {
+    const t = (item.card?.triad_type || "").toLowerCase();
+    if (t in triadCounts) {
+      (triadCounts as Record<string, number>)[t] += item.quantity;
+    }
+  }
+  return {
+    name: totalCards === maxCards ? "Ready" : "Incomplete",
+    cardsTotal: totalCards,
+    cardsMax: maxCards,
+    assault: triadCounts.assault,
+    precision: triadCounts.precision,
+    arcane: triadCounts.arcane,
+  };
+}
+
+function DeckPanel({ deck, onEditDeck }: { deck: DeckSummary | null; onEditDeck: () => void }) {
+  const d = deck ?? { name: "—", cardsTotal: 0, cardsMax: 20, assault: 0, precision: 0, arcane: 0 };
   return (
     <div className={styles.column}>
       <h2 className={styles.sectionTitle}>Active deck</h2>
@@ -84,8 +101,8 @@ function DeckPanel() {
           </span>
         </div>
       </div>
-      <button type="button" className={styles.btnEdit}>
-        Edit deck
+      <button type="button" className={styles.btnEdit} onClick={onEditDeck}>
+        {d.cardsTotal === 0 ? "Create deck" : "Edit deck"}
       </button>
     </div>
   );
@@ -130,11 +147,20 @@ function MatchHistoryPanel() {
 
 export default function LobbyPage() {
   const navigate = useNavigate();
+  const token = useAppSelector((s) => s.auth.token);
   const userId = useAppSelector((s) => s.auth.userId);
+  const [deck, setDeck] = useState<DeckSummary | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isOnline, setIsOnline] = useState(socket.connected);
 
   const displayName = userId != null ? `PILOT_${userId}` : "PILOT_ZERO";
+
+  useEffect(() => {
+    if (!token) return;
+    fetchUserDeck(token)
+      .then((res) => setDeck(summarizeDeck(res.totalCards, res.maxCards, res.cards)))
+      .catch(() => setDeck(null));
+  }, [token]);
 
   useEffect(() => {
     socket.connect();
@@ -155,6 +181,10 @@ export default function LobbyPage() {
       setIsSearching(false);
       navigate("/game");
     }, 3000);
+  };
+
+  const handleOpenDeckBuilder = () => {
+    navigate("/deck-builder");
   };
 
   return (
@@ -178,7 +208,7 @@ export default function LobbyPage() {
       </header>
 
       <div className={styles.layout}>
-        <DeckPanel />
+        <DeckPanel deck={deck} onEditDeck={handleOpenDeckBuilder} />
         <div className={styles.centerColumn}>
           <button
             type="button"
