@@ -12,6 +12,14 @@ function initSocket(httpServer) {
   io.on("connection", (socket) => {
     console.log("✅ connected:", socket.id)
 
+      socket.on("arena:create", () => {
+        const arenaId = uuidv4(); // You can use any UUID generation library, e.g., 'uuid' npm package
+    // 1. Сгенерируй уникальный id (например, uuid)
+    // 2. Добавь запись в activeGames: { players: [socket.id] }
+    // 3. socket.join(arenaId)
+    // 4. socket.emit("arena:created", { arenaId })
+  });
+
     socket.on("match:join", (payload) => {
       const { matchId } = payload;
       console.log("MatchId::: ", matchId);
