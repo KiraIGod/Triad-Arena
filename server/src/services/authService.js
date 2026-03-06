@@ -35,7 +35,7 @@ async function registerUser(payload) {
     expiresIn: "7d"
   });
 
-  return { token, userId: user.id };
+  return { token, userId: user.id, nickname: user.nickname };
 }
 
 async function loginUser(payload) {
@@ -59,7 +59,7 @@ async function loginUser(payload) {
     expiresIn: "7d"
   });
 
-  return { token, userId: user.id };
+  return { token, userId: user.id, nickname: user.nickname };
 }
 
 module.exports = { registerUser, loginUser };

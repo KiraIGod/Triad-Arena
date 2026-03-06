@@ -20,23 +20,23 @@ function initSocket(httpServer) {
     // 4. socket.emit("arena:created", { arenaId })
   });
 
-    socket.on("match:join", (payload) => {
-      const { matchId } = payload;
-      console.log("MatchId::: ", matchId);
-      socket.emit("match:join", { matchId });
+    socket.on("arena:join", (payload) => {
+      const { arenaId } = payload;
+      console.log("ArenaId::: ", arenaId);
+      socket.emit("arena:join", { arenaId });
 
-      if (!matchId) {
-        socket.emit("match:error", {
+      if (!arenaId) {
+        socket.emit("arena:error", {
           type: "BAD_REQUEST",
-          message: "matchId required"
+          message: "arenaId required"
         });
         return;
       }
 
       // const match = getOrCreateMatch(matchId);
-      socket.join(matchId);
-      console.log(`socket ${socket.id} joined match ${matchId}`);
-      socket.emit("match:state", {
+      socket.join(arenaId);
+      console.log(`socket ${socket.id} joined arena ${arenaId}`);
+      socket.emit("arena:state", {
         // gameState: match
       });
       // io.to(matchId).emit("game:update", { players: getPlayersInGame(matchId) });

@@ -2,6 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import socket from "../../shared/socket/socket";
 
+type CreateArenaResponse = {
+  arenaId?: string;
+  error?: string;
+};
+
+type JoinArenaResponse = {
+  arenaId?: string;
+  opponentNickname?: string;
+  error?: string;
+};
+
 type UseLobbyArenaResult = {
   isOnline: boolean;
   isCreatingArena: boolean;
@@ -17,7 +28,7 @@ const [isCreatingArena, setIsCreatingArena] = useState(false);
 const [isJoiningArena, setIsJoiningArena] = useState(false);
   const [isOnline, setIsOnline] = useState(socket.connected);
   const [error, setError] = useState<string | null>(null);
-  const [arenaId] = useState<string | null>(null);
+  
 
   useEffect(() => {
     socket.connect();
@@ -35,22 +46,62 @@ const [isJoiningArena, setIsJoiningArena] = useState(false);
   }, []);
 
   const handleCreateArena = () => {
+    if (isCreatingArena) return;
+
     setError(null)
     setIsCreatingArena(true);
-    socket.emit("arena:create", (res) => {
-    if (!res?.matchId) {
-      setError(res?.error ?? "Failed to create arena");
+
+    const timeoutId = setTimeout(() => {
+      setError("Failed to create arena. Please try again.");
       setIsCreatingArena(false);
-      return;
+      console.error("arena:create timeout");
+    }, 7000);
+
+    socket.emit("arena:create", (res?: CreateArenaResponse) => {
+      clearTimeout(timeoutId);
+
+      if (!res?.arenaId) {
+        const message = res?.error ?? "Failed to create arena";
+        setError(message);
+        setIsCreatingArena(false);
+        console.error("arena:create failed:", message);
+        return;
     }
     setIsCreatingArena(false);
-    navigate(`/game?matchId=${res.matchId}`);
+    console.log("arena:create success:", res.arenaId)
+    navigate(`/game?arenaId=${res.arenaId}`);
     });
 
   }
 
   const handleJoinArena = () => {
-    // TODO: implement join random arena flow
+    if (isJoiningArena) return;
+
+    setError(null);
+    setIsJoiningArena(true);
+
+    const timeoutId = setTimeout(() => {
+      setError("Failed to join arena. Please try again.");
+      setIsJoiningArena(false);
+      console.error("arena:join-random timeout");
+    }, 7000);
+
+    socket.emit("arena:join", (res?: JoinArenaResponse) => {
+      clearTimeout(timeoutId);
+
+      if (!res?.arenaId) {
+        const message = res?.error ?? "Failed to join arena";
+        setError(message);
+        setIsJoiningArena(false);
+        console.error("arena:join failed:", message);
+        return;
+      }
+
+      setIsJoiningArena(false);
+      console.log("arena:join success:", res.arenaId);
+      const opponent = encodeURIComponent(res.opponentNickname ?? "UNKNOWN");
+      navigate(`/game?arenaId=${res.arenaId}&opponent=${opponent}`);
+    });
   };
 
   return {

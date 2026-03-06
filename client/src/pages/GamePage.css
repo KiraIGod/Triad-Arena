@@ -134,6 +134,8 @@
 }
 
 .game-state {
+  position: relative;
+  z-index: 2;
   text-align: right;
   text-transform: uppercase;
 }

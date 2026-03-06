@@ -170,10 +170,6 @@ export default function LobbyPage() {
 
 
 
-  const handleEnterArena = () => {
-
-  };
-
   const handleOpenDeckBuilder = () => {
     navigate("/deck-builder");
   };
@@ -208,7 +204,7 @@ export default function LobbyPage() {
         <DeckPanel deck={deck} onEditDeck={handleOpenDeckBuilder} />
 
         <section className={styles.centerColumn}>
-          <button type="button" className={styles.btnBattle} disabled={isJoiningArena} onClick={handleEnterArena}>
+          <button type="button" className={styles.btnBattle} disabled={isJoiningArena} onClick={handleJoinArena}>
             {isJoiningArena ? (
               <>
                 <span className={styles.loader} />
@@ -228,7 +224,7 @@ export default function LobbyPage() {
             {isCreatingArena ? (
               <>
                 <span className={styles.loader} />
-                Creating of Arena...
+                Creating Arena...
               </>
             ) : (
               <>
@@ -240,6 +236,7 @@ export default function LobbyPage() {
             )}
           </button>
 
+          {error && <p>{error}</p>}
           {/* {isSearching && <p className={styles.searchingText}>Searching for opponent...</p>} */}
 
           <div className={styles.ratingBlock}>
