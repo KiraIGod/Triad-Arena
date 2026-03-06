@@ -1,25 +1,25 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Card, Typography, Form, Input, Button, message } from "antd";
-import type { FormProps } from "antd";
-import { useAppDispatch } from "../store";
-import { setCredentials } from "../features/auth/authSlice";
-import api from "../shared/api/axios";
+import { useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { Card, Typography, Form, Input, Button, message } from "antd"
+import type { FormProps } from "antd"
+import { useAppDispatch } from "../store"
+import { setCredentials } from "../features/auth/authSlice"
+import api from "../shared/api/axios"
 
-import "./LoginRegister.css";
+import "./LoginRegister.css"
 
 type LoginFields = {
-  username: string;
-  password: string;
+  username: string
+  password: string
 };
 
 export default function LoginPage() {
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const [loading, setLoading] = useState(false)
 
   const onFinish: FormProps<LoginFields>["onFinish"] = async (values) => {
-    setLoading(true);
+    setLoading(true)
     try {
       const { data } = await api.post<{ token: string; userId: number; nickname: string }>(
         "/auth/login",
@@ -27,10 +27,10 @@ export default function LoginPage() {
           username: values.username.trim(),
           password: values.password,
         },
-      );
-      dispatch(setCredentials({ token: data.token, userId: data.userId, nickname: typeof data.nickname === "string" ? data.nickname : "" }));
-      message.success("Вход выполнен");
-      navigate("/lobby", { replace: true });
+      )
+      dispatch(setCredentials({ token: data.token, userId: data.userId, nickname: typeof data.nickname === "string" ? data.nickname : "" }))
+      message.success("Вход выполнен")
+      navigate("/lobby", { replace: true })
     } catch (err) {
       const msg =
         err &&
@@ -40,12 +40,12 @@ export default function LoginPage() {
             ?.data?.message === "string"
           ? (err as { response: { data: { message: string } } }).response.data
             .message
-          : "Ошибка входа";
-      message.error(msg);
+          : "Ошибка входа"
+      message.error(msg)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     // <Card>
@@ -126,7 +126,14 @@ export default function LoginPage() {
 
               <Form.Item
                 name="password"
-                rules={[{ required: true, message: "Enter password" }]}
+                rules={[
+                  { required: true, message: "Enter password" },
+                  { min: 8, message: 'Чуваааак, пароль должен быть минимум 8 символов'},
+                  {
+                    pattern: /^(?=.*[!@#$%^&*()_\-+=[\]{};:'",.<>/?\\|])/,
+                    message: 'Погоди, нужен хотя бы один спецсимвол',
+                  },
+                ]}
               >
                 <Input.Password
                   placeholder="PASSWORD"
@@ -161,5 +168,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

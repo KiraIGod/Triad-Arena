@@ -141,7 +141,14 @@ export default function RegisterPage() {
 
               <Form.Item
                 name="password"
-                rules={[{ required: true, message: "Введите пароль" }]}
+                rules={[
+                  { required: true, message: "Enter password" },
+                  { min: 8, message: 'Чуваааак, пароль должен быть минимум 8 символов'},
+                  {
+                    pattern: /^(?=.*[!@#$%^&*()_\-+=[\]{};:'",.<>/?\\|])/,
+                    message: 'Погоди, нужен хотя бы один спецсимвол',
+                  },
+                ]}
               >
                 <Input.Password
                   placeholder="PASSWORD"
