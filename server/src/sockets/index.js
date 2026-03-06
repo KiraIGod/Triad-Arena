@@ -1,8 +1,6 @@
 const { Server } = require("socket.io");
-const jwt = require("jsonwebtoken");
 const registerMatchSocket = require("./matchSocket");
 const registerArenaSocket = require("./arenaSocket");
-const { cleanupArena } = require("../services/matchService");
 
 const activeGames = new Map();
 
@@ -10,27 +8,6 @@ function initSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: {
       origin: "*"
-    }
-  });
-
-  io.use((socket, next) => {
-    try {
-      const token = socket.handshake?.auth?.token;
-      if (!token) {
-        return next(new Error("Authentication error"));
-      }
-
-      const payload = jwt.verify(token, process.env.JWT_SECRET || "dev_secret");
-      const userId = payload?.userId || payload?.id;
-      if (typeof userId !== "string" || userId.length === 0) {
-        return next(new Error("Authentication error"));
-      }
-
-      socket.userId = userId;
-      socket.data.userId = userId;
-      return next();
-    } catch (_error) {
-      return next(new Error("Authentication error"));
     }
   });
 
@@ -47,11 +24,11 @@ function initSocket(httpServer) {
       } else {
         activeGames.set(normalizedGameId, { updatedAt: Date.now() });
       }
+      
     });
 
     socket.on("disconnect", () => {
-      console.log(`[SOCKET] Player disconnected ${socket.userId || "unknown"}`);
-      cleanupArena(activeGames, socket.userId, socket.id);
+      // Placeholder for cleanup logic.
     });
   });
 
