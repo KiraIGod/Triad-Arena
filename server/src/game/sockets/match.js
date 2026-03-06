@@ -12,23 +12,31 @@ function initSocket(httpServer) {
   io.on("connection", (socket) => {
     console.log("✅ connected:", socket.id)
 
-    socket.on("match:join", (payload) => {
-      const { matchId } = payload;
-      console.log("MatchId::: ", matchId);
-      socket.emit("match:join", { matchId });
+      socket.on("arena:create", () => {
+        const arenaId = uuidv4(); // You can use any UUID generation library, e.g., 'uuid' npm package
+    // 1. Сгенерируй уникальный id (например, uuid)
+    // 2. Добавь запись в activeGames: { players: [socket.id] }
+    // 3. socket.join(arenaId)
+    // 4. socket.emit("arena:created", { arenaId })
+  });
 
-      if (!matchId) {
-        socket.emit("match:error", {
+    socket.on("arena:join", (payload) => {
+      const { arenaId } = payload;
+      console.log("ArenaId::: ", arenaId);
+      socket.emit("arena:join", { arenaId });
+
+      if (!arenaId) {
+        socket.emit("arena:error", {
           type: "BAD_REQUEST",
-          message: "matchId required"
+          message: "arenaId required"
         });
         return;
       }
 
       // const match = getOrCreateMatch(matchId);
-      socket.join(matchId);
-      console.log(`socket ${socket.id} joined match ${matchId}`);
-      socket.emit("match:state", {
+      socket.join(arenaId);
+      console.log(`socket ${socket.id} joined arena ${arenaId}`);
+      socket.emit("arena:state", {
         // gameState: match
       });
       // io.to(matchId).emit("game:update", { players: getPlayersInGame(matchId) });

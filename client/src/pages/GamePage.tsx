@@ -1,5 +1,8 @@
-﻿import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useAppSelector } from "../store";
 import { GameCard, type CardModel } from "../components/Card";
+import socket from "../shared/socket/socket";
 import "./GamePage.css";
 
 const PLAYER_CARDS: CardModel[] = [
@@ -65,6 +68,54 @@ export default function GamePage() {
   const [playerHP] = useState(85);
   const [opponentHP] = useState(62);
   const [energy] = useState(7);
+  const [searchParams] = useSearchParams();
+  const arenaId = searchParams.get("arenaId") ?? "unknown";
+  const [opponentNickname, setOpponentNickname] = useState(searchParams.get("opponent") ?? "UNKNOWN");
+  const nickname = useAppSelector((s) => s.auth.nickname);
+  const displayName = nickname != null ? `Gladiator ${nickname}` : "Gladiator UNKNOWN";
+
+  useEffect(() => {
+    const fromQuery = searchParams.get("opponent");
+    if (fromQuery) {
+      setOpponentNickname(fromQuery);
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (!arenaId || arenaId === "unknown") return;
+    if (!socket.connected) socket.connect();
+    socket.emit("join_game", arenaId);
+
+    const updateOpponentFromPlayers = (players?: Array<{ nickname?: string }>) => {
+      if (!Array.isArray(players)) return;
+      const names = players
+        .map((player) => player?.nickname)
+        .filter((value): value is string => Boolean(value));
+
+      const ownName = (nickname ?? "").toLowerCase();
+      const candidate = names.find((name) => name.toLowerCase() !== ownName);
+      if (candidate) {
+        setOpponentNickname(candidate);
+      } else {
+        setOpponentNickname("UNKNOWN");
+      }
+    };
+
+    socket.emit("arena:get-state", { arenaId }, (res?: { players?: Array<{ nickname?: string }> }) => {
+      updateOpponentFromPlayers(res?.players);
+    });
+
+    const onArenaReady = (payload?: { arenaId?: string; players?: Array<{ nickname?: string }> }) => {
+      if (!payload?.arenaId || payload.arenaId !== arenaId || !Array.isArray(payload.players)) return;
+      updateOpponentFromPlayers(payload.players);
+    };
+
+    socket.on("arena:ready", onArenaReady);
+    return () => {
+      socket.off("arena:ready", onArenaReady);
+    };
+  }, [arenaId, nickname]);
+
 
   const playerHPPercent = Math.max(0, Math.min(100, playerHP));
   const opponentHPPercent = Math.max(0, Math.min(100, opponentHP));
@@ -79,14 +130,16 @@ export default function GamePage() {
       <div className="game-screen__texture parchment-texture" />
       <div className="game-screen__vignette darkest-vignette" />
 
+
+
       <header className="game-hud game-hud--top parchment-panel">
         <div className="game-hud__identity">
           <div className="game-hud__accent game-hud__accent--blood" />
           <div>
-            <p className="game-hud__name comic-text-shadow">SHADOWREAPER</p>
+            <p className="game-hud__name comic-text-shadow">{opponentNickname}</p>
             <p className="game-hud__rank">Rank IV - Cultist</p>
           </div>
-        </div>
+        </div>      
 
         <div className="game-hp">
           <div className="game-hp__meta">
@@ -99,13 +152,18 @@ export default function GamePage() {
               style={{ width: `${opponentHPPercent}%` }}
             />
           </div>
-        </div>
+        </div>        
 
         <div className="game-state">
           <p className="game-state__label">Affliction</p>
           <p className="game-state__value">Fearful</p>
         </div>
       </header>
+
+      <div className="game-state">
+        <p className="game-state__label">Arena</p>
+        <p className="game-state__value">{arenaId}</p>
+      </div>
 
       <main className="game-battlefield">
         <div className="game-battlefield__divider" />
@@ -132,7 +190,7 @@ export default function GamePage() {
         <div className="game-hud__identity">
           <div className="game-hud__accent game-hud__accent--gold" />
           <div>
-            <p className="game-hud__name comic-text-shadow">YOU</p>
+            <p className="game-hud__name comic-text-shadow">{displayName}</p>
             <p className="game-hud__rank">Crusader - Level 12</p>
           </div>
         </div>
@@ -186,3 +244,4 @@ export default function GamePage() {
     </div>
   );
 }
+

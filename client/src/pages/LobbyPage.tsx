@@ -4,6 +4,7 @@ import { useAppSelector } from "../store";
 import styles from "./LobbyPage.module.css";
 import socket from "../shared/socket/socket";
 import { fetchUserDeck } from "../shared/api/deckBuilderApi";
+import { useLobbyArena } from "../features/customHooks/useLobbyArena";
 
 type DeckSummary = {
   name: string;
@@ -151,12 +152,11 @@ function MatchHistoryPanel() {
 }
 
 export default function LobbyPage() {
-  const navigate = useNavigate();
-  const token = useAppSelector((s) => s.auth.token);
-  const userId = useAppSelector((s) => s.auth.userId);
-  const [deck, setDeck] = useState<DeckSummary | null>(null);
-  const [isSearching, setIsSearching] = useState(false);
-  const [isOnline, setIsOnline] = useState(socket.connected);
+  const navigate = useNavigate()
+  const token = useAppSelector((s) => s.auth.token)
+  const userId = useAppSelector((s) => s.auth.userId)
+  const [deck, setDeck] = useState<DeckSummary | null>(null)
+  const { isCreatingArena, isJoiningArena, handleCreateArena, handleJoinArena, isOnline, error } = useLobbyArena(token)
 
   const displayName = userId != null ? `PILOT_${userId}` : "PILOT_ZERO";
 
@@ -167,26 +167,7 @@ export default function LobbyPage() {
       .catch(() => setDeck(null));
   }, [token]);
 
-  useEffect(() => {
-    socket.connect();
-    const onConnect = () => setIsOnline(true);
-    const onDisconnect = () => setIsOnline(false);
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.disconnect();
-    };
-  }, []);
 
-  const handleEnterArena = () => {
-    setIsSearching(true);
-    setTimeout(() => {
-      setIsSearching(false);
-      navigate("/game");
-    }, 3000);
-  };
 
   const handleOpenDeckBuilder = () => {
     navigate("/deck-builder");
@@ -222,8 +203,8 @@ export default function LobbyPage() {
         <DeckPanel deck={deck} onEditDeck={handleOpenDeckBuilder} />
 
         <section className={styles.centerColumn}>
-          <button type="button" className={styles.btnBattle} disabled={isSearching} onClick={handleEnterArena}>
-            {isSearching ? (
+          <button type="button" className={styles.btnBattle} disabled={isJoiningArena} onClick={handleJoinArena}>
+            {isJoiningArena ? (
               <>
                 <span className={styles.loader} />
                 Searching for opponent...
@@ -238,11 +219,11 @@ export default function LobbyPage() {
             )}
           </button>
 
-          <button type="button" className={styles.btnBattle} disabled={isSearching} onClick={handleEnterArena}>
-            {isSearching ? (
+          <button type="button" className={styles.btnBattle} disabled={isCreatingArena} onClick={handleCreateArena}>
+            {isCreatingArena ? (
               <>
                 <span className={styles.loader} />
-                Searching for opponent...
+                Creating Arena...
               </>
             ) : (
               <>
@@ -254,7 +235,8 @@ export default function LobbyPage() {
             )}
           </button>
 
-          {isSearching && <p className={styles.searchingText}>Searching for opponent...</p>}
+          {error && <p>{error}</p>}
+          {/* {isSearching && <p className={styles.searchingText}>Searching for opponent...</p>} */}
 
           <div className={styles.ratingBlock}>
             <p className={styles.ratingLine}>

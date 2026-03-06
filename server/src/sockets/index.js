@@ -1,5 +1,6 @@
 const { Server } = require("socket.io");
 const registerMatchSocket = require("./matchSocket");
+const registerArenaSocket = require("./arenaSocket");
 
 const activeGames = new Map();
 
@@ -12,8 +13,17 @@ function initSocket(httpServer) {
 
   io.on("connection", (socket) => {
     socket.on("join_game", (gameId) => {
-      socket.join(String(gameId));
-      activeGames.set(String(gameId), { updatedAt: Date.now() });
+      const normalizedGameId = String(gameId);
+      socket.join(normalizedGameId);
+      const current = activeGames.get(normalizedGameId);
+      if (current && typeof current === "object") {
+        activeGames.set(normalizedGameId, {
+          ...current,
+          updatedAt: Date.now()
+        });
+      } else {
+        activeGames.set(normalizedGameId, { updatedAt: Date.now() });
+      }
     });
 
     socket.on("disconnect", () => {
@@ -22,6 +32,7 @@ function initSocket(httpServer) {
   });
 
   registerMatchSocket(io);
+  registerArenaSocket(io, activeGames);
 
   return io;
 }

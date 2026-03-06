@@ -21,14 +21,14 @@ export default function LoginPage() {
   const onFinish: FormProps<LoginFields>["onFinish"] = async (values) => {
     setLoading(true);
     try {
-      const { data } = await api.post<{ token: string; userId: number }>(
+      const { data } = await api.post<{ token: string; userId: number; nickname: string }>(
         "/auth/login",
         {
           username: values.username.trim(),
           password: values.password,
         },
       );
-      dispatch(setCredentials({ token: data.token, userId: data.userId }));
+      dispatch(setCredentials({ token: data.token, userId: data.userId, nickname: typeof data.nickname === "string" ? data.nickname : "" }));
       message.success("Вход выполнен");
       navigate("/lobby", { replace: true });
     } catch (err) {
