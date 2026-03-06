@@ -22,7 +22,7 @@ type UseLobbyArenaResult = {
   handleJoinArena: () => void;
 };
 
-export function useLobbyArena(): UseLobbyArenaResult {
+export function useLobbyArena(token: string | null): UseLobbyArenaResult {
   const navigate = useNavigate();
 const [isCreatingArena, setIsCreatingArena] = useState(false);
 const [isJoiningArena, setIsJoiningArena] = useState(false);
@@ -31,6 +31,12 @@ const [isJoiningArena, setIsJoiningArena] = useState(false);
   
 
   useEffect(() => {
+    if (token) {
+      socket.auth = { token };
+      if (socket.connected) {
+        socket.disconnect();
+      }
+    }
     socket.connect();
     const onConnect = () => setIsOnline(true);
     const onDisconnect = () => setIsOnline(false);
@@ -43,7 +49,7 @@ const [isJoiningArena, setIsJoiningArena] = useState(false);
       socket.off("disconnect", onDisconnect);
       socket.disconnect();
     };
-  }, []);
+  }, [token]);
 
   const handleCreateArena = () => {
     if (isCreatingArena) return;

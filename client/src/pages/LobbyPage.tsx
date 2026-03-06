@@ -156,8 +156,7 @@ export default function LobbyPage() {
   const token = useAppSelector((s) => s.auth.token)
   const userId = useAppSelector((s) => s.auth.userId)
   const [deck, setDeck] = useState<DeckSummary | null>(null)
-  const [arenaId, setArenaId] = useState<string | null>(null)
-  const { isCreatingArena, isJoiningArena, handleCreateArena, handleJoinArena, isOnline, error } = useLobbyArena()
+  const { isCreatingArena, isJoiningArena, handleCreateArena, handleJoinArena, isOnline, error } = useLobbyArena(token)
 
   const displayName = userId != null ? `PILOT_${userId}` : "PILOT_ZERO";
 

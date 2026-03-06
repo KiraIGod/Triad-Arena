@@ -86,18 +86,28 @@ export default function GamePage() {
     if (!socket.connected) socket.connect();
     socket.emit("join_game", arenaId);
 
-    const onArenaReady = (payload?: { arenaId?: string; players?: Array<{ nickname?: string }> }) => {
-      if (!payload?.arenaId || payload.arenaId !== arenaId || !Array.isArray(payload.players)) return;
-
-      const names = payload.players
+    const updateOpponentFromPlayers = (players?: Array<{ nickname?: string }>) => {
+      if (!Array.isArray(players)) return;
+      const names = players
         .map((player) => player?.nickname)
         .filter((value): value is string => Boolean(value));
 
       const ownName = (nickname ?? "").toLowerCase();
-      const candidate = names.find((name) => name.toLowerCase() !== ownName) ?? names[0];
+      const candidate = names.find((name) => name.toLowerCase() !== ownName);
       if (candidate) {
         setOpponentNickname(candidate);
+      } else {
+        setOpponentNickname("UNKNOWN");
       }
+    };
+
+    socket.emit("arena:get-state", { arenaId }, (res?: { players?: Array<{ nickname?: string }> }) => {
+      updateOpponentFromPlayers(res?.players);
+    });
+
+    const onArenaReady = (payload?: { arenaId?: string; players?: Array<{ nickname?: string }> }) => {
+      if (!payload?.arenaId || payload.arenaId !== arenaId || !Array.isArray(payload.players)) return;
+      updateOpponentFromPlayers(payload.players);
     };
 
     socket.on("arena:ready", onArenaReady);

@@ -108,6 +108,34 @@ module.exports = function registerArenaSocket(io, activeGames) {
 
     socket.on("arena:join", handleJoinRandom);
 
+    socket.on("arena:get-state", (payload, ack) => {
+      try {
+        const arenaId = String(payload?.arenaId || "");
+        if (!arenaId) {
+          if (typeof ack === "function") ack({ error: "arenaId is required" });
+          return;
+        }
+
+        const arena = activeGames.get(arenaId);
+        if (!arena) {
+          if (typeof ack === "function") ack({ error: "Arena not found" });
+          return;
+        }
+
+        if (typeof ack === "function") {
+          ack({
+            arenaId,
+            status: arena.status,
+            players: Array.isArray(arena.players) ? arena.players : []
+          });
+        }
+      } catch (error) {
+        if (typeof ack === "function") {
+          ack({ error: "Failed to get arena state" });
+        }
+      }
+    });
+
 
   });
 };
