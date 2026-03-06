@@ -1,81 +1,66 @@
-﻿import { useEffect, useState } from "react";
 import matchSocket from "./socket";
 
-
-
-function GamePage() {
-  const matchId = "test-match-1"
-
-  const [status, setStatus] = useState("idle"); // idle | connecting | in_match
-  const [gameState, setGameState] = useState(null);
-  const [error, setError] = useState(null);
-
-
-  useEffect(() => {
-    if (!matchId) return;
-
-    setStatus("connecting");
-    setError(null);
-
-    if (!matchSocket.connected) matchSocket.connect();
-
-    // listeners
-    const onState = (data) => {
-      setGameState(data.gameState);
-      setStatus("in_match");
+export type MatchStatePayload = {
+  matchId: string;
+  players: string[];
+  state: {
+    version: number;
+    turn: number;
+    activePlayer: string;
+    players: {
+      player1: { hp: number; shield: number; energy: number };
+      player2: { hp: number; shield: number; energy: number };
     };
+    turnActions: Array<{ actionId: string; cardId: string; playerId: string }>;
+    finished: boolean;
+  };
+};
 
-    const onUpdate = (data) => {
-      setGameState(data.gameState);
-    };
+export type MatchErrorPayload = {
+  type: string;
+  message: string;
+};
 
-    const onError = (err) => {
-      setError(err);
-      setStatus("idle");
-    };
+export function queueForMatch(): void {
+  if (!matchSocket.connected) {
+    matchSocket.connect();
+  }
+  matchSocket.emit("match:queue");
+}
 
-    matchSocket.on("match:state", onState);
-    matchSocket.on("match:update", onUpdate);
-    matchSocket.on("match:error", onError);
+export function playMatchCard(payload: {
+  matchId: string;
+  cardId: string;
+  actionId: string;
+  version: number;
+}): void {
+  matchSocket.emit("match:playCard", payload);
+}
 
-    matchSocket.emit("match:join", { matchId }, (payload) => {
-      if (payload && payload.ok === false) {
-        setError(payload.error || { type: "JOIN_FAILED", message: "Join failed" });
-        setStatus("idle");
-      }
-    });
-    matchSocket.on("match:join", (data) => {
-      console.log("✅ joined match::: ", data);
-    })
+export function endMatchTurn(payload: { matchId: string; version: number }): void {
+  matchSocket.emit("match:endTurn", payload);
+}
 
+export function onMatchState(handler: (payload: MatchStatePayload) => void): void {
+  matchSocket.on("match:state", handler);
+}
 
+export function onMatchUpdate(handler: (payload: MatchStatePayload) => void): void {
+  matchSocket.on("match:update", handler);
+}
 
-    const onConnect = () => {
-      console.log("✅ connected:::: ", matchSocket.id);
-    };
+export function onMatchError(handler: (payload: MatchErrorPayload) => void): void {
+  matchSocket.on("match:error", handler);
+}
 
+export function offMatchState(handler: (payload: MatchStatePayload) => void): void {
+  matchSocket.off("match:state", handler);
+}
 
-    const onDisconnect = (reason) => {
-      console.log("❌ disconnected:", reason);
-    };
+export function offMatchUpdate(handler: (payload: MatchStatePayload) => void): void {
+  matchSocket.off("match:update", handler);
+}
 
-      
-
-    matchSocket.on("connect", onConnect);
-    matchSocket.on("disconnect", onDisconnect);
-
-    return () => {
-      matchSocket.off("match:state", onState);
-      matchSocket.off("match:update", onUpdate);
-      matchSocket.off("match:error", onError);
-      matchSocket.off("connect", onConnect);
-      matchSocket.off("disconnect", onDisconnect);
-      matchSocket.disconnect();
-    };
-  }, [matchId])
-
-  return (
-    <>
-    </>
-  )
+export function offMatchError(handler: (payload: MatchErrorPayload) => void): void {
+  matchSocket.off("match:error", handler);
 }

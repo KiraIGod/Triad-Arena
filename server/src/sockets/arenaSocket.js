@@ -38,7 +38,7 @@ module.exports = function registerArenaSocket(io, activeGames) {
           status: "waiting",
           createdAt: Date.now(),
           updatedAt: Date.now(),
-          players: [{ socketId: socket.id, nickname: hostNickname }]
+          players: [{ socketId: socket.id, userId: socket.userId || null, nickname: hostNickname }]
         });
 
         socket.join(arenaId);
@@ -67,6 +67,13 @@ module.exports = function registerArenaSocket(io, activeGames) {
         }
 
         const { arenaId, arena } = picked;
+        if (!Array.isArray(arena?.players)) {
+          if (typeof ack === "function") {
+            ack({ error: "Arena is unavailable" });
+          }
+          return;
+        }
+
         const joinerNickname = (await getNicknameFromSocket(socket)) || "UNKNOWN";
         const hostNickname = arena.players?.[0]?.nickname || "UNKNOWN";
 
@@ -78,11 +85,25 @@ module.exports = function registerArenaSocket(io, activeGames) {
           return;
         }
 
-        if (!arena.players.find((p) => p.socketId === socket.id)) {
-          arena.players.push({ socketId: socket.id, nickname: joinerNickname });
+        const isAlreadyInArena = arena.players.some((p) => p?.socketId === socket.id);
+        if (!isAlreadyInArena && arena.players.length >= 2) {
+          if (typeof ack === "function") {
+            ack({ error: "Arena is full" });
+          }
+          return;
         }
 
-        arena.status = "ready";
+        if (!isAlreadyInArena) {
+          arena.players.push({
+            socketId: socket.id,
+            userId: socket.userId || null,
+            nickname: joinerNickname
+          });
+        }
+
+        if (arena.players.length === 2) {
+          arena.status = "ready";
+        }
         arena.updatedAt = Date.now();
 
         socket.join(arenaId);

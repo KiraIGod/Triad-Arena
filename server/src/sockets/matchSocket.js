@@ -13,6 +13,8 @@ const {
 const DEBUG_GAME_STATE = String(process.env.DEBUG_GAME_STATE || "").toLowerCase() === "true";
 const RATE_LIMIT_WINDOW_MS = 1000;
 const RATE_LIMIT_MAX_ACTIONS = 10;
+const DEFAULT_DECK_NAME = "Main Deck";
+let waitingQueueEntry = null;
 
 function createSocketError(type, message) {
   return { type, message };
@@ -39,6 +41,31 @@ function getSerializedState(matchId, gameState) {
     console.log("GAME STATE UPDATE", safeState);
   }
   return safeState;
+}
+
+function buildMatchStatePayload(match, safeState) {
+  return {
+    matchId: String(match.id),
+    players: [match.player_one_id, match.player_two_id].filter(Boolean),
+    state: safeState
+  };
+}
+
+async function ensurePlayerDeckId(userId) {
+  const existingDeck = await db.Deck.findOne({
+    where: { user_id: userId },
+    order: [["created_at", "ASC"]]
+  });
+
+  if (existingDeck) {
+    return existingDeck.id;
+  }
+
+  const createdDeck = await db.Deck.create({
+    user_id: userId,
+    name: DEFAULT_DECK_NAME
+  });
+  return createdDeck.id;
 }
 
 function enforceActionRateLimit(socket) {
@@ -137,8 +164,60 @@ async function handleJoin(io, socket, payload = {}) {
   }
 
   socket.join(String(matchId));
-  socket.emit("match:state", { state: safeState });
+  socket.emit("match:state", buildMatchStatePayload(match, safeState));
   return io;
+}
+
+async function handleQueue(io, socket) {
+  const playerId = getPlayerFromSocket(socket);
+  if (!playerId) {
+    throw createSocketError(INVALID_ACTION, "Player not identified");
+  }
+
+  if (waitingQueueEntry && waitingQueueEntry.userId === playerId) {
+    socket.emit("match:queue", { status: "waiting" });
+    return;
+  }
+
+  if (!waitingQueueEntry) {
+    waitingQueueEntry = { socketId: socket.id, userId: playerId, queuedAt: Date.now() };
+    socket.emit("match:queue", { status: "waiting" });
+    return;
+  }
+
+  const waitingSocket = io.sockets.sockets.get(waitingQueueEntry.socketId);
+  if (!waitingSocket || !waitingSocket.connected || waitingQueueEntry.userId === playerId) {
+    waitingQueueEntry = { socketId: socket.id, userId: playerId, queuedAt: Date.now() };
+    socket.emit("match:queue", { status: "waiting" });
+    return;
+  }
+
+  const playerOneId = waitingQueueEntry.userId;
+  const playerTwoId = playerId;
+  waitingQueueEntry = null;
+
+  const [playerOneDeckId, playerTwoDeckId] = await Promise.all([
+    ensurePlayerDeckId(playerOneId),
+    ensurePlayerDeckId(playerTwoId)
+  ]);
+
+  const match = await db.Match.create({
+    player_one_id: playerOneId,
+    player_two_id: playerTwoId,
+    player_one_deck_id: playerOneDeckId,
+    player_two_deck_id: playerTwoDeckId,
+    status: "active",
+    started_at: new Date()
+  });
+
+  const { state } = await loadMatchState(match.id);
+  const safeState = getSerializedState(match.id, state);
+  const payload = buildMatchStatePayload(match, safeState);
+
+  waitingSocket.join(String(match.id));
+  socket.join(String(match.id));
+  waitingSocket.emit("match:state", payload);
+  socket.emit("match:state", payload);
 }
 
 async function handlePlayCard(io, socket, payload = {}) {
@@ -201,7 +280,10 @@ async function handlePlayCard(io, socket, payload = {}) {
         console.log(`[ACTION] Turn action #${lastTurnAction.actionIndex}`);
       }
     }
-    io.to(String(matchId)).emit("match:update", { state: safeState, events });
+    io.to(String(matchId)).emit("match:update", {
+      ...buildMatchStatePayload(match, safeState),
+      events
+    });
     io.to(String(matchId)).emit("match:finish", { winnerId });
     clearMatchRuntime(matchId);
     return;
@@ -211,7 +293,10 @@ async function handlePlayCard(io, socket, payload = {}) {
   if (lastTurnAction && Number.isFinite(lastTurnAction.actionIndex)) {
     console.log(`[ACTION] Turn action #${lastTurnAction.actionIndex}`);
   }
-  io.to(String(matchId)).emit("match:update", { state: safeState, events });
+  io.to(String(matchId)).emit("match:update", {
+    ...buildMatchStatePayload(match, safeState),
+    events
+  });
 }
 
 async function handleEndTurn(io, socket, payload = {}) {
@@ -255,13 +340,19 @@ async function handleEndTurn(io, socket, payload = {}) {
         payload: { winnerId }
       })
     );
-    io.to(String(matchId)).emit("match:update", { state: safeState, events });
+    io.to(String(matchId)).emit("match:update", {
+      ...buildMatchStatePayload(match, safeState),
+      events
+    });
     io.to(String(matchId)).emit("match:finish", { winnerId });
     clearMatchRuntime(matchId);
     return;
   }
 
-  io.to(String(matchId)).emit("match:update", { state: safeState, events });
+  io.to(String(matchId)).emit("match:update", {
+    ...buildMatchStatePayload(match, safeState),
+    events
+  });
 }
 
 function wrapSocketHandler(socket, handler) {
@@ -277,8 +368,14 @@ function wrapSocketHandler(socket, handler) {
 module.exports = function registerMatchSocket(io) {
   io.on("connection", (socket) => {
     socket.data.matchActionHistory = [];
+    socket.on("match:queue", wrapSocketHandler(socket, () => handleQueue(io, socket)));
     socket.on("match:join", wrapSocketHandler(socket, (payload) => handleJoin(io, socket, payload)));
     socket.on("match:playCard", wrapSocketHandler(socket, (payload) => handlePlayCard(io, socket, payload)));
     socket.on("match:endTurn", wrapSocketHandler(socket, (payload) => handleEndTurn(io, socket, payload)));
+    socket.on("disconnect", () => {
+      if (waitingQueueEntry?.socketId === socket.id) {
+        waitingQueueEntry = null;
+      }
+    });
   });
 };

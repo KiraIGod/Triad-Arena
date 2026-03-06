@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
+    "test:game-flow": "node src/tests/gameFlowTest.js",
     "db:migrate": "sequelize-cli db:migrate --config src/db/config/config.js --migrations-path src/db/migrations",
     "db:seed": "sequelize-cli db:seed:all --config src/db/config/config.js --seeders-path src/db/seeders",
     "db:rs": "npx sequelize-cli db:migrate:undo:all && npx sequelize-cli db:migrate && npx sequelize-cli db:seed:all"
@@ -22,6 +23,7 @@
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
+    "socket.io-client": "^4.8.3",
     "sequelize-cli": "^6.6.5"
   }
 }
