@@ -272,7 +272,6 @@ export default function DeckBuilderPage() {
           cardsById={cardsById}
           totalCards={totalCards}
           maxCards={MAX_DECK_SIZE}
-          onSelectCard={setSelectedCard}
           onRemoveCard={removeCardFromDeck}
         />
       </div>
