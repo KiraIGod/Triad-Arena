@@ -11,7 +11,7 @@ import "./LoginRegister.css"
 type LoginFields = {
   username: string
   password: string
-};
+}
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -131,7 +131,7 @@ export default function LoginPage() {
                   { min: 8, message: 'Чуваааак, пароль должен быть минимум 8 символов'},
                   {
                     pattern: /^(?=.*[!@#$%^&*()_\-+=[\]{};:'",.<>/?\\|])/,
-                    message: 'Погоди, нужен хотя бы один спецсимвол',
+                    message: 'И..., минимум один спецсимвол',
                   },
                 ]}
               >

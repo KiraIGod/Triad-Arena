@@ -1,26 +1,26 @@
-import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { Typography, Form, Input, Button, message } from "antd";
-import type { FormProps } from "antd";
-import { useAppDispatch } from "../store";
-import { setCredentials } from "../features/auth/authSlice";
-import api from "../shared/api/axios";
+import { useState } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { Typography, Form, Input, Button, message } from "antd"
+import type { FormProps } from "antd"
+import { useAppDispatch } from "../store"
+import { setCredentials } from "../features/auth/authSlice"
+import api from "../shared/api/axios"
 
-import "./LoginRegister.css";
+import "./LoginRegister.css"
 
 type RegisterFields = {
   username: string;
   password: string;
-  confirmPassword: string;
-};
+  confirmPassword: string
+}
 
 export default function RegisterPage() {
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const [loading, setLoading] = useState(false)
 
   const onFinish: FormProps<RegisterFields>["onFinish"] = async (values) => {
-    setLoading(true);
+    setLoading(true)
     try {
       const { data } = await api.post<{ token: string; userId: number; nickname: string }>(
         "/auth/register",
@@ -28,10 +28,10 @@ export default function RegisterPage() {
           username: values.username.trim(),
           password: values.password,
         },
-      );
-      dispatch(setCredentials({ token: data.token, userId: data.userId, nickname: typeof data.nickname === "string" ? data.nickname : "" }));
-      message.success("Регистрация успешна");
-      navigate("/lobby", { replace: true });
+      )
+      dispatch(setCredentials({ token: data.token, userId: data.userId, nickname: typeof data.nickname === "string" ? data.nickname : "" }))
+      message.success("Регистрация успешна")
+      navigate("/lobby", { replace: true })
     } catch (err) {
       const msg =
         err &&
@@ -41,12 +41,12 @@ export default function RegisterPage() {
           ?.data?.message === "string"
           ? (err as { response: { data: { message: string } } }).response.data
               .message
-          : "Ошибка регистрации";
-      message.error(msg);
+          : "Ошибка регистрации"
+      message.error(msg)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     // <Card className="registerCard">
@@ -146,7 +146,7 @@ export default function RegisterPage() {
                   { min: 8, message: 'Чуваааак, пароль должен быть минимум 8 символов'},
                   {
                     pattern: /^(?=.*[!@#$%^&*()_\-+=[\]{};:'",.<>/?\\|])/,
-                    message: 'Погоди, нужен хотя бы один спецсимвол',
+                    message: 'И..., минимум один спецсимвол',
                   },
                 ]}
               >
@@ -205,5 +205,5 @@ export default function RegisterPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }
