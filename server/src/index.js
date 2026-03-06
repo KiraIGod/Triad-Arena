@@ -4,6 +4,7 @@ const cors = require("cors");
 const http = require("http");
 const authRoutes = require("./routes/auth");
 const leaderboardRoutes = require("./routes/leaderboard");
+const deckBuilderRoutes = require("./routes/deckBuilder");
 const { initSocket } = require("./sockets/index");
 
 dotenv.config();
@@ -21,6 +22,7 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/leaderboard", leaderboardRoutes);
+app.use("/api/deck-builder", deckBuilderRoutes);
 
 initSocket(server);
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Card, Typography, Form, Input, Button, message } from "antd";
+import { Typography, Form, Input, Button, message } from "antd";
 import type { FormProps } from "antd";
 import { useAppDispatch } from "../store";
 import { setCredentials } from "../features/auth/authSlice";
@@ -22,14 +22,14 @@ export default function RegisterPage() {
   const onFinish: FormProps<RegisterFields>["onFinish"] = async (values) => {
     setLoading(true);
     try {
-      const { data } = await api.post<{ token: string; userId: number }>(
+      const { data } = await api.post<{ token: string; userId: number; nickname: string }>(
         "/auth/register",
         {
           username: values.username.trim(),
           password: values.password,
         },
       );
-      dispatch(setCredentials({ token: data.token, userId: data.userId }));
+      dispatch(setCredentials({ token: data.token, userId: data.userId, nickname: typeof data.nickname === "string" ? data.nickname : "" }));
       message.success("Регистрация успешна");
       navigate("/lobby", { replace: true });
     } catch (err) {

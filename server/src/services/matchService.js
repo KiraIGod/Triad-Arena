@@ -19,10 +19,12 @@ function toVersion(value) {
 
 function getPlayerFromSocket(socket) {
   const candidates = [
+    socket?.userId,
     socket?.data?.userId,
     socket?.data?.user?.id,
     socket?.user?.id,
     socket?.handshake?.auth?.userId,
+    socket?.handshake?.auth?.id,
     socket?.handshake?.query?.userId
   ];
 
@@ -154,6 +156,44 @@ function clearMatchRuntime(matchId) {
   lastStateCache.delete(cacheKey);
 }
 
+function cleanupArena(activeGames, userId, socketId) {
+  try {
+    if (!(activeGames instanceof Map)) {
+      return;
+    }
+
+    for (const [arenaId, arena] of activeGames.entries()) {
+      if (!arena || !Array.isArray(arena.players)) {
+        continue;
+      }
+
+      const nextPlayers = arena.players.filter((player) => {
+        const sameSocket = socketId && player?.socketId === socketId;
+        const sameUser = userId && player?.userId === userId;
+        return !sameSocket && !sameUser;
+      });
+
+      if (nextPlayers.length === arena.players.length) {
+        continue;
+      }
+
+      if (nextPlayers.length === 0) {
+        activeGames.delete(arenaId);
+        continue;
+      }
+
+      arena.players = nextPlayers;
+      arena.updatedAt = Date.now();
+      if (arena.status === "ready" && nextPlayers.length < 2) {
+        arena.status = "waiting";
+      }
+      activeGames.set(arenaId, arena);
+    }
+  } catch (error) {
+    console.error("[arena:cleanup] failed:", error?.message || error);
+  }
+}
+
 module.exports = {
   loadMatchState,
   saveMatchState,
@@ -162,6 +202,7 @@ module.exports = {
   getMatchEventLog,
   getLastState,
   clearMatchRuntime,
+  cleanupArena,
   matchStateCache,
   eventLogCache,
   lastStateCache

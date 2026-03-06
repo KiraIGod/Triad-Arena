@@ -3,6 +3,7 @@ const { sequelize } = require("../index");
 const initUserModel = require("./User");
 const initPlayerStatsModel = require("./PlayerStats");
 const initCardModel = require("./Card");
+const initUserCardModel = require("./UserCard");
 const initDeckModel = require("./Deck");
 const initDeckCardModel = require("./DeckCard");
 const initMatchModel = require("./Match");
@@ -14,6 +15,7 @@ const db = {};
 db.User = initUserModel(sequelize);
 db.PlayerStats = initPlayerStatsModel(sequelize);
 db.Card = initCardModel(sequelize);
+db.UserCard = initUserCardModel(sequelize);
 db.Deck = initDeckModel(sequelize);
 db.DeckCard = initDeckCardModel(sequelize);
 db.Match = initMatchModel(sequelize);
@@ -26,6 +28,11 @@ db.PlayerStats.belongsTo(db.User, { foreignKey: "user_id" });
 
 db.User.hasMany(db.Deck, { foreignKey: "user_id", onDelete: "CASCADE" });
 db.Deck.belongsTo(db.User, { foreignKey: "user_id" });
+
+db.User.hasMany(db.UserCard, { foreignKey: "user_id", onDelete: "CASCADE" });
+db.UserCard.belongsTo(db.User, { foreignKey: "user_id" });
+db.Card.hasMany(db.UserCard, { foreignKey: "card_id", onDelete: "CASCADE" });
+db.UserCard.belongsTo(db.Card, { foreignKey: "card_id" });
 
 db.Deck.hasMany(db.DeckCard, { foreignKey: "deck_id", onDelete: "CASCADE" });
 db.DeckCard.belongsTo(db.Deck, { foreignKey: "deck_id" });

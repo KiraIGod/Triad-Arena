@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "../store";
-import socket from "../shared/socket/socket";
 import styles from "./LobbyPage.module.css";
+import socket from "../shared/socket/socket";
+import { fetchUserDeck } from "../shared/api/deckBuilderApi";
+import { useLobbyArena } from "../features/customHooks/useLobbyArena";
 
-// ——— Mock data ———
-const MOCK_DECK = {
-  name: "Strike Force Alpha",
-  cardsTotal: 20,
-  cardsMax: 20,
-  assault: 7,
-  precision: 8,
-  arcane: 5,
+type DeckSummary = {
+  name: string;
+  cardsTotal: number;
+  cardsMax: number;
+  assault: number;
+  precision: number;
+  arcane: number;
 };
 
 const MOCK_MATCHES: Array<{
@@ -21,155 +22,176 @@ const MOCK_MATCHES: Array<{
   turns: number;
   hpLeft: number;
 }> = [
-  {
-    date: "02.03.25",
-    opponent: "SHADOW_IX",
-    result: "Victory",
-    turns: 12,
-    hpLeft: 45,
-  },
-  {
-    date: "01.03.25",
-    opponent: "NOVA_PRIME",
-    result: "Defeat",
-    turns: 8,
-    hpLeft: 0,
-  },
-  {
-    date: "28.02.25",
-    opponent: "CRIMSON_7",
-    result: "Victory",
-    turns: 15,
-    hpLeft: 22,
-  },
-  {
-    date: "27.02.25",
-    opponent: "ZERO_ONE",
-    result: "Defeat",
-    turns: 10,
-    hpLeft: 0,
-  },
-  {
-    date: "25.02.25",
-    opponent: "ECHO_99",
-    result: "Victory",
-    turns: 11,
-    hpLeft: 38,
-  },
+  { date: "02.03.25", opponent: "SHADOW_IX", result: "Victory", turns: 12, hpLeft: 45 },
+  { date: "01.03.25", opponent: "NOVA_PRIME", result: "Defeat", turns: 8, hpLeft: 0 },
+  { date: "28.02.25", opponent: "CRIMSON_7", result: "Victory", turns: 15, hpLeft: 22 },
+  { date: "27.02.25", opponent: "ZERO_ONE", result: "Defeat", turns: 10, hpLeft: 0 },
+  { date: "25.02.25", opponent: "ECHO_99", result: "Victory", turns: 11, hpLeft: 38 }
 ];
 
 const RATING_MOCK = "1,847";
 const RANK_MOCK = "#24";
 
-// ——— Small internal components ———
-function DeckPanel() {
-  const d = MOCK_DECK;
+function summarizeDeck(
+  totalCards: number,
+  maxCards: number,
+  cards: Array<{ cardId: string; quantity: number; card: { triad_type: string } }>
+): DeckSummary {
+  const triadCounts = { assault: 0, precision: 0, arcane: 0 };
+  for (const item of cards) {
+    const t = (item.card?.triad_type || "").toLowerCase();
+    if (t in triadCounts) {
+      (triadCounts as Record<string, number>)[t] += item.quantity;
+    }
+  }
+  return {
+    name: totalCards === maxCards ? "Ready" : "Incomplete",
+    cardsTotal: totalCards,
+    cardsMax: maxCards,
+    assault: triadCounts.assault,
+    precision: triadCounts.precision,
+    arcane: triadCounts.arcane
+  };
+}
+
+function DeckPanel({ deck, onEditDeck }: { deck: DeckSummary | null; onEditDeck: () => void }) {
+  const d = deck ?? { name: "-", cardsTotal: 0, cardsMax: 20, assault: 0, precision: 0, arcane: 0 };
+  const triumphRate = d.cardsMax > 0 ? ((d.cardsTotal / d.cardsMax) * 100).toFixed(1) : "0.0";
+
   return (
-    <div className={styles.column}>
-      <h2 className={styles.sectionTitle}>Active deck</h2>
-      <div className={styles.deckCard}>
-        <h3 className={styles.deckName}>{d.name}</h3>
+    <section className={styles.sidePanel}>
+      <div className={styles.panelLabelRow}>
+        <span className={styles.panelDiamond} />
+        <span className={styles.panelLabel}>Warrior</span>
+        <span className={styles.panelLine} />
+      </div>
+
+      <div className={styles.ratingCard}>
+        <p className={styles.kicker}>Resolve</p>
+        <p className={styles.ratingNumber}>{RATING_MOCK}</p>
+      </div>
+
+      <div className={styles.statCard}>
+        <p className={styles.kicker}>Active deck</p>
+        <p className={styles.deckName}>{d.name}</p>
         <p className={styles.deckMeta}>
           {d.cardsTotal}/{d.cardsMax} cards
         </p>
-        <div className={styles.deckStats}>
-          <span className={styles.stat}>
-            Assault <span className={styles.statValue}>{d.assault}</span>
-          </span>
-          <span className={styles.stat}>
-            Precision <span className={styles.statValue}>{d.precision}</span>
-          </span>
-          <span className={styles.stat}>
-            Arcane <span className={styles.statValue}>{d.arcane}</span>
-          </span>
+      </div>
+
+      <div className={styles.deckTriadGrid}>
+        <div className={styles.triadBox}>
+          <span>Assault</span>
+          <strong>{d.assault}</strong>
+        </div>
+        <div className={styles.triadBox}>
+          <span>Precision</span>
+          <strong>{d.precision}</strong>
+        </div>
+        <div className={styles.triadBox}>
+          <span>Arcane</span>
+          <strong>{d.arcane}</strong>
         </div>
       </div>
-      <button type="button" className={styles.btnEdit}>
-        Edit deck
+
+      <div className={styles.statCard}>
+        <p className={styles.kicker}>Triumph rate</p>
+        <p className={styles.triumphValue}>{triumphRate}%</p>
+      </div>
+
+      <button type="button" className={styles.btnEdit} onClick={onEditDeck}>
+        {d.cardsTotal === 0 ? "Create deck" : "Edit deck"}
       </button>
-    </div>
+    </section>
   );
 }
 
 function MatchHistoryPanel() {
   return (
-    <div className={styles.column}>
-      <h2 className={styles.sectionTitle}>Match history</h2>
+    <section className={styles.historyPanel}>
+      <div className={styles.historyHeader}>
+        <span className={styles.panelDiamondBlood} />
+        <span className={styles.panelLabel}>Battle Chronicle</span>
+        <span className={styles.panelLine} />
+      </div>
+
       <div className={styles.matchList}>
         {MOCK_MATCHES.map((m, i) => (
           <div key={i} className={styles.matchCard}>
-            <div className={styles.matchRow}>
-              <span className={styles.matchMeta}>{m.date}</span>
-              <span
-                className={
-                  m.result === "Victory"
-                    ? styles.matchResultVictory
-                    : styles.matchResultDefeat
-                }
-              >
-                {m.result}
-              </span>
+            <span
+              className={
+                m.result === "Victory" ? styles.matchIndicatorVictory : styles.matchIndicatorDefeat
+              }
+              aria-hidden
+            />
+            <div className={styles.matchMain}>
+              <div className={styles.matchRow}>
+                <span className={styles.matchOpponent}>{m.opponent}</span>
+                <span className={m.result === "Victory" ? styles.matchResultVictory : styles.matchResultDefeat}>
+                  {m.result}
+                </span>
+              </div>
+              <div className={styles.matchRow}>
+                <span className={styles.matchMeta}>{m.date}</span>
+                <span className={styles.matchMeta}>Turns: {m.turns}</span>
+              </div>
             </div>
-            <div className={styles.matchRow}>
-              <span className={styles.matchOpponent}>{m.opponent}</span>
-            </div>
-            <div className={styles.matchRow}>
-              <span className={styles.matchMeta}>
-                Turns: {m.turns} · HP left: {m.hpLeft}
-              </span>
+            <div className={styles.damageBox}>
+              <span className={styles.damageLabel}>HP Left</span>
+              <strong className={styles.damageValue}>{m.hpLeft}</strong>
             </div>
           </div>
         ))}
       </div>
+
       <button type="button" className={styles.btnViewAll}>
         View all data
       </button>
-    </div>
+    </section>
   );
 }
 
 export default function LobbyPage() {
-  const navigate = useNavigate();
-  const userId = useAppSelector((s) => s.auth.userId);
-  const [isSearching, setIsSearching] = useState(false);
-  const [isOnline, setIsOnline] = useState(socket.connected);
+  const navigate = useNavigate()
+  const token = useAppSelector((s) => s.auth.token)
+  const userId = useAppSelector((s) => s.auth.userId)
+  const [deck, setDeck] = useState<DeckSummary | null>(null)
+  const { isCreatingArena, isJoiningArena, handleCreateArena, handleJoinArena, isOnline, error } = useLobbyArena(token)
 
   const displayName = userId != null ? `PILOT_${userId}` : "PILOT_ZERO";
 
   useEffect(() => {
-    socket.connect();
-    const onConnect = () => setIsOnline(true);
-    const onDisconnect = () => setIsOnline(false);
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      socket.disconnect();
-    };
-  }, []);
+    if (!token) return;
+    fetchUserDeck(token)
+      .then((res) => setDeck(summarizeDeck(res.totalCards, res.maxCards, res.cards)))
+      .catch(() => setDeck(null));
+  }, [token]);
 
-  const handleEnterArena = () => {
-    setIsSearching(true);
-    setTimeout(() => {
-      setIsSearching(false);
-      navigate("/game");
-    }, 3000);
+
+
+  const handleOpenDeckBuilder = () => {
+    navigate("/deck-builder");
   };
 
   return (
     <div className={styles.page}>
+      <div className={styles.bgImage} />
+      <div className={`${styles.bgTexture} parchment-texture`} />
+      <div className={`${styles.bgVignette} darkest-vignette`} />
+
       <header className={styles.header}>
-        <div className={styles.brand}>
-          <h1 className={styles.title}>Triad Arena</h1>
-          <p className={styles.subtitle}>Sector_7 // Lobby</p>
+        <div className={styles.brandWrap}>
+          <div className={styles.brandAccent} />
+          <div className={styles.brand}>
+            <h1 className={styles.title}>Triad Arena</h1>
+            <p className={styles.subtitle}>Sector_7 // Encampment</p>
+          </div>
         </div>
+
         <div className={styles.headerRight}>
           <p className={styles.status}>
-            Status:{" "}
-            <span
-              className={isOnline ? styles.statusOnline : styles.statusOffline}
-            >
+            Status{" "}
+            <span className={isOnline ? styles.statusOnline : styles.statusOffline}>
               {isOnline ? "Online" : "Offline"}
             </span>
           </p>
@@ -178,31 +200,44 @@ export default function LobbyPage() {
       </header>
 
       <div className={styles.layout}>
-        <DeckPanel />
-        <div className={styles.centerColumn}>
-          <button
-            type="button"
-            className={styles.btnArena}
-            disabled={isSearching}
-            onClick={handleEnterArena}
-          >
-            {isSearching ? (
+        <DeckPanel deck={deck} onEditDeck={handleOpenDeckBuilder} />
+
+        <section className={styles.centerColumn}>
+          <button type="button" className={styles.btnBattle} disabled={isJoiningArena} onClick={handleJoinArena}>
+            {isJoiningArena ? (
               <>
                 <span className={styles.loader} />
-                Searching for opponent…
+                Searching for opponent...
               </>
             ) : (
               <>
                 <span className={styles.btnArenaIcon} aria-hidden>
-                  ⚔
+                  +
                 </span>
-                Enter Arena
+                Find Arena
               </>
             )}
           </button>
-          {isSearching && (
-            <p className={styles.searchingText}>Searching for opponent…</p>
-          )}
+
+          <button type="button" className={styles.btnBattle} disabled={isCreatingArena} onClick={handleCreateArena}>
+            {isCreatingArena ? (
+              <>
+                <span className={styles.loader} />
+                Creating Arena...
+              </>
+            ) : (
+              <>
+                <span className={styles.btnArenaIcon} aria-hidden>
+                  +
+                </span>
+                Create Arena
+              </>
+            )}
+          </button>
+
+          {error && <p>{error}</p>}
+          {/* {isSearching && <p className={styles.searchingText}>Searching for opponent...</p>} */}
+
           <div className={styles.ratingBlock}>
             <p className={styles.ratingLine}>
               Rating <span className={styles.ratingValue}>{RATING_MOCK}</span>
@@ -211,7 +246,8 @@ export default function LobbyPage() {
               Rank <span className={styles.ratingValue}>{RANK_MOCK}</span>
             </p>
           </div>
-        </div>
+        </section>
+
         <MatchHistoryPanel />
       </div>
     </div>
