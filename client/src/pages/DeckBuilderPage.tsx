@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "../store";
 import {
   fetchAllCards,
@@ -26,6 +27,7 @@ function toMap(
 }
 
 export default function DeckBuilderPage() {
+  const navigate = useNavigate();
   const token = useAppSelector((state) => state.auth.token);
 
   const [cards, setCards] = useState<DeckBuilderCard[]>([]);
@@ -105,14 +107,19 @@ export default function DeckBuilderPage() {
 
   const handleRemoveCard = () => {
     if (!selectedCard || !canRemoveCard(selectedCard.id)) return;
+    removeCardFromDeck(selectedCard.id);
+  };
+
+  const removeCardFromDeck = (cardId: string) => {
     setDeckByCardId((prev) => {
-      const current = prev[selectedCard.id] ?? 0;
+      const current = prev[cardId] ?? 0;
+      if (current <= 0) return prev;
       const next = current - 1;
       if (next <= 0) {
-        const { [selectedCard.id]: _removed, ...rest } = prev;
+        const { [cardId]: _removed, ...rest } = prev;
         return rest;
       }
-      return { ...prev, [selectedCard.id]: next };
+      return { ...prev, [cardId]: next };
     });
     setStatus(null);
   };
@@ -191,7 +198,16 @@ export default function DeckBuilderPage() {
   return (
     <main className="deckBuilder">
       <div className="deckBuilder__header">
-        <h1 className="deckBuilder__title">Deck Builder</h1>
+        <div className="deckBuilder__headerLeft">
+          <button
+            type="button"
+            className="deckBuilder__btn deckBuilder__btn--back"
+            onClick={() => navigate("/lobby")}
+          >
+            Back
+          </button>
+          <h1 className="deckBuilder__title">Deck Builder</h1>
+        </div>
 
         <div className="deckBuilder__actions">
           <button
@@ -237,6 +253,8 @@ export default function DeckBuilderPage() {
           cards={cards}
           collectionByCardId={collectionByCardId}
           deckByCardId={deckByCardId}
+          maxDeckSize={MAX_DECK_SIZE}
+          totalCards={totalCards}
           onSelectCard={setSelectedCard}
         />
         <CurrentDeck
@@ -245,6 +263,7 @@ export default function DeckBuilderPage() {
           totalCards={totalCards}
           maxCards={MAX_DECK_SIZE}
           onSelectCard={setSelectedCard}
+          onRemoveCard={removeCardFromDeck}
         />
       </div>
 

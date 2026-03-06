@@ -4,6 +4,8 @@ type CardPoolProps = {
   cards: DeckBuilderCard[];
   collectionByCardId: Record<string, number>;
   deckByCardId: Record<string, number>;
+  maxDeckSize: number;
+  totalCards: number;
   onSelectCard: (card: DeckBuilderCard) => void;
 };
 
@@ -20,6 +22,8 @@ export default function CardPool({
   cards,
   collectionByCardId,
   deckByCardId,
+  maxDeckSize,
+  totalCards,
   onSelectCard,
 }: CardPoolProps) {
   return (
@@ -34,12 +38,13 @@ export default function CardPool({
           const owned = collectionByCardId[card.id] ?? 0;
           const inDeck = deckByCardId[card.id] ?? 0;
           const modifier = triadModifier(card.triad_type);
+          const exhausted = inDeck >= owned || totalCards >= maxDeckSize;
 
           return (
             <button
               key={card.id}
               type="button"
-              className={`poolCard ${modifier ? `poolCard--${modifier}` : ""}`}
+              className={`poolCard ${modifier ? `poolCard--${modifier}` : ""} ${exhausted ? "poolCard--exhausted" : ""}`}
               onClick={() => onSelectCard(card)}
             >
               <div className="poolCard__mana">{card.mana_cost}</div>
