@@ -110,6 +110,15 @@ export default function DeckBuilderPage() {
     removeCardFromDeck(selectedCard.id);
   };
 
+  const addCardToDeck = (cardId: string) => {
+    if (!canAddCard(cardId)) return;
+    setDeckByCardId((prev) => ({
+      ...prev,
+      [cardId]: (prev[cardId] ?? 0) + 1,
+    }));
+    setStatus(null);
+  };
+
   const removeCardFromDeck = (cardId: string) => {
     setDeckByCardId((prev) => {
       const current = prev[cardId] ?? 0;
@@ -255,6 +264,7 @@ export default function DeckBuilderPage() {
           deckByCardId={deckByCardId}
           maxDeckSize={MAX_DECK_SIZE}
           totalCards={totalCards}
+          onAddCard={addCardToDeck}
           onSelectCard={setSelectedCard}
         />
         <CurrentDeck

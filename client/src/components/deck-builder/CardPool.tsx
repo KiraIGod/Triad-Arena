@@ -6,6 +6,7 @@ type CardPoolProps = {
   deckByCardId: Record<string, number>;
   maxDeckSize: number;
   totalCards: number;
+  onAddCard: (cardId: string) => void;
   onSelectCard: (card: DeckBuilderCard) => void;
 };
 
@@ -24,6 +25,7 @@ export default function CardPool({
   deckByCardId,
   maxDeckSize,
   totalCards,
+  onAddCard,
   onSelectCard,
 }: CardPoolProps) {
   return (
@@ -41,13 +43,23 @@ export default function CardPool({
           const exhausted = inDeck >= owned || totalCards >= maxDeckSize;
 
           return (
-            <button
+            <div
               key={card.id}
-              type="button"
               className={`poolCard ${modifier ? `poolCard--${modifier}` : ""} ${exhausted ? "poolCard--exhausted" : ""}`}
-              onClick={() => onSelectCard(card)}
+              onClick={() => !exhausted && onAddCard(card.id)}
             >
               <div className="poolCard__mana">{card.mana_cost}</div>
+              <button
+                type="button"
+                className="poolCard__infoBtn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectCard(card);
+                }}
+                aria-label={`Info about ${card.name}`}
+              >
+                i
+              </button>
               <div className="poolCard__name">{card.name}</div>
               <div className="poolCard__type">{card.type}</div>
 
@@ -68,7 +80,7 @@ export default function CardPool({
               <div className="poolCard__copies">
                 Owned: {owned} &middot; In deck: <span>{inDeck}</span>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>
