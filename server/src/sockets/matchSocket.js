@@ -10,10 +10,10 @@ const {
   appendMatchEvents,
   clearMatchRuntime
 } = require("../services/matchService");
+const { getActiveDeckId } = require("../services/deckBuilderService");
 const DEBUG_GAME_STATE = String(process.env.DEBUG_GAME_STATE || "").toLowerCase() === "true";
 const RATE_LIMIT_WINDOW_MS = 1000;
 const RATE_LIMIT_MAX_ACTIONS = 10;
-const DEFAULT_DECK_NAME = "Main Deck";
 let waitingQueueEntry = null;
 
 function createSocketError(type, message) {
@@ -52,20 +52,7 @@ function buildMatchStatePayload(match, safeState) {
 }
 
 async function ensurePlayerDeckId(userId) {
-  const existingDeck = await db.Deck.findOne({
-    where: { user_id: userId },
-    order: [["created_at", "ASC"]]
-  });
-
-  if (existingDeck) {
-    return existingDeck.id;
-  }
-
-  const createdDeck = await db.Deck.create({
-    user_id: userId,
-    name: DEFAULT_DECK_NAME
-  });
-  return createdDeck.id;
+  return getActiveDeckId(userId);
 }
 
 function enforceActionRateLimit(socket) {

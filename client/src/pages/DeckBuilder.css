@@ -119,6 +119,142 @@
   background: rgba(201, 169, 98, 0.1);
 }
 
+/* ===== Deck Tabs ===== */
+
+.deckTabs {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.deckTabs__tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(180deg, #2a241e 0%, #1a1612 100%);
+  border: 2px solid #000;
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+
+.deckTabs__tab--active {
+  border-color: var(--blood-red);
+  box-shadow: 0 0 12px rgba(168, 62, 54, 0.35);
+}
+
+.deckTabs__tab--default .deckTabs__tabBtn {
+  border-left: 3px solid var(--gold-accent);
+}
+
+.deckTabs__tabBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--foreground);
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.deckTabs__tabBtn:hover {
+  background: rgba(168, 62, 54, 0.1);
+}
+
+.deckTabs__name {
+  cursor: pointer;
+  user-select: none;
+}
+
+.deckTabs__count {
+  font-family: var(--font-accent);
+  font-size: 11px;
+  color: var(--text-faded);
+  letter-spacing: 0.04em;
+}
+
+.deckTabs__renameWrap {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+}
+
+.deckTabs__renameInput {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--gold-accent);
+  padding: 4px 8px;
+  width: 140px;
+  outline: none;
+  box-shadow: 0 0 8px rgba(201, 169, 98, 0.25);
+}
+
+.deckTabs__controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 8px;
+}
+
+.deckTabs__activeBadge {
+  font-size: 16px;
+  color: var(--gold-accent);
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.deckTabs__controlBtn {
+  background: none;
+  border: none;
+  color: var(--text-faded);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  transition: color 0.12s;
+}
+
+.deckTabs__controlBtn:hover {
+  color: var(--gold-accent);
+}
+
+.deckTabs__controlBtn--delete:hover {
+  color: var(--blood-bright);
+}
+
+.deckTabs__addBtn {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faded);
+  background: none;
+  border: 2px dashed rgba(217, 199, 168, 0.2);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.deckTabs__addBtn:hover {
+  color: var(--gold-accent);
+  border-color: var(--gold-accent);
+}
+
 .deckBuilder__body {
   display: flex;
   gap: 20px;
