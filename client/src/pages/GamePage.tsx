@@ -213,6 +213,14 @@ export default function GamePage() {
     }));
   }, [match, userIdStr]);
 
+  const selfDeckCount = useMemo(() => {
+    if (!match || !userIdStr) return 0;
+    const ownIndex = match.players.findIndex((id) => id === userIdStr);
+    if (ownIndex < 0) return 0;
+    const ownKey = ownIndex === 0 ? "player1" : "player2";
+    return match.state.players[ownKey].deckCount ?? 0;
+  }, [match, userIdStr]);
+
   const { playerHPPercent, opponentHPPercent, currentEnergy, isMyTurn, selfIndex, selfStats, oppStats } = useMemo(() => {
     if (!match || !userIdStr) {
       return {
@@ -387,7 +395,12 @@ export default function GamePage() {
       </div>
 
       <main className="game-battlefield">
-        <div className="game-battlefield__divider" />
+
+        <aside className="game-deck-panel">
+          <p>My Deck</p>
+          <p className="game-log__entry">Cards left: {selfDeckCount}</p>
+          <p className="game-log__entry">Cards in hand: {handCards.length}</p>
+        </aside>
 
         <aside className="game-log">
           <p className="game-log__title">Battle Log</p>
