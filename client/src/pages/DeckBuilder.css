@@ -348,10 +348,16 @@
   transform: translateY(-2px);
 }
 
+.poolCard--inDeck {
+  opacity: 0.55;
+  filter: brightness(0.7) saturate(0.6);
+}
+
 .poolCard--exhausted {
-  opacity: 0.35;
-  filter: saturate(0.2);
+  opacity: 0.3;
+  filter: brightness(0.5) saturate(0.15);
   cursor: default;
+  pointer-events: none;
 }
 
 .poolCard--exhausted:hover {
