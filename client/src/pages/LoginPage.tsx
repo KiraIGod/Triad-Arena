@@ -48,44 +48,6 @@ export default function LoginPage() {
   }
 
   return (
-    // <Card>
-    //   <Typography.Title level={3}>Вход</Typography.Title>
-    //   <Form<LoginFields>
-    //     name="login"
-    //     layout="vertical"
-    //     onFinish={onFinish}
-    //     autoComplete="off"
-    //     requiredMark={false}
-    //   >
-    //     <Form.Item
-    //       name="username"
-    //       label="Имя пользователя"
-    //       rules={[{ required: true, message: "Введите имя пользователя" }]}
-    //     >
-    //       <Input placeholder="username" autoComplete="username" />
-    //     </Form.Item>
-    //     <Form.Item
-    //       name="password"
-    //       label="Пароль"
-    //       rules={[{ required: true, message: "Введите пароль" }]}
-    //     >
-    //       <Input.Password
-    //         placeholder="••••••••"
-    //         autoComplete="current-password"
-    //       />
-    //     </Form.Item>
-    //     <Form.Item>
-    //       <Button type="primary" htmlType="submit" block loading={loading}>
-    //         Войти
-    //       </Button>
-    //     </Form.Item>
-    //     <div>
-    //       <Typography.Text type="secondary">Нет аккаунта? </Typography.Text>
-    //       <Link to="/register">Регистрация</Link>
-    //     </div>
-    //   </Form>
-    // </Card>
-
     <div className="authPage">
       <div className="authBg" />
       <div className="authTexture" />
@@ -128,7 +90,7 @@ export default function LoginPage() {
                 name="password"
                 rules={[
                   { required: true, message: "Enter password" },
-                  { min: 8, message: 'Чуваааак, пароль должен быть минимум 8 символов'},
+                  { min: 8, message: 'Чуваааак, пароль должен быть минимум 8 символов' },
                   {
                     pattern: /^(?=.*[!@#$%^&*()_\-+=[\]{};:'",.<>/?\\|])/,
                     message: 'И..., минимум один спецсимвол',
