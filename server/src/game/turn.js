@@ -24,6 +24,26 @@ function withRefreshedEnergy(player) {
   };
 }
 
+function drawCard(player) {
+  const deck = Array.isArray(player?.deck) ? [...player.deck] : [];
+  const hand = Array.isArray(player?.hand) ? [...player.hand] : [];
+
+  if (deck.length === 0) {
+    return {
+      ...player,
+      hand,
+      deck
+    };
+  }
+
+  const [drawnCard, ...remainingDeck] = deck;
+  return {
+    ...player,
+    hand: [...hand, drawnCard],
+    deck: remainingDeck
+  };
+}
+
 function resolveTurn(state) {
   if (!state || state.finished) {
     return state;
@@ -36,7 +56,7 @@ function resolveTurn(state) {
   const waitingPlayer = withEffects[nextKey];
   const player1 = currentKey === "player1" ? endedPlayer : waitingPlayer;
   const player2 = currentKey === "player2" ? endedPlayer : waitingPlayer;
-  const nextActivePlayer = withRefreshedEnergy(nextKey === "player1" ? player1 : player2);
+  const nextActivePlayer = drawCard(withRefreshedEnergy(nextKey === "player1" ? player1 : player2));
 
   return {
     ...withEffects,

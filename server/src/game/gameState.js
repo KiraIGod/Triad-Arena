@@ -14,7 +14,8 @@ function createPlayer(id, cards = []) {
     energy: GAME_CONSTANTS.ENERGY_PER_TURN,
     statuses: [],
     hand,
-    deck
+    deck,
+    discard: []
   };
 }
 
