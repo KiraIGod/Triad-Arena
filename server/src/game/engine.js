@@ -191,6 +191,23 @@ function isFinished(state) {
   return (state?.player1?.hp || 0) <= 0 || (state?.player2?.hp || 0) <= 0;
 }
 
+function consumeCardFromHand(player, cardId) {
+  const hand = Array.isArray(player?.hand) ? [...player.hand] : [];
+  const discard = Array.isArray(player?.discard) ? [...player.discard] : [];
+  const cardIndex = hand.findIndex((entry) => entry?.id === cardId);
+
+  if (cardIndex < 0) {
+    return null;
+  }
+
+  const [consumedCard] = hand.splice(cardIndex, 1);
+  return {
+    ...player,
+    hand,
+    discard: [...discard, consumedCard]
+  };
+}
+
 function playCard(state, playerInput, card) {
   return withSafety(() => {
     const { playerId, expectedVersion: playerExpected } = parseActorInput(playerInput);
@@ -210,13 +227,17 @@ function playCard(state, playerInput, card) {
     if ((state[playerKey]?.energy || 0) < manaCost) failInvalid("Not enough energy");
 
     const attacker = state[playerKey];
+    const attackerAfterConsume = consumeCardFromHand(attacker, card.id);
+    if (!attackerAfterConsume) {
+      failInvalid("Card is not in hand");
+    }
     const defender = state[opponentKey];
     const baseDamage = getCardBaseDamage(card);
     const weakAdjusted = Math.max(0, baseDamage - getWeakPenalty(attacker));
     const finalDamage = applyTriadBonus(getCardTriadType(card), getDefenderTriadType(state, defender?.id, card), weakAdjusted);
 
     const defenderAfterDamage = applyDamage(defender, finalDamage);
-    const attackerAfterStatuses = applyStatuses(attacker, collectStatuses(card, "selfStatuses"));
+    const attackerAfterStatuses = applyStatuses(attackerAfterConsume, collectStatuses(card, "selfStatuses"));
     const defenderAfterStatuses = applyStatuses(defenderAfterDamage, collectStatuses(card, "statuses"));
     const energy = Math.max(0, (attackerAfterStatuses.energy || 0) - manaCost);
     const actionIndex = (state.turnActions || []).length + 1;
