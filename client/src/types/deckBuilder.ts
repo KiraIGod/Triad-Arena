@@ -1,6 +1,6 @@
-export type ApiCardType = "unit" | "spell";
-export type ApiTriadType = "assault" | "precision" | "arcane";
-export type CardType = "UNIT" | "SPELL";
+export type ApiCardType = "unit" | "spell"
+export type ApiTriadType = "assault" | "precision" | "arcane"
+export type CardType = "UNIT" | "SPELL"
 
 export type DeckBuilderCard = {
   id: string;
@@ -13,19 +13,19 @@ export type DeckBuilderCard = {
   description: string;
   image: string;
   created_at: string;
-};
+}
 
 export type CollectionItem = {
   cardId: string;
   quantity: number;
   card: DeckBuilderCard;
-};
+}
 
 export type DeckItem = {
   cardId: string;
   quantity: number;
   card: DeckBuilderCard;
-};
+}
 
 export type DeckData = {
   id: string;
@@ -33,4 +33,4 @@ export type DeckData = {
   totalCards: number;
   maxCards: number;
   cards: DeckItem[];
-};
+}
