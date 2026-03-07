@@ -42,6 +42,15 @@ function initSocket(httpServer) {
       }
     });
 
+    socket.on("leave_game", (gameId) => {
+      const normalizedGameId = String(gameId || "");
+      if (!normalizedGameId) return;
+
+      socket.leave(normalizedGameId);
+      const userId = socket.data?.userId;
+      cleanupArena(activeGames, userId, socket.id);
+    });
+
     socket.on("disconnect", () => {
       const userId = socket.data?.userId;
       cleanupArena(activeGames, userId, socket.id);

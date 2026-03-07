@@ -213,6 +213,14 @@ export default function GamePage() {
     }));
   }, [match, userIdStr]);
 
+  const selfDeckCount = useMemo(() => {
+    if (!match || !userIdStr) return 0;
+    const ownIndex = match.players.findIndex((id) => id === userIdStr);
+    if (ownIndex < 0) return 0;
+    const ownKey = ownIndex === 0 ? "player1" : "player2";
+    return match.state.players[ownKey].deckCount ?? 0;
+  }, [match, userIdStr]);
+
   const { playerHPPercent, opponentHPPercent, currentEnergy, isMyTurn, selfIndex, selfStats, oppStats } = useMemo(() => {
     if (!match || !userIdStr) {
       return {
@@ -322,6 +330,13 @@ export default function GamePage() {
     });
   };
 
+  const handleLeaveArenaClick = () => {
+    if (arenaId && arenaId !== "unknown") {
+      socket.emit("leave_game", arenaId);
+    }
+    navigate("/lobby");
+  };
+
   return (
     <div className="game-screen">
       <div className="game-screen__bg" />
@@ -374,20 +389,32 @@ export default function GamePage() {
       )}
 
       <div className="game-state">
+        <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
+          Leave Arena
+        </button>
+      </div>
+      
+      <div className="game-state">
         <p className="game-state__label">Arena</p>
         <p className="game-state__value">{arenaId}</p>
       </div>
       <div className="game-state">
         <p className="game-state__label">Match</p>
-        <p className="game-state__value">{match ? match.matchId : arenaMatchId ? "Connecting..." : "Waiting arena..."}</p>
+        <p className="game-state__value">{match ?match.matchId : arenaMatchId ? "Connecting..." : "Waiting arena..."}</p>
       </div>
       <div className="game-state">
         <p className="game-state__label">Turn</p>
         <p className="game-state__value">{match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}</p>
       </div>
 
+
       <main className="game-battlefield">
-        <div className="game-battlefield__divider" />
+
+        <aside className="game-deck-panel">
+          <p>My Deck</p>
+          <p className="game-log__entry">Cards left: {selfDeckCount}</p>
+          <p className="game-log__entry">Cards in hand: {handCards.length}</p>
+        </aside>
 
         <aside className="game-log">
           <p className="game-log__title">Battle Log</p>
