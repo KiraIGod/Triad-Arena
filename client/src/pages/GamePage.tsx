@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
 import { GameCard, type CardModel } from "../components/Card";
 import socket from "../shared/socket/socket";
@@ -24,6 +24,7 @@ import type { DeckData } from "../types/deckBuilder";
 import "./GamePage.css";
 
 export default function GamePage() {
+  const navigate = useNavigate();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const arenaId = searchParams.get("arenaId") ?? "unknown";
@@ -33,11 +34,15 @@ export default function GamePage() {
   const nickname = useAppSelector((s) => s.auth.nickname);
   const userId = useAppSelector((s) => s.auth.userId);
   const token = useAppSelector((s) => s.auth.token);
+  const userIdStr = userId != null ? String(userId) : null;
 
   const displayName = nickname ?? "UNKNOWN";
 
   const [match, setMatch] = useState<MatchStatePayload | null>(null);
   const [matchError, setMatchError] = useState<string | null>(null);
+  const [isReconnecting, setIsReconnecting] = useState(false);
+  const [logEntries, setLogEntries] = useState<string[]>(["Awaiting actions..."]);
+  const [selectedCardReason, setSelectedCardReason] = useState<string | null>(null);
   const [deck, setDeck] = useState<DeckData | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const joinedMatchRef = useRef<string | null>(null);
@@ -53,6 +58,25 @@ export default function GamePage() {
       setArenaMatchId(fromQueryMatchId);
     }
   }, [searchParams]);
+
+  const appendLog = (entry: string) => {
+    setLogEntries((prev) => [entry, ...prev].slice(0, 8));
+  };
+
+  const toActionLogEntry = (event: NonNullable<MatchStatePayload["events"]>[number]): string => {
+    if (!event) return "Unknown event";
+    const payload = event.payload || {};
+    if (event.type === "CARD_PLAYED") {
+      return `Card played: ${String(payload.cardId ?? "unknown")}`;
+    }
+    if (event.type === "TURN_ENDED") {
+      return `Turn ended by ${String(payload.playerId ?? "unknown")}`;
+    }
+    if (event.type === "MATCH_FINISHED") {
+      return `Match finished`;
+    }
+    return event.type;
+  };
 
   useEffect(() => {
     if (!arenaId || arenaId === "unknown") return;
@@ -99,45 +123,67 @@ export default function GamePage() {
   }, [arenaId, nickname, token]);
 
   useEffect(() => {
-    if (!token || !userId) return;
+    if (!token || !userIdStr) return;
 
     socket.auth = { token };
     if (!socket.connected) socket.connect();
+    const onConnect = () => {
+      setIsReconnecting(false);
+      syncMatch();
+    };
+    const onDisconnect = () => {
+      setIsReconnecting(true);
+      appendLog("Reconnecting...");
+    };
 
     const handleState = (payload: MatchStatePayload) => {
       setMatchError(null);
+      setSelectedCardReason(null);
       setMatch(payload);
       setArenaMatchId(payload.matchId);
+      if (payload.events?.length) {
+        payload.events.forEach((event) => appendLog(toActionLogEntry(event)));
+      }
     };
 
     const handleUpdate = (payload: MatchStatePayload) => {
       setMatchError(null);
+      setSelectedCardReason(null);
       setMatch(payload);
+      if (payload.events?.length) {
+        payload.events.forEach((event) => appendLog(toActionLogEntry(event)));
+      }
     };
 
     const handleError = (payload: MatchErrorPayload) => {
       setMatchError(payload.message || "Match action failed");
+      appendLog(payload.message || "Match action failed");
       if (payload.type === "STATE_OUTDATED") {
         syncMatch();
       }
     };
 
-    const handleFinish = (payload: { winnerId: string | null }) => {
+    const handleFinish = (payload: { winnerId: string | null; reason?: string }) => {
       setWinnerId(payload.winnerId ?? null);
+      appendLog(payload.reason ? `Match finished: ${payload.reason}` : "Match finished");
     };
 
+    socket.on("connect", onConnect);
+    socket.on("disconnect", onDisconnect);
     onMatchState(handleState);
     onMatchUpdate(handleUpdate);
     onMatchError(handleError);
     onMatchFinish(handleFinish);
 
     return () => {
+      socket.off("connect", onConnect);
+      socket.off("disconnect", onDisconnect);
       offMatchState(handleState);
       offMatchUpdate(handleUpdate);
       offMatchError(handleError);
       offMatchFinish(handleFinish);
     };
-  }, [token, userId]);
+  }, [token, userIdStr]);
 
   useEffect(() => {
     if (!arenaMatchId) return;
@@ -178,23 +224,29 @@ export default function GamePage() {
     });
   }, [deck]);
 
-  const { playerHPPercent, opponentHPPercent, currentEnergy, isMyTurn } = useMemo(() => {
-    if (!match || !userId) {
+  const { playerHPPercent, opponentHPPercent, currentEnergy, isMyTurn, selfIndex, selfStats, oppStats } = useMemo(() => {
+    if (!match || !userIdStr) {
       return {
         playerHPPercent: 100,
         opponentHPPercent: 100,
         currentEnergy: 0,
-        isMyTurn: false
+        isMyTurn: false,
+        selfIndex: -1,
+        selfStats: { hp: 0, shield: 0, energy: 0, statuses: [] as Array<{ type: string; turns?: number; amount?: number }> },
+        oppStats: { hp: 0, shield: 0, energy: 0, statuses: [] as Array<{ type: string; turns?: number; amount?: number }> }
       };
     }
 
-    const selfIndex = match.players.findIndex((id) => id === userId);
+    const selfIndex = match.players.findIndex((id) => id === userIdStr);
     if (selfIndex < 0) {
       return {
         playerHPPercent: 100,
         opponentHPPercent: 100,
         currentEnergy: 0,
-        isMyTurn: false
+        isMyTurn: false,
+        selfIndex: -1,
+        selfStats: { hp: 0, shield: 0, energy: 0, statuses: [] as Array<{ type: string; turns?: number; amount?: number }> },
+        oppStats: { hp: 0, shield: 0, energy: 0, statuses: [] as Array<{ type: string; turns?: number; amount?: number }> }
       };
     }
 
@@ -214,26 +266,48 @@ export default function GamePage() {
       playerHPPercent: clampPercent(selfStats.hp),
       opponentHPPercent: clampPercent(oppStats.hp),
       currentEnergy: selfStats.energy ?? 0,
-      isMyTurn: match.state.activePlayer === userId && !match.state.finished
+      isMyTurn: match.state.activePlayer === userIdStr && !match.state.finished,
+      selfIndex,
+      selfStats,
+      oppStats
     };
-  }, [match, userId]);
+  }, [match, userIdStr]);
 
   const matchResultLabel = useMemo(() => {
-    if (!winnerId || !userId) return null;
-    return winnerId === userId ? "Victory" : "Defeat";
-  }, [winnerId, userId]);
+    if (!winnerId || !userIdStr) return null;
+    return winnerId === userIdStr ? "Victory" : "Defeat";
+  }, [winnerId, userIdStr]);
+
+  const playedCardIdsThisTurn = useMemo(() => {
+    if (!match || !userIdStr) return new Set<string>();
+    const ids = match.state.turnActions
+      .filter((action) => action.playerId === userIdStr)
+      .map((action) => action.cardId);
+    return new Set(ids);
+  }, [match, userIdStr]);
+
+  const getCardDisabledReason = (card: CardModel): string | null => {
+    if (!match || !userIdStr) return "Match is not ready";
+    if (selfIndex < 0) return "You are not part of this match";
+    if (match.state.finished) return "Match already finished";
+    if (!isMyTurn) return "Wait for your turn";
+    if (playedCardIdsThisTurn.has(card.id.split(":")[0])) return "Card already played this turn";
+    if (currentEnergy < card.mana_cost) return "Not enough energy";
+
+    const statuses = selfStats.statuses || [];
+    if (statuses.some((status) => status?.type === "stun")) return "You are stunned";
+    return null;
+  };
 
   const canPlayCard = (card: CardModel): boolean => {
-    if (!match || !userId) return false;
-    if (match.state.finished) return false;
-    if (!isMyTurn) return false;
-    if (currentEnergy < card.mana_cost) return false;
-    return true;
+    return getCardDisabledReason(card) === null;
   };
 
   const handleCardClick = (card: CardModel) => {
     setSelectedCardId((prev) => (prev === card.id ? null : card.id));
-    if (!canPlayCard(card)) return;
+    const reason = getCardDisabledReason(card);
+    setSelectedCardReason(reason);
+    if (reason) return;
     if (!match) return;
 
     const actionId = `${Date.now()}-${card.id}-${Math.random().toString(36).slice(2)}`;
@@ -249,8 +323,9 @@ export default function GamePage() {
 
   const handleEndTurnClick = () => {
     setSelectedCardId(null);
-    if (!match || !userId) return;
-    if (match.state.finished || match.state.activePlayer !== userId) return;
+    setSelectedCardReason(null);
+    if (!match || !userIdStr) return;
+    if (match.state.finished || match.state.activePlayer !== userIdStr) return;
 
     endMatchTurn({
       matchId: match.matchId,
@@ -276,7 +351,9 @@ export default function GamePage() {
         <div className="game-hp">
           <div className="game-hp__meta">
             <span>Death&apos;s Door</span>
-            <strong className="comic-text-shadow">{Math.round(opponentHPPercent)}%</strong>
+            <strong className="comic-text-shadow">
+              {Math.round(opponentHPPercent)}% | HP {oppStats.hp} | SH {oppStats.shield}
+            </strong>
           </div>
           <div className="game-hp__track ink-border-thin">
             <div className="game-hp__fill game-hp__fill--enemy blood-glow" style={{ width: `${opponentHPPercent}%` }} />
@@ -284,10 +361,28 @@ export default function GamePage() {
         </div>
 
         <div className="game-state">
-          <p className="game-state__label">Affliction</p>
-          <p className="game-state__value">Fearful</p>
+          <p className="game-state__label">Opponent Status</p>
+          <p className="game-state__value">
+            {(oppStats.statuses || []).length
+              ? (oppStats.statuses || []).map((status) => status.type).join(", ")
+              : "None"}
+          </p>
         </div>
       </header>
+
+      {isReconnecting && (
+        <div className="game-state">
+          <p className="game-state__label">Connection</p>
+          <p className="game-state__value">Reconnecting...</p>
+        </div>
+      )}
+
+      {match && selfIndex < 0 && (
+        <div className="game-state">
+          <p className="game-state__label">Access</p>
+          <p className="game-state__value">You are not part of this match</p>
+        </div>
+      )}
 
       <div className="game-state">
         <p className="game-state__label">Arena</p>
@@ -308,8 +403,13 @@ export default function GamePage() {
         <aside className="game-log">
           <p className="game-log__title">Battle Log</p>
           {matchResultLabel && <p className="game-log__entry game-log__entry--active">{matchResultLabel}</p>}
-          {!matchResultLabel && matchError && <p className="game-log__entry game-log__entry--active">{matchError}</p>}
-          {!matchResultLabel && !matchError && <p className="game-log__entry">Awaiting actions...</p>}
+          {matchError && <p className="game-log__entry game-log__entry--active">{matchError}</p>}
+          {selectedCardReason && <p className="game-log__entry">{selectedCardReason}</p>}
+          {logEntries.map((entry, idx) => (
+            <p key={`${idx}-${entry}`} className={`game-log__entry ${idx === 0 ? "game-log__entry--active" : ""}`}>
+              {entry}
+            </p>
+          ))}
         </aside>
 
         {selectedCardId && (
@@ -320,6 +420,19 @@ export default function GamePage() {
           </div>
         )}
       </main>
+
+      {match?.state.finished && (
+        <div className="game-overlay">
+          <div className="game-overlay__panel parchment-panel">
+            <span className="comic-text-shadow">{matchResultLabel ?? "Match finished"}</span>
+            <div style={{ marginTop: 12, textAlign: "center" }}>
+              <button type="button" className="game-end-turn stress-warning" onClick={() => navigate("/lobby")}>
+                Back to Lobby
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <footer className="game-hud game-hud--bottom parchment-panel">
         <div className="game-hud__identity">
@@ -333,7 +446,9 @@ export default function GamePage() {
         <div className="game-hp">
           <div className="game-hp__meta">
             <span>Death&apos;s Door</span>
-            <strong className="comic-text-shadow">{Math.round(playerHPPercent)}%</strong>
+            <strong className="comic-text-shadow">
+              {Math.round(playerHPPercent)}% | HP {selfStats.hp} | SH {selfStats.shield} | EN {currentEnergy}
+            </strong>
           </div>
           <div className="game-hp__track ink-border-thin">
             <div className="game-hp__fill game-hp__fill--player" style={{ width: `${playerHPPercent}%` }} />
@@ -341,6 +456,14 @@ export default function GamePage() {
         </div>
 
         <div className="game-actions">
+          <div className="game-state">
+            <p className="game-state__label">Your Status</p>
+            <p className="game-state__value">
+              {(selfStats.statuses || []).length
+                ? (selfStats.statuses || []).map((status) => status.type).join(", ")
+                : "None"}
+            </p>
+          </div>
           <div className="game-energy" aria-label="Resolve">
             {Array.from({ length: 10 }).map((_, index) => (
               <span key={index} className={`game-energy__pip ${index < currentEnergy ? "is-active" : ""}`} />
@@ -360,13 +483,14 @@ export default function GamePage() {
       <section className="game-hand" aria-label="Hand">
         {handCards.map((card, index) => {
           const isSelected = selectedCardId === card.id;
+          const isDisabled = !canPlayCard(card);
           return (
             <div
               key={card.id}
               className={`game-hand__slot ${isSelected ? "is-selected" : ""}`}
               style={{ "--slot-rotation": `${(index - 2) * 2}deg` } as CSSProperties}
             >
-              <GameCard card={card} onClick={handleCardClick} />
+              <GameCard card={card} onClick={handleCardClick} disabled={isDisabled} />
             </div>
           );
         })}

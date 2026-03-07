@@ -8,25 +8,35 @@ export type MatchStatePayload = {
     turn: number;
     activePlayer: string;
     players: {
-      player1: { hp: number; shield: number; energy: number };
-      player2: { hp: number; shield: number; energy: number };
+      player1: {
+        hp: number;
+        shield: number;
+        energy: number;
+        statuses?: Array<{ type: string; turns?: number; amount?: number }>;
+      };
+      player2: {
+        hp: number;
+        shield: number;
+        energy: number;
+        statuses?: Array<{ type: string; turns?: number; amount?: number }>;
+      };
     };
     turnActions: Array<{ actionId: string; cardId: string; playerId: string }>;
     finished: boolean;
   };
+  events?: Array<{
+    eventId: number;
+    turn: number | null;
+    type: string;
+    timestamp: number;
+    payload: Record<string, unknown>;
+  }>;
 };
 
 export type MatchErrorPayload = {
   type: string;
   message: string;
 };
-
-export function queueForMatch(): void {
-  if (!matchSocket.connected) {
-    matchSocket.connect();
-  }
-  matchSocket.emit("match:queue");
-}
 
 export function syncMatch(): void {
   if (!matchSocket.connected) {
