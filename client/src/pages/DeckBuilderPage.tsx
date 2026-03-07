@@ -13,6 +13,7 @@ import type { DeckBuilderCard } from "../types/deckBuilder";
 import CardPool from "../components/deck-builder/CardPool";
 import CurrentDeck from "../components/deck-builder/CurrentDeck";
 import CardModal from "../components/deck-builder/CardModal";
+import CardViewer from "../components/deck-builder/CardViewer";
 import "./DeckBuilder.css";
 
 const MAX_DECK_SIZE = 20;
@@ -44,6 +45,7 @@ export default function DeckBuilderPage() {
   const [isResetting, setIsResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
 
   const cardsById = useMemo<Record<string, DeckBuilderCard>>(
     () =>
@@ -221,6 +223,13 @@ export default function DeckBuilderPage() {
         <div className="deckBuilder__actions">
           <button
             type="button"
+            className="deckBuilder__btn deckBuilder__btn--viewer"
+            onClick={() => setIsViewerOpen(true)}
+          >
+            Режим просмотра
+          </button>
+          <button
+            type="button"
             className="deckBuilder__btn"
             onClick={() => void handleCommitDeck()}
             disabled={totalCards !== MAX_DECK_SIZE || anyBusy}
@@ -287,6 +296,19 @@ export default function DeckBuilderPage() {
         onAdd={handleAddCard}
         onRemove={handleRemoveCard}
       />
+
+      {isViewerOpen && (
+        <CardViewer
+          cards={cards}
+          collectionByCardId={collectionByCardId}
+          deckByCardId={deckByCardId}
+          onAddCard={addCardToDeck}
+          onRemoveCard={removeCardFromDeck}
+          canAddCard={canAddCard}
+          canRemoveCard={canRemoveCard}
+          onClose={() => setIsViewerOpen(false)}
+        />
+      )}
     </main>
   );
 }
