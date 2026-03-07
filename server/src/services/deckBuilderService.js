@@ -6,6 +6,10 @@ const MAX_DECKS = 3;
 const DEFAULT_COLLECTION_QUANTITY = 2;
 const DEFAULT_DECK_NAME = "Main Deck";
 
+function isMissingIsActiveColumn(error) {
+  return String(error?.message || "").toLowerCase().includes("is_active");
+}
+
 function normalizeDeckItems(items) {
   if (!Array.isArray(items)) {
     throw new Error("deckItems must be an array");
@@ -368,30 +372,63 @@ async function resetUserDeck(userId, deckId) {
 }
 
 async function getActiveDeckId(userId) {
-  const deck = await Deck.findOne({
-    where: { user_id: userId, is_active: true }
-  });
+  let deck = null;
+  let supportsIsActive = true;
+
+  try {
+    deck = await Deck.findOne({
+      where: { user_id: userId, is_active: true }
+    });
+  } catch (error) {
+    if (!isMissingIsActiveColumn(error)) {
+      throw error;
+    }
+    supportsIsActive = false;
+  }
 
   if (deck) {
     return deck.id;
   }
 
-  const firstDeck = await Deck.findOne({
-    where: { user_id: userId },
-    order: [["created_at", "ASC"]]
-  });
+  const firstDeck = await Deck.findOne(
+    supportsIsActive
+      ? {
+          where: { user_id: userId },
+          order: [["created_at", "ASC"]]
+        }
+      : {
+          where: { user_id: userId },
+          attributes: ["id"],
+          order: [["created_at", "ASC"]]
+        }
+  );
 
   if (firstDeck) {
-    firstDeck.is_active = true;
-    await firstDeck.save();
+    if (supportsIsActive) {
+      firstDeck.is_active = true;
+      await firstDeck.save();
+    }
     return firstDeck.id;
   }
 
-  const created = await Deck.create({
-    user_id: userId,
-    name: DEFAULT_DECK_NAME,
-    is_active: true
-  });
+  const created = await Deck.create(
+    supportsIsActive
+      ? {
+          user_id: userId,
+          name: DEFAULT_DECK_NAME,
+          is_active: true
+        }
+      : {
+          user_id: userId,
+          name: DEFAULT_DECK_NAME
+        },
+    supportsIsActive
+      ? undefined
+      : {
+          fields: ["user_id", "name"],
+          returning: false
+        }
+  );
   return created.id;
 }
 

@@ -110,6 +110,47 @@ function testBurnTiming() {
   assertSerializedState(state, "m-burn");
 }
 
+function testDrawMechanic() {
+  let state = createInitialGameState("p1", "p2", {
+    playerOneDeck: [
+      { id: "p1-c1" },
+      { id: "p1-c2" },
+      { id: "p1-c3" },
+      { id: "p1-c4" }
+    ],
+    playerTwoDeck: [
+      { id: "p2-c1" },
+      { id: "p2-c2" },
+      { id: "p2-c3" },
+      { id: "p2-c4" },
+      { id: "p2-c5" }
+    ]
+  });
+
+  assert(state.player1.hand.length === 3, "Player1 starting hand should contain 3 cards");
+  assert(state.player1.deck.length === 1, "Player1 deck should contain remaining cards");
+  assert(state.player2.hand.length === 3, "Player2 starting hand should contain 3 cards");
+  assert(state.player2.deck.length === 2, "Player2 deck should contain remaining cards");
+
+  state = end(state, "p1", 1);
+  assert(state.activePlayer === "p2", "Turn should switch to player2");
+  assert(state.player2.hand.length === 4, "Next player should draw 1 card at turn start");
+  assert(state.player2.deck.length === 1, "Next player deck should decrease after draw");
+  assertSerializedState(state, "m-draw");
+
+  const afterSecondTurn = end(state, "p2", 2);
+  assert(afterSecondTurn.player1.hand.length === 4, "Player1 should draw when their turn starts");
+  assert(afterSecondTurn.player1.deck.length === 0, "Player1 deck should reach zero after final draw");
+
+  const afterEmptyDeckTurn = end(afterSecondTurn, "p1", 3);
+  assert(afterEmptyDeckTurn.player2.hand.length === 5, "Player2 should draw last available card");
+  assert(afterEmptyDeckTurn.player2.deck.length === 0, "Player2 deck should reach zero after draw");
+
+  const stableOnEmptyDeck = end(afterEmptyDeckTurn, "p2", 4);
+  assert(stableOnEmptyDeck.player1.hand.length === 4, "Hand should not grow when deck is empty");
+  assert(stableOnEmptyDeck.player1.deck.length === 0, "Empty deck should stay at zero");
+}
+
 function testPerPlayerTurnLimitAndActionMeta() {
   let state = createInitialGameState("p1", "p2");
   state = play(state, "p1", 1, { id: "p1-1", actionId: "p1-1", type: "unit", triad_type: "assault", mana_cost: 1, attack: 1 });
@@ -253,6 +294,7 @@ function testFullPvpScenario() {
 function run() {
   testDamagePipeline();
   testBurnTiming();
+  testDrawMechanic();
   testPerPlayerTurnLimitAndActionMeta();
   testDuplicateActionProtection();
   testRaceConditionProtection();
@@ -266,6 +308,7 @@ function run() {
   console.log("✓ shield system");
   console.log("✓ triad system");
   console.log("✓ burn timing");
+  console.log("✓ draw mechanic");
   console.log("✓ per-player turn limits");
   console.log("✓ duplicate action protection");
   console.log("✓ race condition protection");
