@@ -112,7 +112,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(260px, 340px) minmax(230px, 320px) 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 1.2rem;
   height: calc(100vh - 92px);
   padding: 1.2rem 1.5rem 1.5rem;
@@ -456,7 +456,7 @@
   border: 1px solid var(--ink);
   background: rgba(0, 0, 0, 0.4);
   padding: 0.4rem 0.45rem;
-  text-align: right;
+  text-align: center;
   min-width: 70px;
 }
 
