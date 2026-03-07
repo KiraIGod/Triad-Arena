@@ -9,6 +9,7 @@ type CreateArenaResponse = {
 
 type JoinArenaResponse = {
   arenaId?: string;
+  matchId?: string | null;
   opponentNickname?: string;
   error?: string;
 };
@@ -105,7 +106,8 @@ const [isJoiningArena, setIsJoiningArena] = useState(false);
       setIsJoiningArena(false);
       console.log("arena:join success:", res.arenaId);
       const opponent = encodeURIComponent(res.opponentNickname ?? "UNKNOWN");
-      navigate(`/game?arenaId=${res.arenaId}&opponent=${opponent}`);
+      const matchIdPart = res.matchId ? `&matchId=${encodeURIComponent(res.matchId)}` : "";
+      navigate(`/game?arenaId=${res.arenaId}&opponent=${opponent}${matchIdPart}`);
     });
   };
 

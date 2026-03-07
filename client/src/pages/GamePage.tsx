@@ -5,17 +5,19 @@ import { GameCard, type CardModel } from "../components/Card";
 import socket from "../shared/socket/socket";
 import {
   endMatchTurn,
-  onMatchError,
-  onMatchState,
-  onMatchUpdate,
+  joinMatch,
   offMatchError,
+  offMatchFinish,
   offMatchState,
   offMatchUpdate,
+  onMatchError,
+  onMatchFinish,
+  onMatchState,
+  onMatchUpdate,
   playMatchCard,
-  queueForMatch,
+  syncMatch,
   type MatchErrorPayload,
-  type MatchStatePayload,
-  syncMatch
+  type MatchStatePayload
 } from "../shared/socket/matchSocket";
 import { fetchUserDeck } from "../shared/api/deckBuilderApi";
 import type { DeckData } from "../types/deckBuilder";
@@ -26,26 +28,37 @@ export default function GamePage() {
   const [searchParams] = useSearchParams();
   const arenaId = searchParams.get("arenaId") ?? "unknown";
   const [opponentNickname, setOpponentNickname] = useState(searchParams.get("opponent") ?? "UNKNOWN");
+  const [arenaMatchId, setArenaMatchId] = useState<string | null>(searchParams.get("matchId"));
+
   const nickname = useAppSelector((s) => s.auth.nickname);
   const userId = useAppSelector((s) => s.auth.userId);
   const token = useAppSelector((s) => s.auth.token);
-  const displayName = nickname != null ? `${nickname}` : "UNKNOWN";
+
+  const displayName = nickname ?? "UNKNOWN";
+
   const [match, setMatch] = useState<MatchStatePayload | null>(null);
   const [matchError, setMatchError] = useState<string | null>(null);
-  const [isQueueing, setIsQueueing] = useState(false);
   const [deck, setDeck] = useState<DeckData | null>(null);
-  const hasQueuedRef = useRef(false);
+  const [winnerId, setWinnerId] = useState<string | null>(null);
+  const joinedMatchRef = useRef<string | null>(null);
 
   useEffect(() => {
-    const fromQuery = searchParams.get("opponent");
-    if (fromQuery) {
-      setOpponentNickname(fromQuery);
+    const fromQueryOpponent = searchParams.get("opponent");
+    const fromQueryMatchId = searchParams.get("matchId");
+
+    if (fromQueryOpponent) {
+      setOpponentNickname(fromQueryOpponent);
+    }
+    if (fromQueryMatchId) {
+      setArenaMatchId(fromQueryMatchId);
     }
   }, [searchParams]);
 
-  // Подтягиваем ник оппонента через arena‑сокеты (как и раньше)
   useEffect(() => {
     if (!arenaId || arenaId === "unknown") return;
+    if (!token) return;
+
+    socket.auth = { token };
     if (!socket.connected) socket.connect();
     socket.emit("join_game", arenaId);
 
@@ -57,68 +70,84 @@ export default function GamePage() {
 
       const ownName = (nickname ?? "").toLowerCase();
       const candidate = names.find((name) => name.toLowerCase() !== ownName);
-      if (candidate) {
-        setOpponentNickname(candidate);
-      } else {
-        setOpponentNickname("UNKNOWN");
-      }
+      setOpponentNickname(candidate ?? "UNKNOWN");
     };
 
-    socket.emit("arena:get-state", { arenaId }, (res?: { players?: Array<{ nickname?: string }> }) => {
-      updateOpponentFromPlayers(res?.players);
-    });
+    socket.emit(
+      "arena:get-state",
+      { arenaId },
+      (res?: { matchId?: string; players?: Array<{ nickname?: string }> }) => {
+        updateOpponentFromPlayers(res?.players);
+        if (res?.matchId) {
+          setArenaMatchId(res.matchId);
+        }
+      }
+    );
 
-    const onArenaReady = (payload?: { arenaId?: string; players?: Array<{ nickname?: string }> }) => {
-      if (!payload?.arenaId || payload.arenaId !== arenaId || !Array.isArray(payload.players)) return;
+    const onArenaReady = (payload?: { arenaId?: string; matchId?: string; players?: Array<{ nickname?: string }> }) => {
+      if (!payload?.arenaId || payload.arenaId !== arenaId) return;
       updateOpponentFromPlayers(payload.players);
+      if (payload.matchId) {
+        setArenaMatchId(payload.matchId);
+      }
     };
 
     socket.on("arena:ready", onArenaReady);
     return () => {
       socket.off("arena:ready", onArenaReady);
     };
-  }, [arenaId, nickname]);
+  }, [arenaId, nickname, token]);
 
-  // Подключение к матчу: очередь + обработчики состояния
   useEffect(() => {
     if (!token || !userId) return;
-    if (hasQueuedRef.current) {
-      // При повторном заходе попробуем просто синхронизироваться
-      syncMatch();
-      return;
-    }
 
-    hasQueuedRef.current = true;
-    setIsQueueing(true);
-    setMatchError(null);
-    queueForMatch();
+    socket.auth = { token };
+    if (!socket.connected) socket.connect();
 
     const handleState = (payload: MatchStatePayload) => {
-      setIsQueueing(false);
       setMatchError(null);
       setMatch(payload);
+      setArenaMatchId(payload.matchId);
     };
 
     const handleUpdate = (payload: MatchStatePayload) => {
+      setMatchError(null);
       setMatch(payload);
     };
 
     const handleError = (payload: MatchErrorPayload) => {
       setMatchError(payload.message || "Match action failed");
+      if (payload.type === "STATE_OUTDATED") {
+        syncMatch();
+      }
+    };
+
+    const handleFinish = (payload: { winnerId: string | null }) => {
+      setWinnerId(payload.winnerId ?? null);
     };
 
     onMatchState(handleState);
     onMatchUpdate(handleUpdate);
     onMatchError(handleError);
+    onMatchFinish(handleFinish);
 
     return () => {
       offMatchState(handleState);
       offMatchUpdate(handleUpdate);
       offMatchError(handleError);
+      offMatchFinish(handleFinish);
     };
   }, [token, userId]);
 
-  // Загружаем активную колоду игрока и используем её как "руку"
+  useEffect(() => {
+    if (!arenaMatchId) return;
+    if (joinedMatchRef.current === arenaMatchId) return;
+
+    joinedMatchRef.current = arenaMatchId;
+    setMatchError(null);
+    joinMatch(arenaMatchId);
+  }, [arenaMatchId]);
+
   useEffect(() => {
     if (!token) return;
     fetchUserDeck(token)
@@ -128,25 +157,28 @@ export default function GamePage() {
 
   const handCards: CardModel[] = useMemo(() => {
     if (!deck) return [];
-    return deck.cards.map<CardModel>((item) => ({
-      id: item.card.id,
-      name: item.card.name,
-      type: item.card.type,
-      triad_type: item.card.triad_type.toUpperCase() as CardModel["triad_type"],
-      mana_cost: item.card.mana_cost,
-      attack: item.card.attack,
-      hp: item.card.hp,
-      description: item.card.description,
-      created_at: item.card.created_at
-    }));
+
+    return deck.cards.flatMap<CardModel>((item) => {
+      const card: CardModel = {
+        id: item.card.id,
+        name: item.card.name,
+        type: item.card.type,
+        triad_type: item.card.triad_type.toUpperCase() as CardModel["triad_type"],
+        mana_cost: item.card.mana_cost,
+        attack: item.card.attack,
+        hp: item.card.hp,
+        description: item.card.description,
+        created_at: item.card.created_at
+      };
+
+      return Array.from({ length: Math.max(1, item.quantity) }, (_, idx) => ({
+        ...card,
+        id: `${card.id}:${idx}`
+      }));
+    });
   }, [deck]);
 
-  const {
-    playerHPPercent,
-    opponentHPPercent,
-    currentEnergy,
-    isMyTurn
-  } = useMemo(() => {
+  const { playerHPPercent, opponentHPPercent, currentEnergy, isMyTurn } = useMemo(() => {
     if (!match || !userId) {
       return {
         playerHPPercent: 100,
@@ -157,6 +189,15 @@ export default function GamePage() {
     }
 
     const selfIndex = match.players.findIndex((id) => id === userId);
+    if (selfIndex < 0) {
+      return {
+        playerHPPercent: 100,
+        opponentHPPercent: 100,
+        currentEnergy: 0,
+        isMyTurn: false
+      };
+    }
+
     const selfKey = selfIndex === 0 ? "player1" : "player2";
     const oppKey = selfKey === "player1" ? "player2" : "player1";
 
@@ -177,17 +218,30 @@ export default function GamePage() {
     };
   }, [match, userId]);
 
+  const matchResultLabel = useMemo(() => {
+    if (!winnerId || !userId) return null;
+    return winnerId === userId ? "Victory" : "Defeat";
+  }, [winnerId, userId]);
+
+  const canPlayCard = (card: CardModel): boolean => {
+    if (!match || !userId) return false;
+    if (match.state.finished) return false;
+    if (!isMyTurn) return false;
+    if (currentEnergy < card.mana_cost) return false;
+    return true;
+  };
+
   const handleCardClick = (card: CardModel) => {
     setSelectedCardId((prev) => (prev === card.id ? null : card.id));
-
-    if (!match || !userId) return;
-    if (match.state.finished || match.state.activePlayer !== userId) return;
+    if (!canPlayCard(card)) return;
+    if (!match) return;
 
     const actionId = `${Date.now()}-${card.id}-${Math.random().toString(36).slice(2)}`;
+    const originalCardId = card.id.split(":")[0];
 
     playMatchCard({
       matchId: match.matchId,
-      cardId: card.id,
+      cardId: originalCardId,
       actionId,
       version: match.state.version
     });
@@ -210,8 +264,6 @@ export default function GamePage() {
       <div className="game-screen__texture parchment-texture" />
       <div className="game-screen__vignette darkest-vignette" />
 
-
-
       <header className="game-hud game-hud--top parchment-panel">
         <div className="game-hud__identity">
           <div className="game-hud__accent game-hud__accent--blood" />
@@ -219,7 +271,7 @@ export default function GamePage() {
             <p className="game-hud__name comic-text-shadow">{opponentNickname}</p>
             <p className="game-hud__rank">Rank IV - Cultist</p>
           </div>
-        </div>      
+        </div>
 
         <div className="game-hp">
           <div className="game-hp__meta">
@@ -227,12 +279,9 @@ export default function GamePage() {
             <strong className="comic-text-shadow">{Math.round(opponentHPPercent)}%</strong>
           </div>
           <div className="game-hp__track ink-border-thin">
-            <div
-              className="game-hp__fill game-hp__fill--enemy blood-glow"
-              style={{ width: `${opponentHPPercent}%` }}
-            />
+            <div className="game-hp__fill game-hp__fill--enemy blood-glow" style={{ width: `${opponentHPPercent}%` }} />
           </div>
-        </div>        
+        </div>
 
         <div className="game-state">
           <p className="game-state__label">Affliction</p>
@@ -246,9 +295,11 @@ export default function GamePage() {
       </div>
       <div className="game-state">
         <p className="game-state__label">Match</p>
-        <p className="game-state__value">
-          {match ? match.matchId : isQueueing ? "Searching..." : "Not started"}
-        </p>
+        <p className="game-state__value">{match ? match.matchId : arenaMatchId ? "Connecting..." : "Waiting arena..."}</p>
+      </div>
+      <div className="game-state">
+        <p className="game-state__label">Turn</p>
+        <p className="game-state__value">{match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}</p>
       </div>
 
       <main className="game-battlefield">
@@ -256,8 +307,9 @@ export default function GamePage() {
 
         <aside className="game-log">
           <p className="game-log__title">Battle Log</p>
-          {matchError && <p className="game-log__entry game-log__entry--active">{matchError}</p>}
-          {!matchError && <p className="game-log__entry">Awaiting actions...</p>}
+          {matchResultLabel && <p className="game-log__entry game-log__entry--active">{matchResultLabel}</p>}
+          {!matchResultLabel && matchError && <p className="game-log__entry game-log__entry--active">{matchError}</p>}
+          {!matchResultLabel && !matchError && <p className="game-log__entry">Awaiting actions...</p>}
         </aside>
 
         {selectedCardId && (
@@ -284,20 +336,14 @@ export default function GamePage() {
             <strong className="comic-text-shadow">{Math.round(playerHPPercent)}%</strong>
           </div>
           <div className="game-hp__track ink-border-thin">
-            <div
-              className="game-hp__fill game-hp__fill--player"
-              style={{ width: `${playerHPPercent}%` }}
-            />
+            <div className="game-hp__fill game-hp__fill--player" style={{ width: `${playerHPPercent}%` }} />
           </div>
         </div>
 
         <div className="game-actions">
           <div className="game-energy" aria-label="Resolve">
             {Array.from({ length: 10 }).map((_, index) => (
-              <span
-                key={index}
-                className={`game-energy__pip ${index < currentEnergy ? "is-active" : ""}`}
-              />
+              <span key={index} className={`game-energy__pip ${index < currentEnergy ? "is-active" : ""}`} />
             ))}
           </div>
           <button
@@ -328,4 +374,3 @@ export default function GamePage() {
     </div>
   );
 }
-

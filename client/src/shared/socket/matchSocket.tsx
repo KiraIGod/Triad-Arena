@@ -35,6 +35,13 @@ export function syncMatch(): void {
   matchSocket.emit("match:sync");
 }
 
+export function joinMatch(matchId: string): void {
+  if (!matchSocket.connected) {
+    matchSocket.connect();
+  }
+  matchSocket.emit("match:join", { matchId });
+}
+
 export function playMatchCard(payload: {
   matchId: string;
   cardId: string;
@@ -70,4 +77,16 @@ export function offMatchUpdate(handler: (payload: MatchStatePayload) => void): v
 
 export function offMatchError(handler: (payload: MatchErrorPayload) => void): void {
   matchSocket.off("match:error", handler);
+}
+
+export function onMatchFinish(
+  handler: (payload: { winnerId: string | null; reason?: string }) => void
+): void {
+  matchSocket.on("match:finish", handler);
+}
+
+export function offMatchFinish(
+  handler: (payload: { winnerId: string | null; reason?: string }) => void
+): void {
+  matchSocket.off("match:finish", handler);
 }
