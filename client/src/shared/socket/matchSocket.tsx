@@ -13,12 +13,36 @@ export type MatchStatePayload = {
         shield: number;
         energy: number;
         statuses?: Array<{ type: string; turns?: number; amount?: number }>;
+        hand?: Array<{
+          id: string;
+          name: string;
+          type: string;
+          triad_type: string;
+          mana_cost: number;
+          attack: number | null;
+          hp: number | null;
+          description: string;
+          created_at: string;
+        }>;
+        deckCount?: number;
       };
       player2: {
         hp: number;
         shield: number;
         energy: number;
         statuses?: Array<{ type: string; turns?: number; amount?: number }>;
+        hand?: Array<{
+          id: string;
+          name: string;
+          type: string;
+          triad_type: string;
+          mana_cost: number;
+          attack: number | null;
+          hp: number | null;
+          description: string;
+          created_at: string;
+        }>;
+        deckCount?: number;
       };
     };
     turnActions: Array<{ actionId: string; cardId: string; playerId: string }>;

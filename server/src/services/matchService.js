@@ -4,6 +4,7 @@ const { INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
 const matchStateCache = new Map();
 const eventLogCache = new Map();
 const lastStateCache = new Map();
+const STARTING_HAND_SIZE = 3;
 
 function createError(type, message) {
   return { type, message };
@@ -36,6 +37,82 @@ function cloneValue(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
+function shuffleArray(items) {
+  const shuffled = Array.isArray(items) ? items.slice() : [];
+
+  for (let i = shuffled.length - 1; i > 0; i -= 1) {
+    const swapIndex = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[i]];
+  }
+
+  return shuffled;
+}
+
+function mapCardForMatchState(card) {
+  if (!card) {
+    return null;
+  }
+
+  return {
+    id: card.id,
+    name: card.name,
+    type: card.type,
+    triad_type: card.triad_type,
+    mana_cost: card.mana_cost,
+    attack: card.attack,
+    hp: card.hp,
+    description: card.description,
+    created_at: card.created_at
+  };
+}
+
+async function loadDeckCards(deckId) {
+  if (!deckId) {
+    return [];
+  }
+
+  const deckCards = await db.DeckCard.findAll({
+    where: { deck_id: deckId },
+    include: [{ model: db.Card }]
+  });
+
+  const expandedCards = [];
+  for (const entry of deckCards) {
+    const quantity = Math.max(0, Number(entry.quantity) || 0);
+    const plainCard = mapCardForMatchState(entry.Card);
+    if (!plainCard || quantity === 0) {
+      continue;
+    }
+
+    for (let i = 0; i < quantity; i += 1) {
+      expandedCards.push(cloneValue(plainCard));
+    }
+  }
+
+  return shuffleArray(expandedCards);
+}
+
+async function buildInitialGameState(match) {
+  const [playerOneDeck, playerTwoDeck] = await Promise.all([
+    loadDeckCards(match.player_one_deck_id),
+    loadDeckCards(match.player_two_deck_id)
+  ]);
+
+  const gameState = createInitialGameState(match.player_one_id, match.player_two_id, {
+    playerOneDeck,
+    playerTwoDeck
+  });
+
+  if (gameState.player1?.hand?.length > STARTING_HAND_SIZE) {
+    gameState.player1.hand = gameState.player1.hand.slice(0, STARTING_HAND_SIZE);
+  }
+  if (gameState.player2?.hand?.length > STARTING_HAND_SIZE) {
+    gameState.player2.hand = gameState.player2.hand.slice(0, STARTING_HAND_SIZE);
+  }
+
+  return gameState;
+}
+
 async function ensureMatchState(match) {
   const where = { match_id: match.id };
   let matchState = await db.MatchState.findOne({ where });
@@ -44,7 +121,7 @@ async function ensureMatchState(match) {
     return matchState;
   }
 
-  const gameState = createInitialGameState(match.player_one_id, match.player_two_id);
+  const gameState = await buildInitialGameState(match);
   matchState = await db.MatchState.create({
     match_id: match.id,
     game_state: gameState

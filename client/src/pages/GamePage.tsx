@@ -19,8 +19,6 @@ import {
   type MatchErrorPayload,
   type MatchStatePayload
 } from "../shared/socket/matchSocket";
-import { fetchUserDeck } from "../shared/api/deckBuilderApi";
-import type { DeckData } from "../types/deckBuilder";
 import "./GamePage.css";
 
 export default function GamePage() {
@@ -43,7 +41,6 @@ export default function GamePage() {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [logEntries, setLogEntries] = useState<string[]>(["Awaiting actions..."]);
   const [selectedCardReason, setSelectedCardReason] = useState<string | null>(null);
-  const [deck, setDeck] = useState<DeckData | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const joinedMatchRef = useRef<string | null>(null);
 
@@ -194,35 +191,27 @@ export default function GamePage() {
     joinMatch(arenaMatchId);
   }, [arenaMatchId]);
 
-  useEffect(() => {
-    if (!token) return;
-    fetchUserDeck(token)
-      .then((deckData) => setDeck(deckData))
-      .catch(() => setDeck(null));
-  }, [token]);
-
   const handCards: CardModel[] = useMemo(() => {
-    if (!deck) return [];
+    if (!match || !userIdStr) return [];
 
-    return deck.cards.flatMap<CardModel>((item) => {
-      const card: CardModel = {
-        id: item.card.id,
-        name: item.card.name,
-        type: item.card.type,
-        triad_type: item.card.triad_type.toUpperCase() as CardModel["triad_type"],
-        mana_cost: item.card.mana_cost,
-        attack: item.card.attack,
-        hp: item.card.hp,
-        description: item.card.description,
-        created_at: item.card.created_at
-      };
+    const selfIndex = match.players.findIndex((id) => id === userIdStr);
+    if (selfIndex < 0) return [];
 
-      return Array.from({ length: Math.max(1, item.quantity) }, (_, idx) => ({
-        ...card,
-        id: `${card.id}:${idx}`
-      }));
-    });
-  }, [deck]);
+    const selfKey = selfIndex === 0 ? "player1" : "player2";
+    const playerHand = match.state.players[selfKey].hand || [];
+
+    return playerHand.map<CardModel>((card, index) => ({
+      id: `${card.id}:${index}`,
+      name: card.name,
+      type: String(card.type).toUpperCase() as CardModel["type"],
+      triad_type: String(card.triad_type).toUpperCase() as CardModel["triad_type"],
+      mana_cost: card.mana_cost,
+      attack: card.attack,
+      hp: card.hp,
+      description: card.description,
+      created_at: card.created_at
+    }));
+  }, [match, userIdStr]);
 
   const { playerHPPercent, opponentHPPercent, currentEnergy, isMyTurn, selfIndex, selfStats, oppStats } = useMemo(() => {
     if (!match || !userIdStr) {
