@@ -1,78 +1,40 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
 import { GameCard, type CardModel } from "../components/Card";
 import socket from "../shared/socket/socket";
+import {
+  endMatchTurn,
+  onMatchError,
+  onMatchState,
+  onMatchUpdate,
+  offMatchError,
+  offMatchState,
+  offMatchUpdate,
+  playMatchCard,
+  queueForMatch,
+  type MatchErrorPayload,
+  type MatchStatePayload,
+  syncMatch
+} from "../shared/socket/matchSocket";
+import { fetchUserDeck } from "../shared/api/deckBuilderApi";
+import type { DeckData } from "../types/deckBuilder";
 import "./GamePage.css";
-
-const PLAYER_CARDS: CardModel[] = [
-  {
-    id: "550e8400-e29b-41d4-a716-446655440000",
-    name: "Crimson Blade",
-    type: "UNIT",
-    triad_type: "ASSAULT",
-    mana_cost: 4,
-    attack: 8,
-    hp: 4,
-    description: "Swift strike that ignores armor.",
-    created_at: "2026-03-05T12:00:00Z",
-  },
-  {
-    id: "660e8400-e29b-41d4-a716-446655440001",
-    name: "Spectral Assassin",
-    type: "UNIT",
-    triad_type: "PRECISION",
-    mana_cost: 3,
-    attack: 6,
-    hp: 3,
-    description: "Target weak points for critical damage.",
-    created_at: "2026-03-05T12:00:00Z",
-  },
-  {
-    id: "770e8400-e29b-41d4-a716-446655440002",
-    name: "Void Reaver",
-    type: "UNIT",
-    triad_type: "ARCANE",
-    mana_cost: 5,
-    attack: 10,
-    hp: 2,
-    description: "Consume essence to fuel power.",
-    created_at: "2026-03-05T12:00:00Z",
-  },
-  {
-    id: "880e8400-e29b-41d4-a716-446655440003",
-    name: "Shadow Strike",
-    type: "SPELL",
-    triad_type: "ASSAULT",
-    mana_cost: 2,
-    attack: null,
-    hp: null,
-    description: "Attack from the darkness.",
-    created_at: "2026-03-05T12:00:00Z",
-  },
-  {
-    id: "990e8400-e29b-41d4-a716-446655440004",
-    name: "Arcane Burst",
-    type: "SPELL",
-    triad_type: "ARCANE",
-    mana_cost: 3,
-    attack: null,
-    hp: null,
-    description: "Unleash raw magical energy.",
-    created_at: "2026-03-05T12:00:00Z",
-  },
-];
 
 export default function GamePage() {
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const [playerHP] = useState(85);
-  const [opponentHP] = useState(62);
-  const [energy] = useState(7);
   const [searchParams] = useSearchParams();
   const arenaId = searchParams.get("arenaId") ?? "unknown";
   const [opponentNickname, setOpponentNickname] = useState(searchParams.get("opponent") ?? "UNKNOWN");
   const nickname = useAppSelector((s) => s.auth.nickname);
-  const displayName = nickname != null ? `Gladiator ${nickname}` : "Gladiator UNKNOWN";
+  const userId = useAppSelector((s) => s.auth.userId);
+  const token = useAppSelector((s) => s.auth.token);
+  const displayName = nickname != null ? `${nickname}` : "UNKNOWN";
+  const [match, setMatch] = useState<MatchStatePayload | null>(null);
+  const [matchError, setMatchError] = useState<string | null>(null);
+  const [isQueueing, setIsQueueing] = useState(false);
+  const [deck, setDeck] = useState<DeckData | null>(null);
+  const hasQueuedRef = useRef(false);
 
   useEffect(() => {
     const fromQuery = searchParams.get("opponent");
@@ -81,6 +43,7 @@ export default function GamePage() {
     }
   }, [searchParams]);
 
+  // Подтягиваем ник оппонента через arena‑сокеты (как и раньше)
   useEffect(() => {
     if (!arenaId || arenaId === "unknown") return;
     if (!socket.connected) socket.connect();
@@ -116,12 +79,129 @@ export default function GamePage() {
     };
   }, [arenaId, nickname]);
 
+  // Подключение к матчу: очередь + обработчики состояния
+  useEffect(() => {
+    if (!token || !userId) return;
+    if (hasQueuedRef.current) {
+      // При повторном заходе попробуем просто синхронизироваться
+      syncMatch();
+      return;
+    }
 
-  const playerHPPercent = Math.max(0, Math.min(100, playerHP));
-  const opponentHPPercent = Math.max(0, Math.min(100, opponentHP));
+    hasQueuedRef.current = true;
+    setIsQueueing(true);
+    setMatchError(null);
+    queueForMatch();
+
+    const handleState = (payload: MatchStatePayload) => {
+      setIsQueueing(false);
+      setMatchError(null);
+      setMatch(payload);
+    };
+
+    const handleUpdate = (payload: MatchStatePayload) => {
+      setMatch(payload);
+    };
+
+    const handleError = (payload: MatchErrorPayload) => {
+      setMatchError(payload.message || "Match action failed");
+    };
+
+    onMatchState(handleState);
+    onMatchUpdate(handleUpdate);
+    onMatchError(handleError);
+
+    return () => {
+      offMatchState(handleState);
+      offMatchUpdate(handleUpdate);
+      offMatchError(handleError);
+    };
+  }, [token, userId]);
+
+  // Загружаем активную колоду игрока и используем её как "руку"
+  useEffect(() => {
+    if (!token) return;
+    fetchUserDeck(token)
+      .then((deckData) => setDeck(deckData))
+      .catch(() => setDeck(null));
+  }, [token]);
+
+  const handCards: CardModel[] = useMemo(() => {
+    if (!deck) return [];
+    return deck.cards.map<CardModel>((item) => ({
+      id: item.card.id,
+      name: item.card.name,
+      type: item.card.type,
+      triad_type: item.card.triad_type.toUpperCase() as CardModel["triad_type"],
+      mana_cost: item.card.mana_cost,
+      attack: item.card.attack,
+      hp: item.card.hp,
+      description: item.card.description,
+      created_at: item.card.created_at
+    }));
+  }, [deck]);
+
+  const {
+    playerHPPercent,
+    opponentHPPercent,
+    currentEnergy,
+    isMyTurn
+  } = useMemo(() => {
+    if (!match || !userId) {
+      return {
+        playerHPPercent: 100,
+        opponentHPPercent: 100,
+        currentEnergy: 0,
+        isMyTurn: false
+      };
+    }
+
+    const selfIndex = match.players.findIndex((id) => id === userId);
+    const selfKey = selfIndex === 0 ? "player1" : "player2";
+    const oppKey = selfKey === "player1" ? "player2" : "player1";
+
+    const selfStats = match.state.players[selfKey];
+    const oppStats = match.state.players[oppKey];
+
+    const maxHp = 30;
+    const clampPercent = (value: number | null) => {
+      if (value == null) return 0;
+      return Math.max(0, Math.min(100, (value / maxHp) * 100));
+    };
+
+    return {
+      playerHPPercent: clampPercent(selfStats.hp),
+      opponentHPPercent: clampPercent(oppStats.hp),
+      currentEnergy: selfStats.energy ?? 0,
+      isMyTurn: match.state.activePlayer === userId && !match.state.finished
+    };
+  }, [match, userId]);
 
   const handleCardClick = (card: CardModel) => {
     setSelectedCardId((prev) => (prev === card.id ? null : card.id));
+
+    if (!match || !userId) return;
+    if (match.state.finished || match.state.activePlayer !== userId) return;
+
+    const actionId = `${Date.now()}-${card.id}-${Math.random().toString(36).slice(2)}`;
+
+    playMatchCard({
+      matchId: match.matchId,
+      cardId: card.id,
+      actionId,
+      version: match.state.version
+    });
+  };
+
+  const handleEndTurnClick = () => {
+    setSelectedCardId(null);
+    if (!match || !userId) return;
+    if (match.state.finished || match.state.activePlayer !== userId) return;
+
+    endMatchTurn({
+      matchId: match.matchId,
+      version: match.state.version
+    });
   };
 
   return (
@@ -144,7 +224,7 @@ export default function GamePage() {
         <div className="game-hp">
           <div className="game-hp__meta">
             <span>Death&apos;s Door</span>
-            <strong className="comic-text-shadow">{opponentHP}%</strong>
+            <strong className="comic-text-shadow">{Math.round(opponentHPPercent)}%</strong>
           </div>
           <div className="game-hp__track ink-border-thin">
             <div
@@ -164,17 +244,20 @@ export default function GamePage() {
         <p className="game-state__label">Arena</p>
         <p className="game-state__value">{arenaId}</p>
       </div>
+      <div className="game-state">
+        <p className="game-state__label">Match</p>
+        <p className="game-state__value">
+          {match ? match.matchId : isQueueing ? "Searching..." : "Not started"}
+        </p>
+      </div>
 
       <main className="game-battlefield">
         <div className="game-battlefield__divider" />
 
         <aside className="game-log">
           <p className="game-log__title">Battle Log</p>
-          <p className="game-log__entry">Opponent draws 2 cards</p>
-          <p className="game-log__entry">Shadow strike deals 8 damage</p>
-          <p className="game-log__entry game-log__entry--active">
-            Blood ritual prepared
-          </p>
+          {matchError && <p className="game-log__entry game-log__entry--active">{matchError}</p>}
+          {!matchError && <p className="game-log__entry">Awaiting actions...</p>}
         </aside>
 
         {selectedCardId && (
@@ -198,7 +281,7 @@ export default function GamePage() {
         <div className="game-hp">
           <div className="game-hp__meta">
             <span>Death&apos;s Door</span>
-            <strong className="comic-text-shadow">{playerHP}%</strong>
+            <strong className="comic-text-shadow">{Math.round(playerHPPercent)}%</strong>
           </div>
           <div className="game-hp__track ink-border-thin">
             <div
@@ -213,14 +296,15 @@ export default function GamePage() {
             {Array.from({ length: 10 }).map((_, index) => (
               <span
                 key={index}
-                className={`game-energy__pip ${index < energy ? "is-active" : ""}`}
+                className={`game-energy__pip ${index < currentEnergy ? "is-active" : ""}`}
               />
             ))}
           </div>
           <button
             type="button"
             className="game-end-turn stress-warning"
-            onClick={() => setSelectedCardId(null)}
+            onClick={handleEndTurnClick}
+            disabled={!isMyTurn || !match || match.state.finished}
           >
             End Turn
           </button>
@@ -228,7 +312,7 @@ export default function GamePage() {
       </footer>
 
       <section className="game-hand" aria-label="Hand">
-        {PLAYER_CARDS.map((card, index) => {
+        {handCards.map((card, index) => {
           const isSelected = selectedCardId === card.id;
           return (
             <div

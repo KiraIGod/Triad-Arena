@@ -28,6 +28,13 @@ export function queueForMatch(): void {
   matchSocket.emit("match:queue");
 }
 
+export function syncMatch(): void {
+  if (!matchSocket.connected) {
+    matchSocket.connect();
+  }
+  matchSocket.emit("match:sync");
+}
+
 export function playMatchCard(payload: {
   matchId: string;
   cardId: string;
