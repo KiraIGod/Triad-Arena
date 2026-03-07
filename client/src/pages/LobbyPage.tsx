@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAppSelector } from "../store";
+import { store, useAppSelector } from "../store";
 import styles from "./LobbyPage.module.css";
 import socket from "../shared/socket/socket";
 import { fetchUserDeck } from "../shared/api/deckBuilderApi";
@@ -57,12 +57,13 @@ function summarizeDeck(
 function DeckPanel({ deck, onEditDeck }: { deck: DeckSummary | null; onEditDeck: () => void }) {
   const d = deck ?? { name: "-", cardsTotal: 0, cardsMax: 20, assault: 0, precision: 0, arcane: 0 };
   const triumphRate = d.cardsMax > 0 ? ((d.cardsTotal / d.cardsMax) * 100).toFixed(1) : "0.0";
-
+  const nickname = useAppSelector(store => store.auth.nickname)
+ 
   return (
     <section className={styles.sidePanel}>
       <div className={styles.panelLabelRow}>
         <span className={styles.panelDiamond} />
-        <span className={styles.panelLabel}>Warrior</span>
+        <span className={styles.panelLabel}>{nickname}</span>
         <span className={styles.panelLine} />
       </div>
 

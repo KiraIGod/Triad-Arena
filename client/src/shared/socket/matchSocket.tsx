@@ -8,12 +8,29 @@ export type MatchStatePayload = {
     turn: number;
     activePlayer: string;
     players: {
-      player1: { hp: number; shield: number; energy: number };
-      player2: { hp: number; shield: number; energy: number };
+      player1: {
+        hp: number;
+        shield: number;
+        energy: number;
+        statuses?: Array<{ type: string; turns?: number; amount?: number }>;
+      };
+      player2: {
+        hp: number;
+        shield: number;
+        energy: number;
+        statuses?: Array<{ type: string; turns?: number; amount?: number }>;
+      };
     };
     turnActions: Array<{ actionId: string; cardId: string; playerId: string }>;
     finished: boolean;
   };
+  events?: Array<{
+    eventId: number;
+    turn: number | null;
+    type: string;
+    timestamp: number;
+    payload: Record<string, unknown>;
+  }>;
 };
 
 export type MatchErrorPayload = {
@@ -21,11 +38,18 @@ export type MatchErrorPayload = {
   message: string;
 };
 
-export function queueForMatch(): void {
+export function syncMatch(): void {
   if (!matchSocket.connected) {
     matchSocket.connect();
   }
-  matchSocket.emit("match:queue");
+  matchSocket.emit("match:sync");
+}
+
+export function joinMatch(matchId: string): void {
+  if (!matchSocket.connected) {
+    matchSocket.connect();
+  }
+  matchSocket.emit("match:join", { matchId });
 }
 
 export function playMatchCard(payload: {
@@ -63,4 +87,16 @@ export function offMatchUpdate(handler: (payload: MatchStatePayload) => void): v
 
 export function offMatchError(handler: (payload: MatchErrorPayload) => void): void {
   matchSocket.off("match:error", handler);
+}
+
+export function onMatchFinish(
+  handler: (payload: { winnerId: string | null; reason?: string }) => void
+): void {
+  matchSocket.on("match:finish", handler);
+}
+
+export function offMatchFinish(
+  handler: (payload: { winnerId: string | null; reason?: string }) => void
+): void {
+  matchSocket.off("match:finish", handler);
 }

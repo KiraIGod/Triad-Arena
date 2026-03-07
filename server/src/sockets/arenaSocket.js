@@ -1,6 +1,6 @@
 const { randomUUID } = require("crypto");
 const jwt = require("jsonwebtoken");
-const { User } = require("../db/models");
+const { User, Deck, Match } = require("../db/models");
 
 
 async function getNicknameFromSocket(socket) {
@@ -25,6 +25,24 @@ function pickWaitingArena(activeGames) {
   return null;
 }
 
+async function ensurePlayerDeckId(userId) {
+  const existingDeck = await Deck.findOne({
+    where: { user_id: userId },
+    order: [["created_at", "ASC"]]
+  });
+
+  if (existingDeck) {
+    return existingDeck.id;
+  }
+
+  const createdDeck = await Deck.create({
+    user_id: userId,
+    name: "Main Deck"
+  });
+
+  return createdDeck.id;
+}
+
 module.exports = function registerArenaSocket(io, activeGames) {
   io.on("connection", (socket) => {
     socket.on("arena:create", async (ack) => {
@@ -38,7 +56,7 @@ module.exports = function registerArenaSocket(io, activeGames) {
           status: "waiting",
           createdAt: Date.now(),
           updatedAt: Date.now(),
-          players: [{ socketId: socket.id, userId: socket.userId || null, nickname: hostNickname }]
+          players: [{ socketId: socket.id, userId: socket.data?.userId || null, nickname: hostNickname }]
         });
 
         socket.join(arenaId);
@@ -96,12 +114,40 @@ module.exports = function registerArenaSocket(io, activeGames) {
         if (!isAlreadyInArena) {
           arena.players.push({
             socketId: socket.id,
-            userId: socket.userId || null,
+            userId: socket.data?.userId || null,
             nickname: joinerNickname
           });
         }
 
         if (arena.players.length === 2) {
+          if (!arena.matchId) {
+            const hostUserId = arena.players[0]?.userId;
+            const joinerUserId = arena.players[1]?.userId;
+
+            if (!hostUserId || !joinerUserId) {
+              if (typeof ack === "function") {
+                ack({ error: "Player identity is missing" });
+              }
+              return;
+            }
+
+            const [playerOneDeckId, playerTwoDeckId] = await Promise.all([
+              ensurePlayerDeckId(hostUserId),
+              ensurePlayerDeckId(joinerUserId)
+            ]);
+
+            const match = await Match.create({
+              player_one_id: hostUserId,
+              player_two_id: joinerUserId,
+              player_one_deck_id: playerOneDeckId,
+              player_two_deck_id: playerTwoDeckId,
+              status: "active",
+              started_at: new Date()
+            });
+
+            arena.matchId = String(match.id);
+          }
+
           arena.status = "ready";
         }
         arena.updatedAt = Date.now();
@@ -111,11 +157,12 @@ module.exports = function registerArenaSocket(io, activeGames) {
         console.log(`[arena:join] success arenaId=${arenaId} socket=${socket.id}`);
 
         if (typeof ack === "function") {
-          ack({ arenaId, opponentNickname: hostNickname });
+          ack({ arenaId, opponentNickname: hostNickname, matchId: arena.matchId || null });
         }
 
         io.to(arenaId).emit("arena:ready", {
           arenaId,
+          matchId: arena.matchId || null,
           players: arena.players
         });
       } catch (error) {
@@ -146,6 +193,7 @@ module.exports = function registerArenaSocket(io, activeGames) {
         if (typeof ack === "function") {
           ack({
             arenaId,
+            matchId: arena.matchId || null,
             status: arena.status,
             players: Array.isArray(arena.players) ? arena.players : []
           });
