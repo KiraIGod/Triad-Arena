@@ -438,7 +438,6 @@ export default function DeckBuilderPage() {
           maxDeckSize={MAX_DECK_SIZE}
           totalCards={totalCards}
           onAddCard={addCardToDeck}
-          onSelectCard={setSelectedCard}
         />
         <CurrentDeck
           deckByCardId={deckByCardId}

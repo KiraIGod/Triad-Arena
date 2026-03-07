@@ -8,7 +8,6 @@ type CardPoolProps = {
   maxDeckSize: number
   totalCards: number
   onAddCard: (cardId: string) => void
-  onSelectCard: (card: DeckBuilderCard) => void
 }
 
 type SortKey = 'mana' | 'type' | 'nameDesc'
@@ -29,7 +28,6 @@ export default function CardPool({
   maxDeckSize,
   totalCards,
   onAddCard,
-  onSelectCard,
 }: CardPoolProps) {
   const [sortKey, setSortKey] = useState<SortKey>('mana')
   const [searchQuery, setSearchQuery] = useState('')
@@ -121,8 +119,9 @@ export default function CardPool({
             <button
               key={card.id}
               type="button"
-              className={`poolCard ${modifier ? `poolCard--${modifier}` : ""}`}
-              onClick={() => onSelectCard(card)}
+              className={`poolCard ${modifier ? `poolCard--${modifier}` : ""} ${totalCards >= maxDeckSize || inDeck >= owned ? "poolCard--disabled" : ""}`}
+              onClick={() => onAddCard(card.id)}
+              disabled={totalCards >= maxDeckSize || inDeck >= owned}
             >
               <div className="poolCard__mana">{card.mana_cost}</div>
               <div className="poolCard__name">{card.name}</div>
