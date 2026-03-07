@@ -5,6 +5,9 @@ type CardPoolProps = {
   cards: DeckBuilderCard[]
   collectionByCardId: Record<string, number>
   deckByCardId: Record<string, number>
+  maxDeckSize: number
+  totalCards: number
+  onAddCard: (cardId: string) => void
   onSelectCard: (card: DeckBuilderCard) => void
 }
 
@@ -115,7 +118,7 @@ export default function CardPool({
               <div className="poolCard__copies">
                 Owned: {owned} &middot; In deck: <span>{inDeck}</span>
               </div>
-            </button>
+            </div>
           )
         })}
       </div>
