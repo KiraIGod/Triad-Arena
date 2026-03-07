@@ -129,6 +129,17 @@ function validateCardPlayPreconditions(state, playerId, card) {
   }
 }
 
+async function finalizeMatch(match, winnerId) {
+  await db.Match.update(
+    {
+      status: "finished",
+      winner_id: winnerId || null,
+      finished_at: new Date()
+    },
+    { where: { id: match.id } }
+  );
+}
+
 function getWinnerId(match, state) {
   const player1Hp = state?.player1?.hp ?? 0;
   const player2Hp = state?.player2?.hp ?? 0;
@@ -280,6 +291,7 @@ async function handlePlayCard(io, socket, payload = {}) {
         console.log(`[ACTION] Turn action #${lastTurnAction.actionIndex}`);
       }
     }
+    await finalizeMatch(match, winnerId);
     io.to(String(matchId)).emit("match:update", {
       ...buildMatchStatePayload(match, safeState),
       events
@@ -340,6 +352,7 @@ async function handleEndTurn(io, socket, payload = {}) {
         payload: { winnerId }
       })
     );
+    await finalizeMatch(match, winnerId);
     io.to(String(matchId)).emit("match:update", {
       ...buildMatchStatePayload(match, safeState),
       events
