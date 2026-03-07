@@ -67,7 +67,9 @@
   box-shadow:
     0 0 12px rgba(127, 30, 29, 0.4),
     inset 0 2px 4px rgba(0, 0, 0, 0.5);
-  transition: filter 0.15s, box-shadow 0.15s;
+  transition:
+    filter 0.15s,
+    box-shadow 0.15s;
 }
 
 .deckBuilder__btn:hover:not(:disabled) {
@@ -115,6 +117,142 @@
 .deckBuilder__feedback--status {
   color: var(--gold-accent);
   background: rgba(201, 169, 98, 0.1);
+}
+
+/* ===== Deck Tabs ===== */
+
+.deckTabs {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  flex-wrap: wrap;
+}
+
+.deckTabs__tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: linear-gradient(180deg, #2a241e 0%, #1a1612 100%);
+  border: 2px solid #000;
+  transition:
+    box-shadow 0.15s,
+    border-color 0.15s;
+}
+
+.deckTabs__tab--active {
+  border-color: var(--blood-red);
+  box-shadow: 0 0 12px rgba(168, 62, 54, 0.35);
+}
+
+.deckTabs__tab--default .deckTabs__tabBtn {
+  border-left: 3px solid var(--gold-accent);
+}
+
+.deckTabs__tabBtn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--foreground);
+  cursor: pointer;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.deckTabs__tabBtn:hover {
+  background: rgba(168, 62, 54, 0.1);
+}
+
+.deckTabs__name {
+  cursor: pointer;
+  user-select: none;
+}
+
+.deckTabs__count {
+  font-family: var(--font-accent);
+  font-size: 11px;
+  color: var(--text-faded);
+  letter-spacing: 0.04em;
+}
+
+.deckTabs__renameWrap {
+  display: flex;
+  align-items: center;
+  padding: 6px 12px;
+}
+
+.deckTabs__renameInput {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  background: rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--gold-accent);
+  padding: 4px 8px;
+  width: 140px;
+  outline: none;
+  box-shadow: 0 0 8px rgba(201, 169, 98, 0.25);
+}
+
+.deckTabs__controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-right: 8px;
+}
+
+.deckTabs__activeBadge {
+  font-size: 16px;
+  color: var(--gold-accent);
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.deckTabs__controlBtn {
+  background: none;
+  border: none;
+  color: var(--text-faded);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  transition: color 0.12s;
+}
+
+.deckTabs__controlBtn:hover {
+  color: var(--gold-accent);
+}
+
+.deckTabs__controlBtn--delete:hover {
+  color: var(--blood-bright);
+}
+
+.deckTabs__addBtn {
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faded);
+  background: none;
+  border: 2px dashed rgba(217, 199, 168, 0.2);
+  padding: 8px 16px;
+  cursor: pointer;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.deckTabs__addBtn:hover {
+  color: var(--gold-accent);
+  border-color: var(--gold-accent);
 }
 
 .deckBuilder__body {
@@ -194,7 +332,9 @@
   border: 2px solid #000;
   padding: 12px;
   cursor: pointer;
-  transition: box-shadow 0.15s, transform 0.1s;
+  transition:
+    box-shadow 0.15s,
+    transform 0.1s;
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -208,10 +348,16 @@
   transform: translateY(-2px);
 }
 
+.poolCard--inDeck {
+  opacity: 0.55;
+  filter: brightness(0.7) saturate(0.6);
+}
+
 .poolCard--exhausted {
-  opacity: 0.35;
-  filter: saturate(0.2);
+  opacity: 0.3;
+  filter: brightness(0.5) saturate(0.15);
   cursor: default;
+  pointer-events: none;
 }
 
 .poolCard--exhausted:hover {
@@ -239,7 +385,9 @@
   border-bottom: 2px solid #000;
   cursor: pointer;
   z-index: 1;
-  transition: color 0.12s, background 0.12s;
+  transition:
+    color 0.12s,
+    background 0.12s;
 }
 
 .poolCard__infoBtn:hover {
@@ -247,9 +395,15 @@
   background: rgba(168, 62, 54, 0.5);
 }
 
-.poolCard--assault { border-left: 3px solid var(--blood-red); }
-.poolCard--precision { border-left: 3px solid var(--gold-accent); }
-.poolCard--arcane { border-left: 3px solid #6b5bcd; }
+.poolCard--assault {
+  border-left: 3px solid var(--blood-red);
+}
+.poolCard--precision {
+  border-left: 3px solid var(--gold-accent);
+}
+.poolCard--arcane {
+  border-left: 3px solid #6b5bcd;
+}
 
 .poolCard__mana {
   position: absolute;
@@ -297,8 +451,12 @@
   margin-top: auto;
 }
 
-.poolCard__stat--atk { color: var(--blood-bright); }
-.poolCard__stat--hp { color: #5aad5a; }
+.poolCard__stat--atk {
+  color: var(--blood-bright);
+}
+.poolCard__stat--hp {
+  color: #5aad5a;
+}
 
 .poolCard__copies {
   font-family: var(--font-accent);
@@ -346,8 +504,12 @@
   letter-spacing: 0.06em;
 }
 
-.currentDeck__counter--full { color: #5aad5a; }
-.currentDeck__counter--partial { color: var(--gold-accent); }
+.currentDeck__counter--full {
+  color: #5aad5a;
+}
+.currentDeck__counter--partial {
+  color: var(--gold-accent);
+}
 
 .currentDeck__list {
   flex: 1;
@@ -446,8 +608,14 @@
 }
 
 @keyframes tooltipFadeIn {
-  from { opacity: 0; transform: translateX(6px); }
-  to { opacity: 1; transform: translateX(0); }
+  from {
+    opacity: 0;
+    transform: translateX(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .deckTooltip__image {
@@ -501,8 +669,12 @@
   font-weight: 900;
 }
 
-.deckTooltip__stat--atk { color: var(--blood-bright); }
-.deckTooltip__stat--hp { color: #5aad5a; }
+.deckTooltip__stat--atk {
+  color: var(--blood-bright);
+}
+.deckTooltip__stat--hp {
+  color: #5aad5a;
+}
 
 /* ===== Card Modal ===== */
 
@@ -518,8 +690,12 @@
 }
 
 @keyframes modalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .cardModal__panel {
@@ -538,8 +714,14 @@
 }
 
 @keyframes modalSlideIn {
-  from { transform: scale(0.95) translateY(10px); opacity: 0; }
-  to { transform: scale(1) translateY(0); opacity: 1; }
+  from {
+    transform: scale(0.95) translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
 }
 
 .cardModal__close {
@@ -557,7 +739,9 @@
   font-size: 18px;
   cursor: pointer;
   z-index: 1;
-  transition: color 0.12s, border-color 0.12s;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
 }
 
 .cardModal__close:hover {
@@ -610,14 +794,32 @@
   color: var(--text-faded);
 }
 
-.cardModal__tag--assault { color: var(--blood-red); border-color: var(--blood-red); }
-.cardModal__tag--precision { color: var(--gold-accent); border-color: var(--gold-accent); }
-.cardModal__tag--arcane { color: #8b7bef; border-color: #6b5bcd; }
-.cardModal__tag--mana { color: #7ba4d9; border-color: #4a7ab5; }
+.cardModal__tag--assault {
+  color: var(--blood-red);
+  border-color: var(--blood-red);
+}
+.cardModal__tag--precision {
+  color: var(--gold-accent);
+  border-color: var(--gold-accent);
+}
+.cardModal__tag--arcane {
+  color: #8b7bef;
+  border-color: #6b5bcd;
+}
+.cardModal__tag--mana {
+  color: #7ba4d9;
+  border-color: #4a7ab5;
+}
 
 .cardModal__divider {
   height: 2px;
-  background: linear-gradient(90deg, transparent 0%, #000 20%, #000 80%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 20%,
+    #000 80%,
+    transparent 100%
+  );
 }
 
 .cardModal__description {
@@ -654,8 +856,12 @@
   font-weight: 900;
 }
 
-.cardModal__statValue--atk { color: var(--blood-bright); }
-.cardModal__statValue--hp { color: #5aad5a; }
+.cardModal__statValue--atk {
+  color: var(--blood-bright);
+}
+.cardModal__statValue--hp {
+  color: #5aad5a;
+}
 
 .cardModal__actions {
   display: flex;
@@ -675,7 +881,9 @@
   padding: 10px 14px;
   border: 2px solid #000;
   cursor: pointer;
-  transition: filter 0.12s, box-shadow 0.12s;
+  transition:
+    filter 0.12s,
+    box-shadow 0.12s;
 }
 
 .cardModal__actionBtn--add {
@@ -703,6 +911,283 @@
   opacity: 0.35;
   cursor: not-allowed;
   filter: saturate(0.3);
+}
+
+/* ===== View Mode Button ===== */
+
+.deckBuilder__btn--viewer {
+  background: linear-gradient(180deg, #1a3a5c 0%, #132a42 100%);
+  box-shadow:
+    0 0 12px rgba(50, 120, 200, 0.3),
+    inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.deckBuilder__btn--viewer:hover:not(:disabled) {
+  filter: brightness(1.15);
+  box-shadow: 0 0 20px rgba(50, 140, 230, 0.5);
+}
+
+/* ===== Card Viewer (browse mode) ===== */
+
+.cardViewer__overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modalFadeIn 0.15s ease-out;
+}
+
+.cardViewer__panel {
+  position: relative;
+  width: 420px;
+  max-width: 94vw;
+  max-height: 92vh;
+  overflow-y: auto;
+  background: linear-gradient(135deg, #2a241e 0%, #1a1612 100%);
+  border: 3px solid #000;
+  box-shadow:
+    0 0 60px rgba(0, 0, 0, 0.9),
+    0 0 100px rgba(50, 120, 200, 0.12),
+    inset 0 0 20px rgba(0, 0, 0, 0.5);
+  animation: modalSlideIn 0.18s ease-out;
+}
+
+.cardViewer__close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(217, 199, 168, 0.15);
+  color: var(--text-faded);
+  font-size: 18px;
+  cursor: pointer;
+  z-index: 1;
+  transition:
+    color 0.12s,
+    border-color 0.12s;
+}
+
+.cardViewer__close:hover {
+  color: var(--foreground);
+  border-color: var(--blood-red);
+}
+
+.cardViewer__counter {
+  position: absolute;
+  top: 10px;
+  left: 14px;
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  color: var(--text-faded);
+  background: rgba(0, 0, 0, 0.5);
+  padding: 4px 10px;
+  border: 1px solid rgba(217, 199, 168, 0.1);
+  z-index: 1;
+}
+
+.cardViewer__image {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  border-bottom: 2px solid #000;
+  display: block;
+  background: var(--parchment-dark);
+}
+
+.cardViewer__body {
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cardViewer__name {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.cardViewer__meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cardViewer__tag {
+  font-family: var(--font-accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border: 1px solid rgba(0, 0, 0, 0.8);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text-faded);
+}
+
+.cardViewer__tag--assault {
+  color: var(--blood-red);
+  border-color: var(--blood-red);
+}
+.cardViewer__tag--precision {
+  color: var(--gold-accent);
+  border-color: var(--gold-accent);
+}
+.cardViewer__tag--arcane {
+  color: #8b7bef;
+  border-color: #6b5bcd;
+}
+.cardViewer__tag--mana {
+  color: #7ba4d9;
+  border-color: #4a7ab5;
+}
+
+.cardViewer__divider {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    #000 20%,
+    #000 80%,
+    transparent 100%
+  );
+}
+
+.cardViewer__description {
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-aged);
+  margin: 0;
+  font-style: italic;
+}
+
+.cardViewer__stats {
+  display: flex;
+  gap: 20px;
+}
+
+.cardViewer__stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.cardViewer__statLabel {
+  font-family: var(--font-accent);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faded);
+}
+
+.cardViewer__statValue {
+  font-family: var(--font-heading);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.cardViewer__statValue--atk {
+  color: var(--blood-bright);
+}
+.cardViewer__statValue--hp {
+  color: #5aad5a;
+}
+
+.cardViewer__actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 24px;
+  border-top: 2px solid #000;
+}
+
+.cardViewer__actionBtn {
+  flex: 1;
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-aged);
+  padding: 10px 14px;
+  border: 2px solid #000;
+  cursor: pointer;
+  transition:
+    filter 0.12s,
+    box-shadow 0.12s;
+}
+
+.cardViewer__actionBtn--add {
+  background: linear-gradient(180deg, #7f1e1d 0%, #6b1e1a 100%);
+  box-shadow: 0 0 10px rgba(127, 30, 29, 0.3);
+}
+
+.cardViewer__actionBtn--add:hover:not(:disabled) {
+  filter: brightness(1.15);
+  box-shadow: 0 0 18px rgba(168, 62, 54, 0.5);
+}
+
+.cardViewer__actionBtn--remove {
+  background: linear-gradient(180deg, #2a241e 0%, #1a1612 100%);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.cardViewer__actionBtn--remove:hover:not(:disabled) {
+  box-shadow:
+    0 0 10px rgba(201, 169, 98, 0.2),
+    inset 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.cardViewer__actionBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  filter: saturate(0.3);
+}
+
+.cardViewer__nav {
+  display: flex;
+  gap: 8px;
+  padding: 0 24px 16px;
+}
+
+.cardViewer__navBtn {
+  flex: 1;
+  font-family: var(--font-heading);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-aged);
+  padding: 10px 14px;
+  border: 2px solid #000;
+  background: linear-gradient(180deg, #1a3a5c 0%, #132a42 100%);
+  box-shadow:
+    0 0 8px rgba(50, 120, 200, 0.2),
+    inset 0 2px 4px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition:
+    filter 0.12s,
+    box-shadow 0.12s;
+}
+
+.cardViewer__navBtn:hover {
+  filter: brightness(1.15);
+  box-shadow: 0 0 16px rgba(50, 140, 230, 0.4);
 }
 
 /* ===== Responsive ===== */

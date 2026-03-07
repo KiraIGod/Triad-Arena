@@ -1,6 +1,8 @@
+const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
 const registerMatchSocket = require("./matchSocket");
 const registerArenaSocket = require("./arenaSocket");
+const { cleanupArena } = require("../services/matchService");
 
 const activeGames = new Map();
 
@@ -8,6 +10,20 @@ function initSocket(httpServer) {
   const io = new Server(httpServer, {
     cors: {
       origin: "*"
+    }
+  });
+
+  io.use((socket, next) => {
+    try {
+      const token = socket.handshake?.auth?.token;
+      if (!token) {
+        return next(new Error("UNAUTHORIZED"));
+      }
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev_secret");
+      socket.data.userId = decoded.userId;
+      return next();
+    } catch (err) {
+      return next(new Error("UNAUTHORIZED"));
     }
   });
 
@@ -24,11 +40,11 @@ function initSocket(httpServer) {
       } else {
         activeGames.set(normalizedGameId, { updatedAt: Date.now() });
       }
-      
     });
 
     socket.on("disconnect", () => {
-      // Placeholder for cleanup logic.
+      const userId = socket.data?.userId;
+      cleanupArena(activeGames, userId, socket.id);
     });
   });
 

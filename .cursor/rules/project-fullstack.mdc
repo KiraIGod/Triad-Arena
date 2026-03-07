@@ -1,0 +1,39 @@
+---
+alwaysApply: true
+---
+
+---
+description: Fullstack project conventions
+alwaysApply: true
+---
+
+- This is a fullstack JavaScript/TypeScript project.
+
+Preferred stack:
+- Frontend: React + TypeScript + Redux Toolkit + MUI
+- Backend: Node.js + Express + Sequelize + PostgreSQL
+
+General rules:
+- Prefer consistency with the existing project structure.
+- Keep code modular and easy to follow.
+- Do not make large architectural changes unless explicitly asked.
+- Keep functions focused and reasonably small.
+- Prefer clear naming over short naming.
+
+Async rules:
+- Use async/await instead of nested .then chains.
+- Handle errors explicitly and consistently.
+- Do not silently swallow errors.
+
+Editing rules:
+- Preserve existing business logic unless explicitly asked to change it.
+- If adding files or folders, follow existing naming conventions.
+- Avoid touching unrelated code when editing.
+
+API rules:
+- Use consistent HTTP status codes.
+- Return predictable JSON response shapes.
+- Prefer one response format for success and one for errors.
+
+Decision rules:
+- When unsure, make the smallest safe change that solves the task.

@@ -23,6 +23,7 @@ type DeckResponse = {
   deck: {
     id: string;
     name: string;
+    isActive: boolean;
     totalCards: number;
     maxCards: number;
     cards: Array<{
@@ -31,6 +32,10 @@ type DeckResponse = {
       card: ApiCard;
     }>;
   };
+};
+
+type DecksResponse = {
+  decks: DeckResponse["deck"][];
 };
 
 function withAuth(token: string) {
@@ -76,12 +81,53 @@ export async function fetchUserDeck(token: string): Promise<DeckData> {
   return mapDeck(data.deck);
 }
 
+export async function fetchUserDecks(token: string): Promise<DeckData[]> {
+  const { data } = await api.get<DecksResponse>("/deck-builder/decks", withAuth(token));
+  return data.decks.map(mapDeck);
+}
+
+export async function createDeck(token: string, name: string): Promise<DeckData> {
+  const { data } = await api.post<DeckResponse>(
+    "/deck-builder/decks",
+    { name },
+    withAuth(token)
+  );
+  return mapDeck(data.deck);
+}
+
+export async function deleteDeck(token: string, deckId: string): Promise<DeckData[]> {
+  const { data } = await api.delete<DecksResponse>(
+    `/deck-builder/decks/${deckId}/delete`,
+    withAuth(token)
+  );
+  return data.decks.map(mapDeck);
+}
+
+export async function renameDeck(token: string, deckId: string, name: string): Promise<DeckData> {
+  const { data } = await api.put<DeckResponse>(
+    `/deck-builder/decks/${deckId}/rename`,
+    { name },
+    withAuth(token)
+  );
+  return mapDeck(data.deck);
+}
+
+export async function activateDeck(token: string, deckId: string): Promise<DeckData[]> {
+  const { data } = await api.put<DecksResponse>(
+    `/deck-builder/decks/${deckId}/activate`,
+    {},
+    withAuth(token)
+  );
+  return data.decks.map(mapDeck);
+}
+
 export async function saveUserDeck(
   token: string,
+  deckId: string,
   deckItems: Array<{ cardId: string; quantity: number }>
 ): Promise<DeckData> {
   const { data } = await api.put<DeckResponse>(
-    "/deck-builder/deck",
+    `/deck-builder/decks/${deckId}`,
     { deckItems },
     withAuth(token)
   );
@@ -90,17 +136,21 @@ export async function saveUserDeck(
 
 export async function updateUserDeckPartial(
   token: string,
+  deckId: string,
   deckItems: Array<{ cardId: string; quantity: number }>
 ): Promise<DeckData> {
   const { data } = await api.patch<DeckResponse>(
-    "/deck-builder/deck",
+    `/deck-builder/decks/${deckId}`,
     { deckItems },
     withAuth(token)
   );
   return mapDeck(data.deck);
 }
 
-export async function resetUserDeck(token: string): Promise<DeckData> {
-  const { data } = await api.delete<DeckResponse>("/deck-builder/deck", withAuth(token));
+export async function resetUserDeck(token: string, deckId: string): Promise<DeckData> {
+  const { data } = await api.delete<DeckResponse>(
+    `/deck-builder/decks/${deckId}`,
+    withAuth(token)
+  );
   return mapDeck(data.deck);
 }

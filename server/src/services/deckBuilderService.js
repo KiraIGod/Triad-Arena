@@ -2,6 +2,7 @@ const db = require("../db/models");
 
 const { Card, Deck, DeckCard, UserCard } = db;
 const MAX_DECK_SIZE = 20;
+const MAX_DECKS = 3;
 const DEFAULT_COLLECTION_QUANTITY = 2;
 const DEFAULT_DECK_NAME = "Main Deck";
 
@@ -98,23 +99,7 @@ async function getUserCollection(userId) {
   }));
 }
 
-async function getOrCreateDeck(userId, transaction) {
-  const [deck] = await Deck.findOrCreate({
-    where: { user_id: userId, name: DEFAULT_DECK_NAME },
-    defaults: { user_id: userId, name: DEFAULT_DECK_NAME },
-    transaction
-  });
-  return deck;
-}
-
-async function getUserDeck(userId) {
-  const deck = await getOrCreateDeck(userId);
-  const deckCards = await DeckCard.findAll({
-    where: { deck_id: deck.id },
-    include: [{ model: Card }],
-    order: [[Card, "name", "ASC"]]
-  });
-
+function formatDeckResponse(deck, deckCards) {
   const cards = deckCards.map((entry) => ({
     cardId: entry.card_id,
     quantity: entry.quantity,
@@ -125,10 +110,160 @@ async function getUserDeck(userId) {
   return {
     id: deck.id,
     name: deck.name,
+    isActive: deck.is_active,
     totalCards,
     maxCards: MAX_DECK_SIZE,
     cards
   };
+}
+
+async function getUserDecks(userId) {
+  let decks = await Deck.findAll({
+    where: { user_id: userId },
+    order: [["created_at", "ASC"]]
+  });
+
+  if (decks.length === 0) {
+    const deck = await Deck.create({
+      user_id: userId,
+      name: DEFAULT_DECK_NAME,
+      is_active: true
+    });
+    decks = [deck];
+  }
+
+  const deckIds = decks.map((d) => d.id);
+  const allDeckCards = await DeckCard.findAll({
+    where: { deck_id: deckIds },
+    include: [{ model: Card }],
+    order: [[Card, "name", "ASC"]]
+  });
+
+  const cardsByDeckId = new Map();
+  for (const dc of allDeckCards) {
+    const arr = cardsByDeckId.get(dc.deck_id) || [];
+    arr.push(dc);
+    cardsByDeckId.set(dc.deck_id, arr);
+  }
+
+  return decks.map((deck) =>
+    formatDeckResponse(deck, cardsByDeckId.get(deck.id) || [])
+  );
+}
+
+async function getUserDeckById(userId, deckId) {
+  const deck = await Deck.findOne({
+    where: { id: deckId, user_id: userId }
+  });
+
+  if (!deck) {
+    throw new Error("Deck not found");
+  }
+
+  const deckCards = await DeckCard.findAll({
+    where: { deck_id: deck.id },
+    include: [{ model: Card }],
+    order: [[Card, "name", "ASC"]]
+  });
+
+  return formatDeckResponse(deck, deckCards);
+}
+
+async function getUserDeck(userId) {
+  const decks = await getUserDecks(userId);
+  const active = decks.find((d) => d.isActive);
+  return active || decks[0];
+}
+
+async function createUserDeck(userId, name) {
+  const existingCount = await Deck.count({ where: { user_id: userId } });
+  if (existingCount >= MAX_DECKS) {
+    throw new Error(`Cannot have more than ${MAX_DECKS} decks`);
+  }
+
+  const trimmed = (name || "").trim();
+  if (!trimmed || trimmed.length > 30) {
+    throw new Error("Deck name must be 1-30 characters");
+  }
+
+  const isFirst = existingCount === 0;
+  const deck = await Deck.create({
+    user_id: userId,
+    name: trimmed,
+    is_active: isFirst
+  });
+
+  return formatDeckResponse(deck, []);
+}
+
+async function deleteUserDeck(userId, deckId) {
+  const deck = await Deck.findOne({
+    where: { id: deckId, user_id: userId }
+  });
+  if (!deck) {
+    throw new Error("Deck not found");
+  }
+
+  const totalDecks = await Deck.count({ where: { user_id: userId } });
+  if (totalDecks <= 1) {
+    throw new Error("Cannot delete the last deck");
+  }
+
+  const wasActive = deck.is_active;
+  await DeckCard.destroy({ where: { deck_id: deckId } });
+  await deck.destroy();
+
+  if (wasActive) {
+    const firstRemaining = await Deck.findOne({
+      where: { user_id: userId },
+      order: [["created_at", "ASC"]]
+    });
+    if (firstRemaining) {
+      firstRemaining.is_active = true;
+      await firstRemaining.save();
+    }
+  }
+
+  return getUserDecks(userId);
+}
+
+async function renameUserDeck(userId, deckId, name) {
+  const trimmed = (name || "").trim();
+  if (!trimmed || trimmed.length > 30) {
+    throw new Error("Deck name must be 1-30 characters");
+  }
+
+  const deck = await Deck.findOne({
+    where: { id: deckId, user_id: userId }
+  });
+  if (!deck) {
+    throw new Error("Deck not found");
+  }
+
+  deck.name = trimmed;
+  await deck.save();
+
+  return getUserDeckById(userId, deckId);
+}
+
+async function setActiveDeck(userId, deckId) {
+  const deck = await Deck.findOne({
+    where: { id: deckId, user_id: userId }
+  });
+  if (!deck) {
+    throw new Error("Deck not found");
+  }
+
+  await db.sequelize.transaction(async (transaction) => {
+    await Deck.update(
+      { is_active: false },
+      { where: { user_id: userId }, transaction }
+    );
+    deck.is_active = true;
+    await deck.save({ transaction });
+  });
+
+  return getUserDecks(userId);
 }
 
 async function validateDeckItems(userId, compactItems, transaction) {
@@ -159,7 +294,7 @@ async function validateDeckItems(userId, compactItems, transaction) {
   }
 }
 
-async function persistDeck(userId, deckItemsInput, options = { requireExactSize: false }) {
+async function persistDeck(userId, deckId, deckItemsInput, options = { requireExactSize: false }) {
   const deckItems = normalizeDeckItems(deckItemsInput);
 
   const deduped = new Map();
@@ -181,7 +316,14 @@ async function persistDeck(userId, deckItemsInput, options = { requireExactSize:
     await ensureUserCollection(userId, transaction);
     await validateDeckItems(userId, compactItems, transaction);
 
-    const deck = await getOrCreateDeck(userId, transaction);
+    const deck = await Deck.findOne({
+      where: { id: deckId, user_id: userId },
+      transaction
+    });
+    if (!deck) {
+      throw new Error("Deck not found");
+    }
+
     await DeckCard.destroy({
       where: { deck_id: deck.id },
       transaction
@@ -196,36 +338,78 @@ async function persistDeck(userId, deckItemsInput, options = { requireExactSize:
     );
   });
 
-  return getUserDeck(userId);
+  return getUserDeckById(userId, deckId);
 }
 
-async function saveUserDeck(userId, deckItemsInput) {
-  return persistDeck(userId, deckItemsInput, { requireExactSize: true });
+async function saveUserDeck(userId, deckId, deckItemsInput) {
+  return persistDeck(userId, deckId, deckItemsInput, { requireExactSize: true });
 }
 
-async function updateUserDeckPartial(userId, deckItemsInput) {
-  return persistDeck(userId, deckItemsInput, { requireExactSize: false });
+async function updateUserDeckPartial(userId, deckId, deckItemsInput) {
+  return persistDeck(userId, deckId, deckItemsInput, { requireExactSize: false });
 }
 
-async function resetUserDeck(userId) {
+async function resetUserDeck(userId, deckId) {
   await db.sequelize.transaction(async (transaction) => {
-    const deck = await getOrCreateDeck(userId, transaction);
+    const deck = await Deck.findOne({
+      where: { id: deckId, user_id: userId },
+      transaction
+    });
+    if (!deck) {
+      throw new Error("Deck not found");
+    }
     await DeckCard.destroy({
       where: { deck_id: deck.id },
       transaction
     });
   });
 
-  return getUserDeck(userId);
+  return getUserDeckById(userId, deckId);
+}
+
+async function getActiveDeckId(userId) {
+  const deck = await Deck.findOne({
+    where: { user_id: userId, is_active: true }
+  });
+
+  if (deck) {
+    return deck.id;
+  }
+
+  const firstDeck = await Deck.findOne({
+    where: { user_id: userId },
+    order: [["created_at", "ASC"]]
+  });
+
+  if (firstDeck) {
+    firstDeck.is_active = true;
+    await firstDeck.save();
+    return firstDeck.id;
+  }
+
+  const created = await Deck.create({
+    user_id: userId,
+    name: DEFAULT_DECK_NAME,
+    is_active: true
+  });
+  return created.id;
 }
 
 module.exports = {
   MAX_DECK_SIZE,
+  MAX_DECKS,
   getAllCards,
   getUserCollection,
   getUserDeck,
+  getUserDecks,
+  getUserDeckById,
+  createUserDeck,
+  deleteUserDeck,
+  renameUserDeck,
+  setActiveDeck,
   saveUserDeck,
   updateUserDeckPartial,
   resetUserDeck,
+  getActiveDeckId,
   ensureUserCollection
 };

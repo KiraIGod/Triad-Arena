@@ -30,6 +30,7 @@ export type DeckItem = {
 export type DeckData = {
   id: string;
   name: string;
+  isActive: boolean;
   totalCards: number;
   maxCards: number;
   cards: DeckItem[];

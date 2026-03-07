@@ -1,21 +1,26 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "../store";
 import {
   fetchAllCards,
   fetchUserCollection,
-  fetchUserDeck,
+  fetchUserDecks,
+  createDeck,
+  deleteDeck,
+  renameDeck,
+  activateDeck,
   resetUserDeck,
-  saveUserDeck,
   updateUserDeckPartial,
 } from "../shared/api/deckBuilderApi";
-import type { DeckBuilderCard } from "../types/deckBuilder";
+import type { DeckBuilderCard, DeckData } from "../types/deckBuilder";
 import CardPool from "../components/deck-builder/CardPool";
 import CurrentDeck from "../components/deck-builder/CurrentDeck";
 import CardModal from "../components/deck-builder/CardModal";
+import CardViewer from "../components/deck-builder/CardViewer";
 import "./DeckBuilder.css";
 
 const MAX_DECK_SIZE = 20;
+const MAX_DECKS = 3;
 
 function toMap(
   items: Array<{ cardId: string; quantity: number }>,
@@ -34,16 +39,20 @@ export default function DeckBuilderPage() {
   const [collectionByCardId, setCollectionByCardId] = useState<
     Record<string, number>
   >({});
+  const [decks, setDecks] = useState<DeckData[]>([]);
+  const [activeDeckId, setActiveDeckId] = useState<string | null>(null);
   const [deckByCardId, setDeckByCardId] = useState<Record<string, number>>({});
   const [selectedCard, setSelectedCard] = useState<DeckBuilderCard | null>(
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [renamingDeckId, setRenamingDeckId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
 
   const cardsById = useMemo<Record<string, DeckBuilderCard>>(
     () =>
@@ -60,6 +69,14 @@ export default function DeckBuilderPage() {
     [deckByCardId],
   );
 
+  const syncDeckCards = useCallback((deck: DeckData | undefined) => {
+    if (!deck) {
+      setDeckByCardId({});
+      return;
+    }
+    setDeckByCardId(toMap(deck.cards));
+  }, []);
+
   useEffect(() => {
     if (!token) return;
 
@@ -67,14 +84,20 @@ export default function DeckBuilderPage() {
       setIsLoading(true);
       setError(null);
       try {
-        const [cardsList, collection, deck] = await Promise.all([
+        const [cardsList, collection, userDecks] = await Promise.all([
           fetchAllCards(token),
           fetchUserCollection(token),
-          fetchUserDeck(token),
+          fetchUserDecks(token),
         ]);
         setCards(cardsList);
         setCollectionByCardId(toMap(collection));
-        setDeckByCardId(toMap(deck.cards));
+        setDecks(userDecks);
+
+        const active = userDecks.find((d) => d.isActive) ?? userDecks[0];
+        if (active) {
+          setActiveDeckId(active.id);
+          syncDeckCards(active);
+        }
       } catch {
         setError("Failed to load deck builder data");
       } finally {
@@ -83,7 +106,15 @@ export default function DeckBuilderPage() {
     };
 
     void load();
-  }, [token]);
+  }, [token, syncDeckCards]);
+
+  const switchToDeck = (deckId: string) => {
+    setActiveDeckId(deckId);
+    const deck = decks.find((d) => d.id === deckId);
+    syncDeckCards(deck);
+    setStatus(null);
+    setError(null);
+  };
 
   const canAddCard = (cardId: string): boolean => {
     const owned = collectionByCardId[cardId] ?? 0;
@@ -133,40 +164,22 @@ export default function DeckBuilderPage() {
     setStatus(null);
   };
 
-  const handleCommitDeck = async () => {
-    if (!token || totalCards !== MAX_DECK_SIZE) return;
-    setIsSaving(true);
-    setError(null);
-    try {
-      const deckItems = Object.entries(deckByCardId).map(
-        ([cardId, quantity]) => ({
-          cardId,
-          quantity,
-        }),
-      );
-      const updatedDeck = await saveUserDeck(token, deckItems);
-      setDeckByCardId(toMap(updatedDeck.cards));
-      setStatus("Deck committed");
-    } catch {
-      setError("Failed to commit deck");
-      setStatus(null);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleSaveProgress = async () => {
-    if (!token) return;
+    if (!token || !activeDeckId) return;
     setIsUpdating(true);
     setError(null);
     try {
       const deckItems = Object.entries(deckByCardId).map(
-        ([cardId, quantity]) => ({
-          cardId,
-          quantity,
-        }),
+        ([cardId, quantity]) => ({ cardId, quantity }),
       );
-      const updatedDeck = await updateUserDeckPartial(token, deckItems);
+      const updatedDeck = await updateUserDeckPartial(
+        token,
+        activeDeckId,
+        deckItems,
+      );
+      setDecks((prev) =>
+        prev.map((d) => (d.id === updatedDeck.id ? updatedDeck : d)),
+      );
       setDeckByCardId(toMap(updatedDeck.cards));
       setStatus("Deck progress saved");
     } catch {
@@ -178,12 +191,15 @@ export default function DeckBuilderPage() {
   };
 
   const handleResetDeck = async () => {
-    if (!token) return;
+    if (!token || !activeDeckId) return;
     setIsResetting(true);
     setError(null);
     try {
-      const resetDeck = await resetUserDeck(token);
-      setDeckByCardId(toMap(resetDeck.cards));
+      const resetDeckData = await resetUserDeck(token, activeDeckId);
+      setDecks((prev) =>
+        prev.map((d) => (d.id === resetDeckData.id ? resetDeckData : d)),
+      );
+      setDeckByCardId(toMap(resetDeckData.cards));
       setSelectedCard(null);
       setStatus("Deck reset");
     } catch {
@@ -191,6 +207,78 @@ export default function DeckBuilderPage() {
       setStatus(null);
     } finally {
       setIsResetting(false);
+    }
+  };
+
+  const handleCreateDeck = async () => {
+    if (!token || decks.length >= MAX_DECKS) return;
+    setError(null);
+    try {
+      const name = `Deck ${decks.length + 1}`;
+      const newDeck = await createDeck(token, name);
+      setDecks((prev) => [...prev, newDeck]);
+      setActiveDeckId(newDeck.id);
+      syncDeckCards(newDeck);
+      setStatus("New deck created");
+    } catch (err) {
+      const msg =
+        err instanceof Error ? err.message : "Failed to create deck";
+      setError(msg);
+    }
+  };
+
+  const handleDeleteDeck = async (deckId: string) => {
+    if (!token || decks.length <= 1) return;
+    setError(null);
+    try {
+      const updatedDecks = await deleteDeck(token, deckId);
+      setDecks(updatedDecks);
+
+      if (activeDeckId === deckId) {
+        const active =
+          updatedDecks.find((d) => d.isActive) ?? updatedDecks[0];
+        if (active) {
+          setActiveDeckId(active.id);
+          syncDeckCards(active);
+        }
+      }
+      setStatus("Deck deleted");
+    } catch {
+      setError("Failed to delete deck");
+    }
+  };
+
+  const handleStartRename = (deck: DeckData) => {
+    setRenamingDeckId(deck.id);
+    setRenameValue(deck.name);
+  };
+
+  const handleConfirmRename = async () => {
+    if (!token || !renamingDeckId || !renameValue.trim()) {
+      setRenamingDeckId(null);
+      return;
+    }
+    try {
+      const updated = await renameDeck(token, renamingDeckId, renameValue.trim());
+      setDecks((prev) =>
+        prev.map((d) => (d.id === updated.id ? updated : d)),
+      );
+    } catch {
+      setError("Failed to rename deck");
+    } finally {
+      setRenamingDeckId(null);
+    }
+  };
+
+  const handleSetActive = async (deckId: string) => {
+    if (!token) return;
+    setError(null);
+    try {
+      const updatedDecks = await activateDeck(token, deckId);
+      setDecks(updatedDecks);
+      setStatus("Active deck changed");
+    } catch {
+      setError("Failed to set active deck");
     }
   };
 
@@ -202,7 +290,7 @@ export default function DeckBuilderPage() {
     return <div className="deckBuilder">Loading deck builder...</div>;
   }
 
-  const anyBusy = isSaving || isUpdating || isResetting;
+  const anyBusy = isUpdating || isResetting;
 
   return (
     <main className="deckBuilder">
@@ -221,11 +309,10 @@ export default function DeckBuilderPage() {
         <div className="deckBuilder__actions">
           <button
             type="button"
-            className="deckBuilder__btn"
-            onClick={() => void handleCommitDeck()}
-            disabled={totalCards !== MAX_DECK_SIZE || anyBusy}
+            className="deckBuilder__btn deckBuilder__btn--viewer"
+            onClick={() => setIsViewerOpen(true)}
           >
-            {isSaving ? "Saving..." : "Commit Deck"}
+            Режим просмотра
           </button>
           <button
             type="button"
@@ -244,6 +331,92 @@ export default function DeckBuilderPage() {
             {isResetting ? "Resetting..." : "Reset Deck"}
           </button>
         </div>
+      </div>
+
+      {/* Deck Tabs */}
+      <div className="deckTabs">
+        {decks.map((deck) => (
+          <div
+            key={deck.id}
+            className={`deckTabs__tab ${deck.id === activeDeckId ? "deckTabs__tab--active" : ""} ${deck.isActive ? "deckTabs__tab--default" : ""}`}
+          >
+            {renamingDeckId === deck.id ? (
+              <div className="deckTabs__renameWrap">
+                <input
+                  className="deckTabs__renameInput"
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={() => void handleConfirmRename()}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void handleConfirmRename();
+                    }
+                    if (e.key === "Escape") setRenamingDeckId(null);
+                  }}
+                  maxLength={30}
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <button
+                type="button"
+                className="deckTabs__tabBtn"
+                onClick={() => switchToDeck(deck.id)}
+              >
+                <span className="deckTabs__name">{deck.name}</span>
+                <span className="deckTabs__count">
+                  {deck.totalCards}/{MAX_DECK_SIZE}
+                </span>
+              </button>
+            )}
+
+            <div className="deckTabs__controls">
+              <button
+                type="button"
+                className="deckTabs__controlBtn"
+                onClick={() => handleStartRename(deck)}
+                title="Переименовать деку"
+              >
+                ✎
+              </button>
+              {deck.isActive ? (
+                <span className="deckTabs__activeBadge" title="Дека для игры">
+                  ★
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  className="deckTabs__controlBtn"
+                  onClick={() => void handleSetActive(deck.id)}
+                  title="Сделать активной для игры"
+                >
+                  ☆
+                </button>
+              )}
+              {decks.length > 1 && (
+                <button
+                  type="button"
+                  className="deckTabs__controlBtn deckTabs__controlBtn--delete"
+                  onClick={() => void handleDeleteDeck(deck.id)}
+                  title="Удалить деку"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {decks.length < MAX_DECKS && (
+          <button
+            type="button"
+            className="deckTabs__addBtn"
+            onClick={() => void handleCreateDeck()}
+          >
+            + Новая дека
+          </button>
+        )}
       </div>
 
       {error && (
@@ -265,7 +438,6 @@ export default function DeckBuilderPage() {
           maxDeckSize={MAX_DECK_SIZE}
           totalCards={totalCards}
           onAddCard={addCardToDeck}
-          onSelectCard={setSelectedCard}
         />
         <CurrentDeck
           deckByCardId={deckByCardId}
@@ -287,6 +459,19 @@ export default function DeckBuilderPage() {
         onAdd={handleAddCard}
         onRemove={handleRemoveCard}
       />
+
+      {isViewerOpen && (
+        <CardViewer
+          cards={cards}
+          collectionByCardId={collectionByCardId}
+          deckByCardId={deckByCardId}
+          onAddCard={addCardToDeck}
+          onRemoveCard={removeCardFromDeck}
+          canAddCard={canAddCard}
+          canRemoveCard={canRemoveCard}
+          onClose={() => setIsViewerOpen(false)}
+        />
+      )}
     </main>
   );
 }

@@ -8,7 +8,9 @@ function normalizePlayer(player) {
     hp: source.hp ?? null,
     shield: source.shield ?? null,
     energy: source.energy ?? null,
-    statuses: Array.isArray(source.statuses) ? cloneValue(source.statuses) : []
+    statuses: Array.isArray(source.statuses) ? cloneValue(source.statuses) : [],
+    hand: Array.isArray(source.hand) ? cloneValue(source.hand) : [],
+    deckCount: Array.isArray(source.deck) ? source.deck.length : 0
   };
 }
 
