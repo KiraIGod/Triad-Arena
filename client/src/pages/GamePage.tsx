@@ -330,6 +330,13 @@ export default function GamePage() {
     });
   };
 
+  const handleLeaveArenaClick = () => {
+    if (arenaId && arenaId !== "unknown") {
+      socket.emit("leave_game", arenaId);
+    }
+    navigate("/lobby");
+  };
+
   return (
     <div className="game-screen">
       <div className="game-screen__bg" />
@@ -382,17 +389,24 @@ export default function GamePage() {
       )}
 
       <div className="game-state">
+        <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
+          Leave Arena
+        </button>
+      </div>
+      
+      <div className="game-state">
         <p className="game-state__label">Arena</p>
         <p className="game-state__value">{arenaId}</p>
       </div>
       <div className="game-state">
         <p className="game-state__label">Match</p>
-        <p className="game-state__value">{match ? match.matchId : arenaMatchId ? "Connecting..." : "Waiting arena..."}</p>
+        <p className="game-state__value">{match ?match.matchId : arenaMatchId ? "Connecting..." : "Waiting arena..."}</p>
       </div>
       <div className="game-state">
         <p className="game-state__label">Turn</p>
         <p className="game-state__value">{match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}</p>
       </div>
+
 
       <main className="game-battlefield">
 
