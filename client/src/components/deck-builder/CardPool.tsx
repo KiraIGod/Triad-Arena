@@ -35,28 +35,40 @@ export default function CardPool({
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredAndSortedCards = useMemo(() => {
-    const filtered = cards.filter((card) =>
-      card.name.toLowerCase().includes(searchQuery.toLowerCase()),
-    );
+    const filtered = cards.filter((card) => {
+      const query = searchQuery.trim().toLowerCase()
+      const isNumber = /^\d+$/.test(query)
+
+      if (isNumber) {
+        return card.mana_cost === parseInt(query, 10)
+      }
+
+      if (query === "spell" || query === "unit") {
+        return card.type.toLowerCase() === query
+      }
+
+      return card.name.toLowerCase().includes(query)
+    })
 
     switch (sortKey) {
       case "mana":
-        return filtered.sort((a, b) => a.mana_cost - b.mana_cost);
+        return filtered.sort((a, b) => a.mana_cost - b.mana_cost)
 
       case "type":
         return filtered.sort((a, b) => {
           if (a.type === b.type) {
-            return a.name.localeCompare(b.name);
+            return a.name.localeCompare(b.name)
           }
-          return a.type.localeCompare(b.type);
-        });
+          return a.type.localeCompare(b.type)
+        })
 
       case "nameDesc":
-        return filtered.sort((a, b) => b.name.localeCompare(a.name));
+        return filtered.sort((a, b) => a.name.localeCompare(b.name))
+
       default:
-        return filtered;
+        return filtered
     }
-  }, [cards, sortKey, searchQuery]);
+  }, [cards, sortKey, searchQuery])
 
   return (
     <section className="cardPool">
