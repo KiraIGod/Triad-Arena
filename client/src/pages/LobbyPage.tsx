@@ -33,6 +33,7 @@ const RATING_MOCK = "1,847";
 const RANK_MOCK = "#24";
 
 function summarizeDeck(
+  name: string,
   totalCards: number,
   maxCards: number,
   cards: Array<{ cardId: string; quantity: number; card: { triad_type: string } }>
@@ -45,7 +46,7 @@ function summarizeDeck(
     }
   }
   return {
-    name: totalCards === maxCards ? "Ready" : "Incomplete",
+    name,
     cardsTotal: totalCards,
     cardsMax: maxCards,
     assault: triadCounts.assault,
@@ -164,7 +165,7 @@ export default function LobbyPage() {
   useEffect(() => {
     if (!token) return;
     fetchUserDeck(token)
-      .then((res) => setDeck(summarizeDeck(res.totalCards, res.maxCards, res.cards)))
+      .then((res) => setDeck(summarizeDeck(res.name, res.totalCards, res.maxCards, res.cards)))
       .catch(() => setDeck(null));
   }, [token]);
 
@@ -204,40 +205,53 @@ export default function LobbyPage() {
         <DeckPanel deck={deck} onEditDeck={handleOpenDeckBuilder} />
 
         <section className={styles.centerColumn}>
-          <button type="button" className={styles.btnBattle} disabled={isJoiningArena} onClick={handleJoinArena}>
-            {isJoiningArena ? (
-              <>
-                <span className={styles.loader} />
-                Searching for opponent...
-              </>
-            ) : (
-              <>
-                <span className={styles.btnArenaIcon} aria-hidden>
-                  +
-                </span>
-                Find Arena
-              </>
-            )}
-          </button>
+          <div className={styles.centerPanel}>
+            <button
+              type="button"
+              className={`${styles.btnBattle} ${styles.btnBattlePrimary}`}
+              disabled={isJoiningArena}
+              onClick={handleJoinArena}
+            >
+              {isJoiningArena ? (
+                <>
+                  <span className={styles.loader} />
+                  Searching for opponent...
+                </>
+              ) : (
+                <>
+                  <span className={styles.btnArenaIcon} aria-hidden>⚔</span>
+                  Find Arena
+                </>
+              )}
+            </button>
 
-          <button type="button" className={styles.btnBattle} disabled={isCreatingArena} onClick={handleCreateArena}>
-            {isCreatingArena ? (
-              <>
-                <span className={styles.loader} />
-                Creating Arena...
-              </>
-            ) : (
-              <>
-                <span className={styles.btnArenaIcon} aria-hidden>
-                  +
-                </span>
-                Create Arena
-              </>
-            )}
-          </button>
+            <div className={styles.centerDivider}>
+              <span className={styles.centerDividerLine} />
+              <span className={styles.centerDividerText}>or</span>
+              <span className={styles.centerDividerLine} />
+            </div>
 
-          {error && <p>{error}</p>}
-          {/* {isSearching && <p className={styles.searchingText}>Searching for opponent...</p>} */}
+            <button
+              type="button"
+              className={`${styles.btnBattle} ${styles.btnBattleSecondary}`}
+              disabled={isCreatingArena}
+              onClick={handleCreateArena}
+            >
+              {isCreatingArena ? (
+                <>
+                  <span className={styles.loader} />
+                  Creating Arena...
+                </>
+              ) : (
+                <>
+                  <span className={styles.btnArenaIcon} aria-hidden>+</span>
+                  Create Arena
+                </>
+              )}
+            </button>
+
+            {error && <p className={styles.errorText}>{error}</p>}
+          </div>
 
           <div className={styles.ratingBlock}>
             <p className={styles.ratingLine}>
