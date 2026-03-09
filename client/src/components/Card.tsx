@@ -1,28 +1,29 @@
-import React from "react";
+import React from "react"
 
 // ============ Types ============
 
-export type CardType = "UNIT" | "SPELL" | "ARTIFACT";
-export type TriadType = "ASSAULT" | "PRECISION" | "ARCANE";
+export type CardType = "UNIT" | "SPELL" | "ARTIFACT"
+export type TriadType = "ASSAULT" | "PRECISION" | "ARCANE"
 
 export interface CardModel {
-  id: string;
-  name: string;
-  type: CardType;
-  triad_type: TriadType;
-  mana_cost: number;
-  attack: number | null;
-  hp: number | null;
-  description: string;
-  created_at: string;
+  id: string
+  name: string
+  type: CardType
+  triad_type: TriadType
+  mana_cost: number
+  attack: number | null
+  hp: number | null
+  description: string
+  image: string
+  created_at: string
 }
 
 export interface GameCardProps {
-  card: CardModel;
-  onClick?: (card: CardModel) => void;
-  disabled?: boolean;
-  size?: "small" | "normal" | "large";
-  className?: string;
+  card: CardModel
+  onClick?: (card: CardModel) => void
+  disabled?: boolean
+  size?: "small" | "normal" | "large"
+  className?: string
 }
 
 // ============ Helpers ============
@@ -32,8 +33,8 @@ function triadToModifier(triadType: TriadType): string {
     ASSAULT: "assault",
     PRECISION: "precision",
     ARCANE: "arcane",
-  };
-  return map[triadType];
+  }
+  return map[triadType]
 }
 
 function typeLabel(type: CardType): string {
@@ -41,8 +42,8 @@ function typeLabel(type: CardType): string {
     UNIT: "Unit",
     SPELL: "Spell",
     ARTIFACT: "Artifact",
-  };
-  return map[type];
+  }
+  return map[type]
 }
 
 // ============ Component ============
@@ -54,31 +55,31 @@ export const GameCard: React.FC<GameCardProps> = ({
   size = "normal",
   className,
 }) => {
-  const triadModifier = triadToModifier(card.triad_type);
+  const triadModifier = triadToModifier(card.triad_type)
   const showStats =
-    card.type !== "SPELL" && (card.attack !== null || card.hp !== null);
+    card.type !== "SPELL" && (card.attack !== null || card.hp !== null)
 
-  const baseClass = "game-card";
-  const triadClass = `game-card--${triadModifier}`;
-  const sizeClass = `game-card--size-${size}`;
+  const baseClass = "game-card"
+  const triadClass = `game-card--${triadModifier}`
+  const sizeClass = `game-card--size-${size}`
   const classNames = [baseClass, triadClass, sizeClass, className]
     .filter(Boolean)
-    .join(" ");
+    .join(" ")
 
   const handleClick = (): void => {
-    if (disabled || !onClick) return;
-    onClick(card);
-  };
+    if (disabled || !onClick) return
+    onClick(card)
+  }
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
-    if (disabled || !onClick) return;
+    if (disabled || !onClick) return
     if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      onClick(card);
+      e.preventDefault()
+      onClick(card)
     }
-  };
+  }
 
-  const isInteractive = Boolean(onClick) && !disabled;
+  const isInteractive = Boolean(onClick) && !disabled
 
   return (
     <article
@@ -101,7 +102,16 @@ export const GameCard: React.FC<GameCardProps> = ({
       </header>
 
       <div className="game-card__art" aria-hidden="true">
-        <div className="game-card__art-placeholder" />
+        <img
+        src={`${import.meta.env.VITE_STATIC_URL}/${card.image}`}
+        alt={card.name}
+        className="game-card__art-image"
+        style={{
+          width: "100%",
+          height: "100%",
+          objectFit: "cover"
+        }}
+        />
       </div>
 
       <section className="game-card__body">
@@ -127,8 +137,8 @@ export const GameCard: React.FC<GameCardProps> = ({
         )}
       </footer>
     </article>
-  );
-};
+  )
+}
 
 /*
   Example mock card and render:

@@ -7,26 +7,47 @@ module.exports = {
     const now = new Date();
 
     await queryInterface.bulkInsert("cards", [
-      { id: randomUUID(), name: "Ashfang Duelist", type: "unit", triad_type: "assault", mana_cost: 2, attack: 3, hp: 2, description: "Swift frontline attacker.", image: "uploads/cards/ashfang_duelist.png", created_at: now },
-      { id: randomUUID(), name: "Warhorn Juggernaut", type: "unit", triad_type: "assault", mana_cost: 4, attack: 5, hp: 4, description: "Heavy breaker of enemy lines.", image: "uploads/cards/warhorn_juggernaut.png", created_at: now },
-      { id: randomUUID(), name: "Bloodfire Slash", type: "spell", triad_type: "assault", mana_cost: 2, attack: null, hp: null, description: "Deal 4 damage to a target.", image: "uploads/cards/bloodfire_slash.png", created_at: now },
-      { id: randomUUID(), name: "Rallying Cry", type: "spell", triad_type: "assault", mana_cost: 1, attack: null, hp: null, description: "Give a friendly unit +2 attack this turn.", image: "uploads/cards/rallying_cry.png", created_at: now },
-      { id: randomUUID(), name: "Crimson Barrage", type: "spell", triad_type: "assault", mana_cost: 3, attack: null, hp: null, description: "Deal 2 damage to all enemy units.", image: "uploads/cards/crimson_barrage.png", created_at: now },
-      { id: randomUUID(), name: "Unbound Rage", type: "spell", triad_type: "assault", mana_cost: 2, attack: null, hp: null, description: "A friendly unit attacks again.", image: "uploads/cards/unbound_rage.png", created_at: now },
+      // =====================
+      // ASSAULT UNITS
+      // =====================
+      { id: randomUUID(), name: "Crimson Duelist", type: "unit", triad_type: "assault", mana_cost: 2, attack: 3, hp: 2, description: "Fast aggressive fighter.", image: "crimson_duelist.png", created_at: now },
+      { id: randomUUID(), name: "Iron Warden", type: "unit", triad_type: "assault", mana_cost: 3, attack: 4, hp: 5, description: "Durable frontline defender.", image: "iron_warden.png", created_at: now },
 
-      { id: randomUUID(), name: "Duskfeather Ranger", type: "unit", triad_type: "precision", mana_cost: 3, attack: 3, hp: 3, description: "Balanced marksman with steady aim.", image: "uploads/cards/duskfeather_ranger.png", created_at: now },
-      { id: randomUUID(), name: "Needlewind Scout", type: "unit", triad_type: "precision", mana_cost: 2, attack: 2, hp: 2, description: "Fast skirmisher that picks weak targets.", image: "uploads/cards/needlewind_scout.png", created_at: now },
-      { id: randomUUID(), name: "Pinpoint Arrow", type: "spell", triad_type: "precision", mana_cost: 1, attack: null, hp: null, description: "Deal 3 damage to a target.", image: "uploads/cards/pinpoint_arrow.png", created_at: now },
-      { id: randomUUID(), name: "Hunter's Mark", type: "spell", triad_type: "precision", mana_cost: 2, attack: null, hp: null, description: "Marked enemy takes extra damage this turn.", image: "uploads/cards/hunters_mark.png", created_at: now },
-      { id: randomUUID(), name: "Tactical Reposition", type: "spell", triad_type: "precision", mana_cost: 1, attack: null, hp: null, description: "Return a friendly unit to your hand.", image: "uploads/cards/tactical_reposition.png", created_at: now },
-      { id: randomUUID(), name: "Deadeye Volley", type: "spell", triad_type: "precision", mana_cost: 3, attack: null, hp: null, description: "Deal 2 damage three times randomly.", image: "uploads/cards/deadeye_volley.png", created_at: now },
+      // =====================
+      // ASSAULT SPELLS
+      // =====================
+      { id: randomUUID(), name: "Blood Strike", type: "spell", triad_type: "assault", mana_cost: 2, attack: 0, hp: 0, description: "Deal 6 damage to enemy hero.", image: "blood_strike.png", created_at: now },
+      { id: randomUUID(), name: "Brutal Cleave", type: "spell", triad_type: "assault", mana_cost: 3, attack: 0, hp: 0, description: "Deal 4 damage to all enemy units.", image: "brutal_cleave.png", created_at: now },
+      { id: randomUUID(), name: "Rage Surge", type: "spell", triad_type: "assault", mana_cost: 2, attack: 0, hp: 0, description: "Target unit gains +3 attack this turn.", image: "rage_surge.png", created_at: now },
+      { id: randomUUID(), name: "Execution", type: "spell", triad_type: "assault", mana_cost: 3, attack: 0, hp: 0, description: "Destroy a unit with 3 HP or less.", image: "execution.png", created_at: now },
 
-      { id: randomUUID(), name: "Runesworn Adept", type: "unit", triad_type: "arcane", mana_cost: 2, attack: 2, hp: 3, description: "Young mage channeling raw energy.", image: "uploads/cards/runesworn_adept.png", created_at: now },
-      { id: randomUUID(), name: "Astral Sentinel", type: "unit", triad_type: "arcane", mana_cost: 4, attack: 4, hp: 5, description: "Guardian forged of starlight.", image: "uploads/cards/astral_sentinel.png", created_at: now },
-      { id: randomUUID(), name: "Arc Spark", type: "spell", triad_type: "arcane", mana_cost: 1, attack: null, hp: null, description: "Deal 2 damage and draw a card.", image: "uploads/cards/arc_spark.png", created_at: now },
-      { id: randomUUID(), name: "Mana Surge", type: "spell", triad_type: "arcane", mana_cost: 2, attack: null, hp: null, description: "Gain temporary mana this turn.", image: "uploads/cards/mana_surge.png", created_at: now },
-      { id: randomUUID(), name: "Mirror Sigil", type: "spell", triad_type: "arcane", mana_cost: 3, attack: null, hp: null, description: "Copy the last spell cast this turn.", image: "uploads/cards/mirror_sigil.png", created_at: now },
-      { id: randomUUID(), name: "Void Rupture", type: "spell", triad_type: "arcane", mana_cost: 5, attack: null, hp: null, description: "Destroy a unit with 5 or less HP.", image: "uploads/cards/void_rupture.png", created_at: now }
+      // =====================
+      // PRECISION UNITS
+      // =====================
+      { id: randomUUID(), name: "Shadow Archer", type: "unit", triad_type: "precision", mana_cost: 3, attack: 3, hp: 3, description: "Balanced ranged attacker.", image: "shadow_archer.png", created_at: now },
+      { id: randomUUID(), name: "Silent Hunter", type: "unit", triad_type: "precision", mana_cost: 4, attack: 4, hp: 4, description: "Deadly precision fighter.", image: "silent_hunter.png", created_at: now },
+
+      // =====================
+      // PRECISION SPELLS
+      // =====================
+      { id: randomUUID(), name: "Mark Target", type: "spell", triad_type: "precision", mana_cost: 1, attack: 0, hp: 0, description: "Your next attack deals +3 damage.", image: "mark_target.png", created_at: now },
+      { id: randomUUID(), name: "Piercing Shot", type: "spell", triad_type: "precision", mana_cost: 2, attack: 0, hp: 0, description: "Deal 5 damage ignoring shield.", image: "piercing_shot.png", created_at: now },
+      { id: randomUUID(), name: "Focus", type: "spell", triad_type: "precision", mana_cost: 1, attack: 0, hp: 0, description: "Draw 1 card.", image: "focus.png", created_at: now },
+      { id: randomUUID(), name: "Weak Point", type: "spell", triad_type: "precision", mana_cost: 2, attack: 0, hp: 0, description: "Target unit takes +2 damage.", image: "weak_point.png", created_at: now },
+
+      // =====================
+      // ARCANE UNITS
+      // =====================
+      { id: randomUUID(), name: "Void Seer", type: "unit", triad_type: "arcane", mana_cost: 3, attack: 2, hp: 4, description: "Mystic controller.", image: "void_seer.png", created_at: now },
+      { id: randomUUID(), name: "Rune Prophet", type: "unit", triad_type: "arcane", mana_cost: 5, attack: 5, hp: 5, description: "Powerful arcane master.", image: "rune_prophet.png", created_at: now },
+
+      // =====================
+      // ARCANE SPELLS
+      // =====================
+      { id: randomUUID(), name: "Arcane Burst", type: "spell", triad_type: "arcane", mana_cost: 2, attack: 0, hp: 0, description: "Deal 4 damage.", image: "arcane_burst.png", created_at: now },
+      { id: randomUUID(), name: "Echo Mind", type: "spell", triad_type: "arcane", mana_cost: 3, attack: 0, hp: 0, description: "Duplicate your next spell.", image: "echo_mind.png", created_at: now },
+      { id: randomUUID(), name: "Energy Shift", type: "spell", triad_type: "arcane", mana_cost: 1, attack: 0, hp: 0, description: "Your next card costs 1 less.", image: "energy_shift.png", created_at: now },
+      { id: randomUUID(), name: "Warp Pulse", type: "spell", triad_type: "arcane", mana_cost: 4, attack: 0, hp: 0, description: "Deal 3 damage to all units.", image: "warp_pulse.png", created_at: now }
     ]);
   },
 
