@@ -1,4 +1,4 @@
-﻿import { Layout, Typography } from "antd";
+import { Layout, Typography } from "antd";
 import type { PropsWithChildren } from "react";
 import { useLocation } from "react-router-dom";
 
@@ -6,7 +6,7 @@ const { Header, Content } = Layout;
 
 export default function AppLayout({ children }: PropsWithChildren) {
   const { pathname } = useLocation()
-  const isAuthPage = pathname === "/login" || pathname === "/register"
+  const isAuthPage = pathname === "/login" || pathname === "/register" || pathname === "/lobby"
 
   return (
     <Layout style={{ minHeight: "100vh" }}>

@@ -112,7 +112,7 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: 280px 1fr 280px;
   gap: 1.2rem;
   height: calc(100vh - 92px);
   padding: 1.2rem 1.5rem 1.5rem;
@@ -276,7 +276,47 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.95rem;
+  gap: 1.2rem;
+}
+
+.centerPanel {
+  width: min(100%, 340px);
+  border: 2px solid var(--ink);
+  background: var(--panel-mid);
+  padding: 1.6rem 1.4rem 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-shadow: 0 0 32px rgba(0, 0, 0, 0.55);
+}
+
+.centerDivider {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.8rem 0;
+}
+
+.centerDividerLine {
+  height: 1px;
+  background: var(--ink);
+  flex: 1;
+}
+
+.centerDividerText {
+  text-transform: uppercase;
+  font-size: 0.58rem;
+  letter-spacing: 0.25em;
+  color: var(--text-muted);
+}
+
+.errorText {
+  margin: 0.6rem 0 0;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  color: #c05050;
+  text-align: center;
 }
 
 .btnBattle {
@@ -305,6 +345,34 @@
 .btnBattle:disabled {
   cursor: not-allowed;
   filter: grayscale(0.28);
+}
+
+.btnBattlePrimary {
+  width: 100%;
+  font-size: 0.92rem;
+  padding: 1.1rem 1rem;
+  background: linear-gradient(180deg, #b04840 0%, #7e2e28 100%);
+  border-color: #3a1a18;
+  box-shadow: 0 0 0 1px rgba(168, 62, 54, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.btnBattlePrimary:hover:not(:disabled) {
+  filter: brightness(1.16);
+  box-shadow: 0 0 0 2px rgba(168, 62, 54, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.btnBattleSecondary {
+  width: 100%;
+  font-size: 0.72rem;
+  padding: 0.75rem 1rem;
+  background: linear-gradient(180deg, #3a2f28 0%, #261e18 100%);
+  border-color: var(--ink);
+  color: var(--text-muted);
+}
+
+.btnBattleSecondary:hover:not(:disabled) {
+  color: var(--text-main);
+  filter: brightness(1.18);
 }
 
 .btnArenaIcon {
@@ -387,7 +455,13 @@
   align-items: center;
   border: 2px solid var(--ink);
   background: rgba(0, 0, 0, 0.28);
-  padding: 0.62rem;
+  padding: 0.72rem 0.62rem;
+  transition: background 0.15s ease;
+  cursor: default;
+}
+
+.matchCard:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .matchIndicatorVictory,
@@ -504,9 +578,13 @@
     padding: 0.4rem 0;
   }
 
-  .btnBattle {
+  .centerPanel {
+    width: min(100%, 420px);
+  }
+
+  .btnBattlePrimary,
+  .btnBattleSecondary {
     width: 100%;
-    max-width: 420px;
   }
 
   .sidePanel,
