@@ -13,7 +13,7 @@ services:
       - "6000:5432"
 
   server:
-    build: ./server
+    image: ${DOCKER_USERNAME}/triad-server:latest
     container_name: triad-server
     restart: always
     depends_on:
@@ -22,7 +22,7 @@ services:
       - .env
 
   client:
-    build: ./client
+    image: ${DOCKER_USERNAME}/triad-client:latest
     container_name: triad-client
     restart: always
     depends_on:

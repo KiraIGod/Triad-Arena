@@ -1,0 +1,45 @@
+name: Deploy Triad Arena
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Скачиваем код проекта
+        uses: actions/checkout@v4
+
+      - name: 🔑 Авторизация в Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: 🏗️ Сборка и пуш Бэкенда (Server)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./server
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/triad-server:latest
+
+      - name: 🏗️ Сборка и пуш Фронтенда (Client)
+        uses: docker/build-push-action@v5
+        with:
+          context: ./client
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/triad-client:latest
+
+      - name: 🚀 Деплой на боевой сервер
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd ~/Triad-Arena
+            git pull origin main
+            docker compose pull
+            docker compose up -d
