@@ -360,8 +360,7 @@
 .poolCard--exhausted {
   opacity: 0.3;
   filter: brightness(0.5) saturate(0.15);
-  cursor: default;
-  pointer-events: none;
+  cursor: pointer;
 }
 
 .poolCard--exhausted:hover {
@@ -1213,5 +1212,40 @@
 
   .cardPool__grid {
     grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+}
+
+/* ===== Toast notification ===== */
+
+.deckBuilder__toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  font-family: var(--font-accent);
+  font-size: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #fff;
+  background: rgba(139, 30, 30, 0.92);
+  border: 2px solid var(--blood-bright, #c93232);
+  padding: 12px 28px;
+  border-radius: 8px;
+  box-shadow:
+    0 4px 24px rgba(0, 0, 0, 0.5),
+    0 0 12px rgba(139, 30, 30, 0.4);
+  pointer-events: none;
+  animation: toastSlideIn 0.3s ease-out;
+}
+
+@keyframes toastSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }
