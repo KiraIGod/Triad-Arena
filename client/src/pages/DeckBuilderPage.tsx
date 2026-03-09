@@ -21,6 +21,7 @@ import "./DeckBuilder.css";
 
 const MAX_DECK_SIZE = 20;
 const MAX_DECKS = 3;
+const MAX_COPIES_PER_CARD = 2;
 
 function toMap(
   items: Array<{ cardId: string; quantity: number }>,
@@ -120,6 +121,7 @@ export default function DeckBuilderPage() {
     const owned = collectionByCardId[cardId] ?? 0;
     const inDeck = deckByCardId[cardId] ?? 0;
     if (totalCards >= MAX_DECK_SIZE) return false;
+    if (inDeck >= MAX_COPIES_PER_CARD) return false;
     return inDeck < owned;
   };
 
@@ -142,7 +144,13 @@ export default function DeckBuilderPage() {
   };
 
   const addCardToDeck = (cardId: string) => {
+    const inDeck = deckByCardId[cardId] ?? 0;
+    if (inDeck >= MAX_COPIES_PER_CARD) {
+      setError("Не более 2 одинаковых карт в колоде");
+      return;
+    }
     if (!canAddCard(cardId)) return;
+    setError(null);
     setDeckByCardId((prev) => ({
       ...prev,
       [cardId]: (prev[cardId] ?? 0) + 1,
@@ -221,8 +229,7 @@ export default function DeckBuilderPage() {
       syncDeckCards(newDeck);
       setStatus("New deck created");
     } catch (err) {
-      const msg =
-        err instanceof Error ? err.message : "Failed to create deck";
+      const msg = err instanceof Error ? err.message : "Failed to create deck";
       setError(msg);
     }
   };
@@ -235,8 +242,7 @@ export default function DeckBuilderPage() {
       setDecks(updatedDecks);
 
       if (activeDeckId === deckId) {
-        const active =
-          updatedDecks.find((d) => d.isActive) ?? updatedDecks[0];
+        const active = updatedDecks.find((d) => d.isActive) ?? updatedDecks[0];
         if (active) {
           setActiveDeckId(active.id);
           syncDeckCards(active);
@@ -259,10 +265,12 @@ export default function DeckBuilderPage() {
       return;
     }
     try {
-      const updated = await renameDeck(token, renamingDeckId, renameValue.trim());
-      setDecks((prev) =>
-        prev.map((d) => (d.id === updated.id ? updated : d)),
+      const updated = await renameDeck(
+        token,
+        renamingDeckId,
+        renameValue.trim(),
       );
+      setDecks((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
     } catch {
       setError("Failed to rename deck");
     } finally {
@@ -312,7 +320,7 @@ export default function DeckBuilderPage() {
             className="deckBuilder__btn deckBuilder__btn--viewer"
             onClick={() => setIsViewerOpen(true)}
           >
-            Режим просмотра
+            View mode
           </button>
           <button
             type="button"
@@ -376,12 +384,12 @@ export default function DeckBuilderPage() {
                 type="button"
                 className="deckTabs__controlBtn"
                 onClick={() => handleStartRename(deck)}
-                title="Переименовать деку"
+                title="Rename the deck"
               >
                 ✎
               </button>
               {deck.isActive ? (
-                <span className="deckTabs__activeBadge" title="Дека для игры">
+                <span className="deckTabs__activeBadge" title="Game deck">
                   ★
                 </span>
               ) : (
@@ -389,7 +397,7 @@ export default function DeckBuilderPage() {
                   type="button"
                   className="deckTabs__controlBtn"
                   onClick={() => void handleSetActive(deck.id)}
-                  title="Сделать активной для игры"
+                  title="Make active for the game"
                 >
                   ☆
                 </button>
@@ -399,7 +407,7 @@ export default function DeckBuilderPage() {
                   type="button"
                   className="deckTabs__controlBtn deckTabs__controlBtn--delete"
                   onClick={() => void handleDeleteDeck(deck.id)}
-                  title="Удалить деку"
+                  title="Delete deck"
                 >
                   ✕
                 </button>
@@ -414,7 +422,7 @@ export default function DeckBuilderPage() {
             className="deckTabs__addBtn"
             onClick={() => void handleCreateDeck()}
           >
-            + Новая дека
+            + New deck
           </button>
         )}
       </div>
@@ -436,6 +444,7 @@ export default function DeckBuilderPage() {
           collectionByCardId={collectionByCardId}
           deckByCardId={deckByCardId}
           maxDeckSize={MAX_DECK_SIZE}
+          maxCopiesPerCard={MAX_COPIES_PER_CARD}
           totalCards={totalCards}
           onAddCard={addCardToDeck}
         />
