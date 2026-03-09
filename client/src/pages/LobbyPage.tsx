@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { store, useAppSelector } from "../store";
 import styles from "./LobbyPage.module.css";
@@ -22,11 +22,41 @@ const MOCK_MATCHES: Array<{
   turns: number;
   hpLeft: number;
 }> = [
-  { date: "02.03.25", opponent: "SHADOW_IX", result: "Victory", turns: 12, hpLeft: 45 },
-  { date: "01.03.25", opponent: "NOVA_PRIME", result: "Defeat", turns: 8, hpLeft: 0 },
-  { date: "28.02.25", opponent: "CRIMSON_7", result: "Victory", turns: 15, hpLeft: 22 },
-  { date: "27.02.25", opponent: "ZERO_ONE", result: "Defeat", turns: 10, hpLeft: 0 },
-  { date: "25.02.25", opponent: "ECHO_99", result: "Victory", turns: 11, hpLeft: 38 }
+  {
+    date: "02.03.25",
+    opponent: "SHADOW_IX",
+    result: "Victory",
+    turns: 12,
+    hpLeft: 45,
+  },
+  {
+    date: "01.03.25",
+    opponent: "NOVA_PRIME",
+    result: "Defeat",
+    turns: 8,
+    hpLeft: 0,
+  },
+  {
+    date: "28.02.25",
+    opponent: "CRIMSON_7",
+    result: "Victory",
+    turns: 15,
+    hpLeft: 22,
+  },
+  {
+    date: "27.02.25",
+    opponent: "ZERO_ONE",
+    result: "Defeat",
+    turns: 10,
+    hpLeft: 0,
+  },
+  {
+    date: "25.02.25",
+    opponent: "ECHO_99",
+    result: "Victory",
+    turns: 11,
+    hpLeft: 38,
+  },
 ];
 
 const RATING_MOCK = "1,847";
@@ -36,7 +66,11 @@ function summarizeDeck(
   name: string,
   totalCards: number,
   maxCards: number,
-  cards: Array<{ cardId: string; quantity: number; card: { triad_type: string } }>
+  cards: Array<{
+    cardId: string;
+    quantity: number;
+    card: { triad_type: string };
+  }>,
 ): DeckSummary {
   const triadCounts = { assault: 0, precision: 0, arcane: 0 };
   for (const item of cards) {
@@ -51,15 +85,29 @@ function summarizeDeck(
     cardsMax: maxCards,
     assault: triadCounts.assault,
     precision: triadCounts.precision,
-    arcane: triadCounts.arcane
+    arcane: triadCounts.arcane,
   };
 }
 
-function DeckPanel({ deck, onEditDeck }: { deck: DeckSummary | null; onEditDeck: () => void }) {
-  const d = deck ?? { name: "-", cardsTotal: 0, cardsMax: 20, assault: 0, precision: 0, arcane: 0 };
-  const triumphRate = d.cardsMax > 0 ? ((d.cardsTotal / d.cardsMax) * 100).toFixed(1) : "0.0";
-  const nickname = useAppSelector(store => store.auth.nickname)
- 
+function DeckPanel({
+  deck,
+  onEditDeck,
+}: {
+  deck: DeckSummary | null;
+  onEditDeck: () => void;
+}) {
+  const d = deck ?? {
+    name: "-",
+    cardsTotal: 0,
+    cardsMax: 20,
+    assault: 0,
+    precision: 0,
+    arcane: 0,
+  };
+  const triumphRate =
+    d.cardsMax > 0 ? ((d.cardsTotal / d.cardsMax) * 100).toFixed(1) : "0.0";
+  const nickname = useAppSelector((store) => store.auth.nickname);
+
   return (
     <section className={styles.sidePanel}>
       <div className={styles.panelLabelRow}>
@@ -122,14 +170,22 @@ function MatchHistoryPanel() {
           <div key={i} className={styles.matchCard}>
             <span
               className={
-                m.result === "Victory" ? styles.matchIndicatorVictory : styles.matchIndicatorDefeat
+                m.result === "Victory"
+                  ? styles.matchIndicatorVictory
+                  : styles.matchIndicatorDefeat
               }
               aria-hidden
             />
             <div className={styles.matchMain}>
               <div className={styles.matchRow}>
                 <span className={styles.matchOpponent}>{m.opponent}</span>
-                <span className={m.result === "Victory" ? styles.matchResultVictory : styles.matchResultDefeat}>
+                <span
+                  className={
+                    m.result === "Victory"
+                      ? styles.matchResultVictory
+                      : styles.matchResultDefeat
+                  }
+                >
                   {m.result}
                 </span>
               </div>
@@ -154,22 +210,52 @@ function MatchHistoryPanel() {
 }
 
 export default function LobbyPage() {
-  const navigate = useNavigate()
-  const token = useAppSelector((s) => s.auth.token)
-  const userId = useAppSelector((s) => s.auth.userId)
-  const [deck, setDeck] = useState<DeckSummary | null>(null)
-  const { isCreatingArena, isJoiningArena, handleCreateArena, handleJoinArena, isOnline, error } = useLobbyArena(token)
+  const navigate = useNavigate();
+  const token = useAppSelector((s) => s.auth.token);
+  const userId = useAppSelector((s) => s.auth.userId);
+  const [deck, setDeck] = useState<DeckSummary | null>(null);
+  const {
+    isCreatingArena,
+    isJoiningArena,
+    handleCreateArena,
+    handleJoinArena,
+    isOnline,
+    error,
+  } = useLobbyArena(token);
+  const [deckError, setDeckError] = useState<string | null>(null);
 
   const displayName = userId != null ? `PILOT_${userId}` : "PILOT_ZERO";
 
   useEffect(() => {
     if (!token) return;
     fetchUserDeck(token)
-      .then((res) => setDeck(summarizeDeck(res.name, res.totalCards, res.maxCards, res.cards)))
+      .then((res) =>
+        setDeck(
+          summarizeDeck(res.name, res.totalCards, res.maxCards, res.cards),
+        ),
+      )
       .catch(() => setDeck(null));
   }, [token]);
 
+  const isDeckReady = deck !== null && deck.cardsTotal >= deck.cardsMax;
 
+  const guardedJoinArena = useCallback(() => {
+    if (!isDeckReady) {
+      setDeckError("Create a deck and add cards");
+      return;
+    }
+    setDeckError(null);
+    handleJoinArena();
+  }, [isDeckReady, handleJoinArena]);
+
+  const guardedCreateArena = useCallback(() => {
+    if (!isDeckReady) {
+      setDeckError("Create a deck and add cards");
+      return;
+    }
+    setDeckError(null);
+    handleCreateArena();
+  }, [isDeckReady, handleCreateArena]);
 
   const handleOpenDeckBuilder = () => {
     navigate("/deck-builder");
@@ -193,7 +279,9 @@ export default function LobbyPage() {
         <div className={styles.headerRight}>
           <p className={styles.status}>
             Status{" "}
-            <span className={isOnline ? styles.statusOnline : styles.statusOffline}>
+            <span
+              className={isOnline ? styles.statusOnline : styles.statusOffline}
+            >
               {isOnline ? "Online" : "Offline"}
             </span>
           </p>
@@ -210,7 +298,7 @@ export default function LobbyPage() {
               type="button"
               className={`${styles.btnBattle} ${styles.btnBattlePrimary}`}
               disabled={isJoiningArena}
-              onClick={handleJoinArena}
+              onClick={guardedJoinArena}
             >
               {isJoiningArena ? (
                 <>
@@ -219,7 +307,9 @@ export default function LobbyPage() {
                 </>
               ) : (
                 <>
-                  <span className={styles.btnArenaIcon} aria-hidden>⚔</span>
+                  <span className={styles.btnArenaIcon} aria-hidden>
+                    ⚔
+                  </span>
                   Find Arena
                 </>
               )}
@@ -235,7 +325,7 @@ export default function LobbyPage() {
               type="button"
               className={`${styles.btnBattle} ${styles.btnBattleSecondary}`}
               disabled={isCreatingArena}
-              onClick={handleCreateArena}
+              onClick={guardedCreateArena}
             >
               {isCreatingArena ? (
                 <>
@@ -244,12 +334,15 @@ export default function LobbyPage() {
                 </>
               ) : (
                 <>
-                  <span className={styles.btnArenaIcon} aria-hidden>+</span>
+                  <span className={styles.btnArenaIcon} aria-hidden>
+                    +
+                  </span>
                   Create Arena
                 </>
               )}
             </button>
 
+            {deckError && <p className={styles.errorText}>{deckError}</p>}
             {error && <p className={styles.errorText}>{error}</p>}
           </div>
 
