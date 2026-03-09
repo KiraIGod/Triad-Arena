@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "../store";
 import {
@@ -54,6 +54,20 @@ export default function DeckBuilderPage() {
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [renamingDeckId, setRenamingDeckId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    setToast(msg);
+    toastTimer.current = setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+    };
+  }, []);
 
   const cardsById = useMemo<Record<string, DeckBuilderCard>>(
     () =>
@@ -145,11 +159,19 @@ export default function DeckBuilderPage() {
 
   const addCardToDeck = (cardId: string) => {
     const inDeck = deckByCardId[cardId] ?? 0;
-    if (inDeck >= MAX_COPIES_PER_CARD) {
-      setError("No more than 2 identical cards in a deck");
+    if (totalCards >= MAX_DECK_SIZE) {
+      showToast(`Deck is full (max ${MAX_DECK_SIZE} cards)`);
       return;
     }
-    if (!canAddCard(cardId)) return;
+    if (inDeck >= MAX_COPIES_PER_CARD) {
+      showToast("No more than 2 copies of the same card allowed");
+      return;
+    }
+    const owned = collectionByCardId[cardId] ?? 0;
+    if (inDeck >= owned) {
+      showToast("Not enough copies in your collection");
+      return;
+    }
     setError(null);
     setDeckByCardId((prev) => ({
       ...prev,
@@ -480,6 +502,12 @@ export default function DeckBuilderPage() {
           canRemoveCard={canRemoveCard}
           onClose={() => setIsViewerOpen(false)}
         />
+      )}
+
+      {toast && (
+        <div className="deckBuilder__toast" role="alert">
+          {toast}
+        </div>
       )}
     </main>
   );
