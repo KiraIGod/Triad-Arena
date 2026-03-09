@@ -146,7 +146,7 @@ export default function CardViewer({
             onClick={() => onAddCard(card.id)}
             disabled={!canAddCard(card.id)}
           >
-            Добавить в деку
+            Add to deck
           </button>
           <button
             type="button"
@@ -154,24 +154,16 @@ export default function CardViewer({
             onClick={() => onRemoveCard(card.id)}
             disabled={!canRemoveCard(card.id)}
           >
-            Удалить из деки
+            Remove from deck
           </button>
         </div>
 
         <div className="cardViewer__nav">
-          <button
-            type="button"
-            className="cardViewer__navBtn"
-            onClick={goPrev}
-          >
-            ← Предыдущая
+          <button type="button" className="cardViewer__navBtn" onClick={goPrev}>
+            ← Previous
           </button>
-          <button
-            type="button"
-            className="cardViewer__navBtn"
-            onClick={goNext}
-          >
-            Следующая →
+          <button type="button" className="cardViewer__navBtn" onClick={goNext}>
+            Next →
           </button>
         </div>
       </div>

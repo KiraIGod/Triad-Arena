@@ -121,9 +121,9 @@ export default function CardPool({
             <button
               key={card.id}
               type="button"
-              className={`poolCard ${modifier ? `poolCard--${modifier}` : ""} ${inDeck >= owned || inDeck >= maxCopiesPerCard || totalCards >= maxDeckSize ? "poolCard--exhausted" : inDeck > 0 ? "poolCard--inDeck" : ""}`}
+              className={`poolCard ${modifier ? `poolCard--${modifier}` : ""} ${totalCards >= maxDeckSize ? "poolCard--exhausted" : inDeck >= maxCopiesPerCard ? "poolCard--copiesMax" : inDeck >= owned ? "poolCard--exhausted" : inDeck > 0 ? "poolCard--inDeck" : ""}`}
               onClick={() => onAddCard(card.id)}
-              disabled={totalCards >= maxDeckSize || inDeck >= owned || inDeck >= maxCopiesPerCard}
+              disabled={totalCards >= maxDeckSize || (inDeck >= owned && inDeck < maxCopiesPerCard)}
             >
               <div className="poolCard__mana">{card.mana_cost}</div>
               <div className="poolCard__name">{card.name}</div>

@@ -146,7 +146,7 @@ export default function DeckBuilderPage() {
   const addCardToDeck = (cardId: string) => {
     const inDeck = deckByCardId[cardId] ?? 0;
     if (inDeck >= MAX_COPIES_PER_CARD) {
-      setError("Не более 2 одинаковых карт в колоде");
+      setError("No more than 2 identical cards in a deck");
       return;
     }
     if (!canAddCard(cardId)) return;
