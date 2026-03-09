@@ -203,6 +203,7 @@ export default function GamePage() {
     return playerHand.map<CardModel>((card, index) => ({
       id: `${card.id}:${index}`,
       name: card.name,
+      image: "crimson_duelist.png",
       type: String(card.type).toUpperCase() as CardModel["type"],
       triad_type: String(card.triad_type).toUpperCase() as CardModel["triad_type"],
       mana_cost: card.mana_cost,
@@ -393,7 +394,7 @@ export default function GamePage() {
           Leave Arena
         </button>
       </div>
-      
+
       <div className="game-state">
         <p className="game-state__label">Arena</p>
         <p className="game-state__value">{arenaId}</p>
