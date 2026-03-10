@@ -105,14 +105,18 @@ export default function GamePage() {
       setOpponentNickname(opponent?.nickname || "UNKNOWN");
     };
 
-    socket.emit(
-      "arena:get-state",
-      { arenaId },
-      (res?: { matchId?: string; players?: Array<{ userId?: string | number; nickname?: string }> }) => {
-        updateOpponentFromPlayers(res?.players);
-        if (res?.matchId) setArenaMatchId(res.matchId);
-      }
-    );
+    const requestArenaState = () => {
+      socket.emit(
+        "arena:get-state",
+        { arenaId },
+        (res?: { matchId?: string; players?: Array<{ userId?: string | number; nickname?: string }> }) => {
+          updateOpponentFromPlayers(res?.players);
+          if (res?.matchId) setArenaMatchId(res.matchId);
+        }
+      );
+    };
+
+    requestArenaState();
 
     const onArenaReady = (
       payload?: { arenaId?: string; matchId?: string; players?: Array<{ userId?: string | number; nickname?: string }> }
@@ -122,9 +126,25 @@ export default function GamePage() {
       if (payload.matchId) setArenaMatchId(payload.matchId);
     };
 
+    const onConnect = () => {
+      socket.emit("join_game", arenaId);
+      requestArenaState();
+    };
+
+    const pollId = window.setInterval(() => {
+      if (!arenaMatchId) {
+        requestArenaState();
+      }
+    }, 1500);
+
+    socket.on("connect", onConnect);
     socket.on("arena:ready", onArenaReady);
-    return () => { socket.off("arena:ready", onArenaReady); };
-  }, [arenaId, token, userIdStr]);
+    return () => {
+      window.clearInterval(pollId);
+      socket.off("connect", onConnect);
+      socket.off("arena:ready", onArenaReady);
+    };
+  }, [arenaId, token, userIdStr, arenaMatchId]);
 
   // ── Match socket ─────────────────────────────────────────────────────────────
   useEffect(() => {
