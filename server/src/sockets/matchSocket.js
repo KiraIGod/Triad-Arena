@@ -262,7 +262,7 @@ async function handleJoin(io, socket, payload = {}) {
   }
 
   const matchRoom = io.sockets.adapter.rooms.get(String(matchId));
-  if (matchRoom && matchRoom.size >= 2) {
+  if (matchRoom && matchRoom.size >= 2 && !matchRoom.has(socket.id)) {
     throw createSocketError("MATCH_FULL", "Match is full");
   }
 
