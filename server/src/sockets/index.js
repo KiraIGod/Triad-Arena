@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const { Server } = require("socket.io");
 const registerArenaSocket = require("./arenaSocket");
+const registerMatchSocket = require("./matchSocket");
 const { cleanupArena } = require("../services/matchService");
 
 const activeGames = new Map();
@@ -60,6 +61,7 @@ function initSocket(httpServer) {
   });
 
   registerArenaSocket(io, activeGames);
+  registerMatchSocket(io);
 
   return io;
 }

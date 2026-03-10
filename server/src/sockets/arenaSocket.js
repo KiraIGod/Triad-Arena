@@ -1,6 +1,6 @@
 const { randomUUID } = require("crypto");
 const jwt = require("jsonwebtoken");
-const { User, DeckCard, Match } = require("../db/models");
+const { User, Card, DeckCard, Match } = require("../db/models");
 const { getActiveDeckId } = require("../services/deckBuilderService");
 
 
@@ -32,9 +32,16 @@ async function ensurePlayerDeckId(userId) {
     throw new Error("Active deck not found");
   }
 
-  const deckCards = await DeckCard.findAll({ where: { deck_id: deckId } });
-  const totalCards = deckCards.reduce((sum, dc) => sum + (Number(dc.quantity) || 0), 0);
-  if (totalCards !== 20) {
+  const rawDeckCards = await DeckCard.findAll({ where: { deck_id: deckId } });
+  const rawTotalCards = rawDeckCards.reduce((sum, dc) => sum + (Number(dc.quantity) || 0), 0);
+
+  const validDeckCards = await DeckCard.findAll({
+    where: { deck_id: deckId },
+    include: [{ model: Card, required: true }]
+  });
+  const validTotalCards = validDeckCards.reduce((sum, dc) => sum + (Number(dc.quantity) || 0), 0);
+
+  if (rawTotalCards !== 20 || validTotalCards !== 20) {
     throw new Error("Deck must contain 20 cards");
   }
 

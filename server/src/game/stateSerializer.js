@@ -20,6 +20,7 @@ function normalizeUnit(unit) {
 function normalizePlayer(player) {
   const source = player || {};
   return {
+    id: source.id ?? null,
     hp: source.hp ?? null,
     shield: source.shield ?? null,
     energy: source.energy ?? null,

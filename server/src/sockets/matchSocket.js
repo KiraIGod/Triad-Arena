@@ -150,9 +150,17 @@ async function validateActiveDeckSize(userId) {
   if (!deckId) {
     throw createSocketError("INVALID_DECK", "Deck must contain 20 cards");
   }
-  const deckCards = await db.DeckCard.findAll({ where: { deck_id: deckId } });
-  const totalCards = deckCards.reduce((sum, dc) => sum + (Number(dc.quantity) || 0), 0);
-  if (totalCards !== 20) {
+
+  const rawDeckCards = await db.DeckCard.findAll({ where: { deck_id: deckId } });
+  const rawTotalCards = rawDeckCards.reduce((sum, dc) => sum + (Number(dc.quantity) || 0), 0);
+
+  const validDeckCards = await db.DeckCard.findAll({
+    where: { deck_id: deckId },
+    include: [{ model: db.Card, required: true }]
+  });
+  const validTotalCards = validDeckCards.reduce((sum, dc) => sum + (Number(dc.quantity) || 0), 0);
+
+  if (rawTotalCards !== 20 || validTotalCards !== 20) {
     throw createSocketError("INVALID_DECK", "Deck must contain 20 cards");
   }
   return deckId;
@@ -181,9 +189,10 @@ function getWinnerId(match, state) {
   return null;
 }
 
-function clearMatchRuntime(matchId) {
+function clearSocketMatchRuntime(matchId) {
   clearMatchQueue(matchId);
   runtimeMatchState.delete(String(matchId));
+  clearMatchRuntime(matchId);
 }
 
 async function cleanupFinishedMatch(io, match, persistedState, safeState, matchId, events) {
@@ -197,7 +206,7 @@ async function cleanupFinishedMatch(io, match, persistedState, safeState, matchI
   );
   await finalizeMatch(match, winnerId);
   unregisterActiveMatch(match);
-  clearMatchRuntime(matchId);
+  clearSocketMatchRuntime(matchId);
   clearTurnTimer(matchId);
 
   const pendingTimer = reconnectTimers.get(String(matchId));
@@ -211,7 +220,7 @@ async function cleanupFinishedMatch(io, match, persistedState, safeState, matchI
     events
   });
   io.to(String(matchId)).emit("match:finish", { winnerId });
-  clearMatchRuntime(matchId);
+  clearSocketMatchRuntime(matchId);
 }
 
 // ─── Turn timer ───────────────────────────────────────────────────────────────
@@ -250,7 +259,7 @@ async function forceEndTurn(io, matchId, playerId) {
       const winnerId = getWinnerId(match, persistedState);
       await finalizeMatch(match, winnerId);
       unregisterActiveMatch(match);
-      clearMatchRuntime(matchId);
+      clearSocketMatchRuntime(matchId);
       clearTurnTimer(matchId);
       const pendingTimer = reconnectTimers.get(String(matchId));
       if (pendingTimer) {
@@ -262,7 +271,7 @@ async function forceEndTurn(io, matchId, playerId) {
         events: [{ type: "TURN_TIMEOUT" }]
       });
       io.to(String(matchId)).emit("match:finish", { winnerId });
-      clearMatchRuntime(matchId);
+      clearSocketMatchRuntime(matchId);
       return;
     }
 
@@ -592,7 +601,7 @@ async function handleLeave(io, socket, payload = {}) {
 
   await finalizeMatch(match, opponentId);
   unregisterActiveMatch(match);
-  clearMatchRuntime(matchId);
+  clearSocketMatchRuntime(matchId);
 
   socket.to(matchId).emit("match:finish", {
     winnerId: opponentId || null,
@@ -673,13 +682,13 @@ module.exports = function registerMatchSocket(io) {
           try {
             unregisterActiveMatch(match);
             reconnectTimers.delete(String(match.id));
-            clearMatchRuntime(match.id);
+            clearSocketMatchRuntime(match.id);
             await finalizeMatch(match, opponentId);
             io.to(String(match.id)).emit("match:finish", {
               winnerId: opponentId,
               reason: "disconnect"
             });
-            clearMatchRuntime(match.id);
+            clearSocketMatchRuntime(match.id);
           } catch (err) {
             console.error("[reconnect:timeout] failed:", err?.message || err);
           }

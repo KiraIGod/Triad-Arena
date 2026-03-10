@@ -266,7 +266,14 @@ export default function GamePage() {
 
     if (!match || !userIdStr) return defaultResult;
 
-    const idx = match.players.findIndex((id) => isSameUser(id));
+    const idxFromState = (() => {
+      const p1Id = match.state.players.player1?.id;
+      const p2Id = match.state.players.player2?.id;
+      if (isSameUser(p1Id)) return 0;
+      if (isSameUser(p2Id)) return 1;
+      return -1;
+    })();
+    const idx = idxFromState >= 0 ? idxFromState : match.players.findIndex((id) => isSameUser(id));
     if (idx < 0) return defaultResult;
 
     const sk = idx === 0 ? "player1" : "player2" as "player1" | "player2";

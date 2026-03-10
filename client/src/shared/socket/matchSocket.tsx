@@ -26,6 +26,7 @@ type PlayerCard = {
 };
 
 type PlayerState = {
+  id?: string | null;
   hp: number;
   shield: number;
   energy: number;
