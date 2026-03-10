@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
 import { GameCard, type CardModel } from "../components/Card";
+import MatchBoard from "../components/MatchBoard";
 import socket from "../shared/socket/socket";
 import {
   endMatchTurn,
@@ -21,6 +22,7 @@ import {
   type MatchFinishPayload,
   type MatchStatePayload
 } from "../shared/socket/matchSocket";
+import { useMatchBoard } from "../features/customHooks/useMatchBoard";
 import "./GamePage.css";
 
 export default function GamePage() {
@@ -46,6 +48,9 @@ export default function GamePage() {
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [finishReason, setFinishReason] = useState<string | null>(null);
   const joinedMatchRef = useRef<string | null>(null);
+  const { playedCards, applyEvents, resetBoard } = useMatchBoard();
+  const isSameUser = (value: string | number | null | undefined) =>
+    String(value ?? "") === String(userIdStr ?? "");
 
   useEffect(() => {
     const fromQueryOpponent = searchParams.get("opponent");
@@ -88,7 +93,7 @@ export default function GamePage() {
 
     const updateOpponentFromPlayers = (players?: Array<{ userId?: string | number; nickname?: string }>) => {
       if (!Array.isArray(players)) return;
-      const opponent = players.find((player) => String(player?.userId ?? "") !== String(userIdStr ?? ""));
+      const opponent = players.find((player) => !isSameUser(player?.userId));
       setOpponentNickname(opponent?.nickname || "UNKNOWN");
     };
 
@@ -139,6 +144,7 @@ export default function GamePage() {
       setMatch(payload);
       setArenaMatchId(payload.matchId);
       if (payload.events?.length) {
+        applyEvents(payload.events);
         payload.events.forEach((event) => appendLog(toActionLogEntry(event)));
       }
     };
@@ -148,6 +154,7 @@ export default function GamePage() {
       setSelectedCardReason(null);
       setMatch(payload);
       if (payload.events?.length) {
+        applyEvents(payload.events);
         payload.events.forEach((event) => appendLog(toActionLogEntry(event)));
       }
     };
@@ -192,21 +199,22 @@ export default function GamePage() {
       offMatchError(handleError);
       offMatchFinish(handleFinish);
     };
-  }, [token, userIdStr]);
+  }, [applyEvents, token, userIdStr]);
 
   useEffect(() => {
     if (!arenaMatchId) return;
     if (joinedMatchRef.current === arenaMatchId) return;
 
+    resetBoard();
     joinedMatchRef.current = arenaMatchId;
     setMatchError(null);
     joinMatch(arenaMatchId);
-  }, [arenaMatchId]);
+  }, [arenaMatchId, resetBoard]);
 
   const handCards: CardModel[] = useMemo(() => {
     if (!match || !userIdStr) return [];
 
-    const selfIndex = match.players.findIndex((id) => id === userIdStr);
+    const selfIndex = match.players.findIndex((id) => isSameUser(id));
     if (selfIndex < 0) return [];
 
     const selfKey = selfIndex === 0 ? "player1" : "player2";
@@ -228,7 +236,7 @@ export default function GamePage() {
 
   const selfDeckCount = useMemo(() => {
     if (!match || !userIdStr) return 0;
-    const ownIndex = match.players.findIndex((id) => id === userIdStr);
+    const ownIndex = match.players.findIndex((id) => isSameUser(id));
     if (ownIndex < 0) return 0;
     const ownKey = ownIndex === 0 ? "player1" : "player2";
     return match.state.players[ownKey].deckCount ?? 0;
@@ -247,7 +255,7 @@ export default function GamePage() {
       };
     }
 
-    const selfIndex = match.players.findIndex((id) => id === userIdStr);
+    const selfIndex = match.players.findIndex((id) => isSameUser(id));
     if (selfIndex < 0) {
       return {
         playerHPPercent: 100,
@@ -276,7 +284,7 @@ export default function GamePage() {
       playerHPPercent: clampPercent(selfStats.hp),
       opponentHPPercent: clampPercent(oppStats.hp),
       currentEnergy: selfStats.energy ?? 0,
-      isMyTurn: match.state.activePlayer === userIdStr && !match.state.finished,
+      isMyTurn: isSameUser(match.state.activePlayer) && !match.state.finished,
       selfIndex,
       selfStats,
       oppStats
@@ -288,7 +296,7 @@ export default function GamePage() {
       return "Opponent cowardly left the arena";
     }
     if (!winnerId || !userIdStr) return null;
-    return winnerId === userIdStr ? "Victory" : "Defeat";
+    return isSameUser(winnerId) ? "Victory" : "Defeat";
   }, [finishReason, winnerId, userIdStr]);
 
   const isMatchFinished = Boolean(match?.state.finished || finishReason || winnerId);
@@ -296,7 +304,7 @@ export default function GamePage() {
   const playedCardIdsThisTurn = useMemo(() => {
     if (!match || !userIdStr) return new Set<string>();
     const ids = match.state.turnActions
-      .filter((action) => action.playerId === userIdStr)
+      .filter((action) => isSameUser(action.playerId))
       .map((action) => action.cardId);
     return new Set(ids);
   }, [match, userIdStr]);
@@ -340,7 +348,7 @@ export default function GamePage() {
     setSelectedCardId(null);
     setSelectedCardReason(null);
     if (!match || !userIdStr) return;
-    if (match.state.finished || match.state.activePlayer !== userIdStr) return;
+    if (match.state.finished || !isSameUser(match.state.activePlayer)) return;
 
     endMatchTurn({
       matchId: match.matchId,
@@ -360,6 +368,7 @@ export default function GamePage() {
     setMatch(null);
     setWinnerId(null);
     setFinishReason(null);
+    resetBoard();
     navigate("/lobby");
   };
 
@@ -414,12 +423,7 @@ export default function GamePage() {
         </div>
       )}
 
-      <div className="game-state">
-        <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
-          Leave Arena
-        </button>
-      </div>
-
+      {/* 
       <div className="game-state">
         <p className="game-state__label">Arena</p>
         <p className="game-state__value">{arenaId}</p>
@@ -427,22 +431,34 @@ export default function GamePage() {
       <div className="game-state">
         <p className="game-state__label">Match</p>
         <p className="game-state__value">{match ?match.matchId : arenaMatchId ? "Connecting..." : "Waiting arena..."}</p>
-      </div>
-      <div className="game-state">
-        <p className="game-state__label">Turn</p>
-        <p className="game-state__value">{match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}</p>
-      </div>
+      </div> */}
 
-
-      <main className="game-battlefield">
-
+      <div className="game-top-row">
         <aside className="game-deck-panel">
           <p>My Deck</p>
           <p className="game-log__entry">Cards left: {selfDeckCount}</p>
           <p className="game-log__entry">Cards in hand: {handCards.length}</p>
         </aside>
 
-        <aside className="game-log">
+        <div className="game-state game-state--center">
+          <p className="game-state__label">Turn</p>
+          <p className="game-state__value">{match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}</p>
+        </div>
+
+        <div className="game-state game-state--right">
+          <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
+            Leave Arena
+          </button>
+        </div>
+      </div>
+
+
+
+      <main className="game-battlefield">
+        <MatchBoard cards={playedCards} />
+
+
+        {/* <aside className="game-log">
           <p className="game-log__title">Battle Log</p>
           {matchResultLabel && <p className="game-log__entry game-log__entry--active">{matchResultLabel}</p>}
           {matchError && <p className="game-log__entry game-log__entry--active">{matchError}</p>}
@@ -452,15 +468,15 @@ export default function GamePage() {
               {entry}
             </p>
           ))}
-        </aside>
+        </aside> */}
 
-        {selectedCardId && (
+        {/* {selectedCardId && (
           <div className="game-overlay">
             <div className="game-overlay__panel parchment-panel">
               <span className="comic-text-shadow">Choose Your Target</span>
             </div>
           </div>
-        )}
+        )} */}
       </main>
 
       {isMatchFinished && (

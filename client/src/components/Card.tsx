@@ -96,14 +96,17 @@ export function GameCard({
       }}
     >
       <div
-        className="h-full flex flex-col ink-border-thin parchment-texture"
+        className="ink-border-thin parchment-texture"
         style={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
           background: "linear-gradient(135deg, #1A1612 0%, #0E0E0E 100%)",
           boxShadow: "inset 0 0 12px rgba(0, 0, 0, 0.8), 0 4px 0 rgba(0, 0, 0, 0.4)"
         }}
       >
-        <div className="px-3 py-2 relative" style={{ background: "rgba(0, 0, 0, 0.5)" }}>
-          <div className="flex justify-between items-center mb-1">
+        <div style={{ position: "relative", padding: "8px 12px", background: "rgba(0, 0, 0, 0.5)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
             <span
               className="uppercase"
               style={{
@@ -118,15 +121,16 @@ export function GameCard({
               {card.name}
             </span>
             <span
-              className="uppercase px-2 py-1"
+              className="uppercase"
               style={{
                 fontFamily: "var(--font-body)",
-                fontSize: 8,
+                fontSize: 10,
                 color: "#0E0E0E",
                 fontWeight: 700,
                 letterSpacing: "0.1em",
                 background: accentColor,
-                border: "1px solid #000000"
+                border: "1px solid #000000",
+                padding: "4px 4px"
               }}
             >
               {card.triad_type.toLowerCase()}
@@ -135,29 +139,40 @@ export function GameCard({
           <div style={{ height: 2, background: "#000000", boxShadow: `0 1px 0 ${accentColor}40` }} />
         </div>
 
-        <div className="flex-1 relative overflow-hidden">
+        <div style={{ position: "relative", overflow: "hidden", flex: 1 }}>
           <div
-            className="absolute inset-0 z-20 pointer-events-none"
-            style={{ boxShadow: "inset 0 0 20px rgba(0, 0, 0, 0.9)", border: "1px solid #000000" }}
+            style={{
+              position: "absolute",
+              inset: 0,
+              zIndex: 20,
+              pointerEvents: "none",
+              boxShadow: "inset 0 0 20px rgba(0, 0, 0, 0.9)",
+              border: "1px solid #000000"
+            }}
           />
           <img
             src={toImageUrl(card.image)}
             alt={card.name}
-            className="w-full h-full"
             style={{
+              width: "100%",
+              height: "100%",
               objectFit: "cover",
               objectPosition: "center 30%",
               filter: "saturate(0.7) contrast(1.3) brightness(0.72)"
             }}
           />
-          <div className="absolute inset-0 pointer-events-none darkest-vignette" />
+          <div className="darkest-vignette" style={{ position: "absolute", inset: 0, pointerEvents: "none" }} />
         </div>
 
-        <div className="px-3 py-3" style={{ background: "rgba(0, 0, 0, 0.7)" }}>
-          <div className="flex items-center gap-3">
+        <div style={{ padding: "12px", background: "rgba(0, 0, 0, 0.7)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div
-              className="flex items-center justify-center flex-shrink-0 relative"
               style={{
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
                 width: 36,
                 height: 36,
                 border: "2px solid #000000",
@@ -171,8 +186,8 @@ export function GameCard({
               >
                 {card.mana_cost}
               </span>
-              <div className="absolute -top-1 -left-1 w-2 h-2 bg-black" />
-              <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-black" />
+              <div style={{ position: "absolute", top: -4, left: -4, width: 8, height: 8, background: "#000" }} />
+              <div style={{ position: "absolute", right: -4, bottom: -4, width: 8, height: 8, background: "#000" }} />
             </div>
 
             <div style={{ minWidth: 0, flex: 1 }}>
