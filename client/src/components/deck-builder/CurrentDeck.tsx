@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { DeckBuilderCard } from "../../types/deckBuilder";
+import { toStaticUrl } from "../../shared/lib/toStaticUrl";
 
 type CurrentDeckProps = {
   deckByCardId: Record<string, number>;
@@ -97,7 +98,7 @@ export default function CurrentDeck({
         >
           <img
             className="deckTooltip__image"
-            src={hoveredCard.image}
+            src={toStaticUrl(hoveredCard.image)}
             alt={hoveredCard.name}
           />
           <div className="deckTooltip__body">

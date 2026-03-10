@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { DeckBuilderCard } from "../../types/deckBuilder";
+import { toStaticUrl } from "../../shared/lib/toStaticUrl";
 
 type CardViewerProps = {
   cards: DeckBuilderCard[];
@@ -91,7 +92,7 @@ export default function CardViewer({
           {currentIndex + 1} / {cards.length}
         </div>
 
-        <img className="cardViewer__image" src={card.image} alt={card.name} />
+        <img className="cardViewer__image" src={toStaticUrl(card.image)} alt={card.name} />
 
         <div className="cardViewer__body">
           <h3 className="cardViewer__name">{card.name}</h3>

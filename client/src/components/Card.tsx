@@ -1,4 +1,5 @@
 import { useState, type KeyboardEvent } from "react";
+import { toStaticUrl } from "../shared/lib/toStaticUrl";
 
 export type CardType = "UNIT" | "SPELL" | "ARTIFACT";
 export type TriadType = "ASSAULT" | "PRECISION" | "ARCANE";
@@ -40,12 +41,6 @@ function typeLabel(type: CardType): string {
   if (type === "UNIT") return "Unit";
   if (type === "SPELL") return "Spell";
   return "Artifact";
-}
-
-function toImageUrl(image: string): string {
-  if (!image) return "";
-  if (image.startsWith("http://") || image.startsWith("https://")) return image;
-  return `${import.meta.env.VITE_STATIC_URL}/${image}`;
 }
 
 export function GameCard({
@@ -151,7 +146,7 @@ export function GameCard({
             }}
           />
           <img
-            src={toImageUrl(card.image)}
+            src={toStaticUrl(card.image)}
             alt={card.name}
             style={{
               width: "100%",

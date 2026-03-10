@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import type { DeckBuilderCard } from "../../types/deckBuilder";
+import { toStaticUrl } from "../../shared/lib/toStaticUrl";
 
 type CardModalProps = {
   card: DeckBuilderCard | null;
@@ -68,7 +69,7 @@ export default function CardModal({
           ✕
         </button>
 
-        <img className="cardModal__image" src={card.image} alt={card.name} />
+        <img className="cardModal__image" src={toStaticUrl(card.image)} alt={card.name} />
 
         <div className="cardModal__body">
           <h3 className="cardModal__name">{card.name}</h3>
