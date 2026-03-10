@@ -12,6 +12,18 @@ function assertNumber(value, field) {
   }
 }
 
+function validateUnit(unit, context) {
+  if (!unit || typeof unit !== "object") {
+    throw createError(`Invalid unit in ${context}`);
+  }
+  if (typeof unit.instanceId !== "string" || unit.instanceId.length === 0) {
+    throw createError(`Unit missing instanceId in ${context}`);
+  }
+  assertNumber(unit.attack, `${context}.attack`);
+  assertNumber(unit.hp, `${context}.hp`);
+  assertNumber(unit.summonedTurn, `${context}.summonedTurn`);
+}
+
 function validatePlayer(player, key) {
   if (!player || typeof player !== "object") {
     throw createError(`Missing player state: ${key}`);
@@ -24,14 +36,21 @@ function validatePlayer(player, key) {
   if (player.hp < 0 || player.hp > GAME_CONSTANTS.MAX_HP) {
     throw createError(`Out of range hp: ${key}.hp`);
   }
-
   if (player.shield < 0 || player.shield > GAME_CONSTANTS.MAX_SHIELD) {
     throw createError(`Out of range shield: ${key}.shield`);
   }
-
   if (player.energy < 0) {
     throw createError(`Out of range energy: ${key}.energy`);
   }
+
+  if (!Array.isArray(player.board)) {
+    throw createError(`Invalid state field: ${key}.board`);
+  }
+  if (player.board.length > GAME_CONSTANTS.MAX_BOARD) {
+    throw createError(`Board exceeds MAX_BOARD: ${key}.board`);
+  }
+
+  player.board.forEach((unit, i) => validateUnit(unit, `${key}.board[${i}]`));
 }
 
 function validateGameState(state) {
@@ -41,6 +60,7 @@ function validateGameState(state) {
 
   assertNumber(state.version, "version");
   assertNumber(state.turn, "turn");
+
   if (typeof state.activePlayer !== "string" || state.activePlayer.length === 0) {
     throw createError("Invalid state field: activePlayer");
   }
@@ -56,7 +76,6 @@ function validateGameState(state) {
   if (!Array.isArray(state.turnActions)) {
     throw createError("Invalid state field: turnActions");
   }
-
   if (typeof state.finished !== "boolean") {
     throw createError("Invalid state field: finished");
   }
@@ -64,6 +83,4 @@ function validateGameState(state) {
   return true;
 }
 
-module.exports = {
-  validateGameState
-};
+module.exports = { validateGameState };
