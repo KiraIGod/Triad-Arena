@@ -28,6 +28,8 @@ function initSocket(httpServer) {
   });
 
   io.on("connection", (socket) => {
+    io.emit("arena:online", io.sockets.sockets.size);
+
     socket.on("join_game", (gameId) => {
       const normalizedGameId = String(gameId);
       socket.join(normalizedGameId);
@@ -54,6 +56,7 @@ function initSocket(httpServer) {
     socket.on("disconnect", () => {
       const userId = socket.data?.userId;
       cleanupArena(activeGames, userId, socket.id);
+      io.emit("arena:online", io.sockets.sockets.size);
     });
   });
 

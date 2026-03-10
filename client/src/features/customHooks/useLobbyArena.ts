@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import socket from "../../shared/socket/socket";
 
@@ -21,15 +21,17 @@ type UseLobbyArenaResult = {
   error: string | null;
   handleCreateArena: () => void;
   handleJoinArena: () => void;
+  cancelSearch: () => void;
 };
 
 export function useLobbyArena(token: string | null): UseLobbyArenaResult {
   const navigate = useNavigate();
-const [isCreatingArena, setIsCreatingArena] = useState(false);
-const [isJoiningArena, setIsJoiningArena] = useState(false);
+  const [isCreatingArena, setIsCreatingArena] = useState(false);
+  const [isJoiningArena, setIsJoiningArena] = useState(false);
   const [isOnline, setIsOnline] = useState(socket.connected);
   const [error, setError] = useState<string | null>(null);
-  
+
+  const joinCancelledRef = useRef(false);
 
   useEffect(() => {
     if (token) {
@@ -51,10 +53,16 @@ const [isJoiningArena, setIsJoiningArena] = useState(false);
     };
   }, [token]);
 
+  const cancelSearch = () => {
+    joinCancelledRef.current = true;
+    setIsJoiningArena(false);
+    setError(null);
+  };
+
   const handleCreateArena = () => {
     if (isCreatingArena) return;
 
-    setError(null)
+    setError(null);
     setIsCreatingArena(true);
 
     const timeoutId = setTimeout(() => {
@@ -72,21 +80,23 @@ const [isJoiningArena, setIsJoiningArena] = useState(false);
         setIsCreatingArena(false);
         console.error("arena:create failed:", message);
         return;
-    }
-    setIsCreatingArena(false);
-    console.log("arena:create success:", res.arenaId)
-    navigate(`/game?arenaId=${res.arenaId}`);
-    });
+      }
 
-  }
+      setIsCreatingArena(false);
+      console.log("arena:create success:", res.arenaId);
+      navigate(`/game?arenaId=${res.arenaId}`);
+    });
+  };
 
   const handleJoinArena = () => {
     if (isJoiningArena) return;
 
+    joinCancelledRef.current = false;
     setError(null);
     setIsJoiningArena(true);
 
     const timeoutId = setTimeout(() => {
+      if (joinCancelledRef.current) return;
       setError("Failed to join arena. Please try again.");
       setIsJoiningArena(false);
       console.error("arena:join-random timeout");
@@ -94,6 +104,8 @@ const [isJoiningArena, setIsJoiningArena] = useState(false);
 
     socket.emit("arena:join", (res?: JoinArenaResponse) => {
       clearTimeout(timeoutId);
+
+      if (joinCancelledRef.current) return;
 
       if (!res?.arenaId) {
         const message = res?.error ?? "Failed to join arena";
@@ -117,6 +129,7 @@ const [isJoiningArena, setIsJoiningArena] = useState(false);
     isJoiningArena,
     error,
     handleCreateArena,
-    handleJoinArena
+    handleJoinArena,
+    cancelSearch
   };
 }

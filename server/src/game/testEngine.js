@@ -21,7 +21,18 @@ function expectError(fn, type, messageContains) {
 }
 
 function play(state, playerId, version, card) {
-  return playCard(state, { playerId, expectedVersion: version }, card);
+  const playerKey = state.player1.id === playerId ? "player1" : "player2";
+  const hasCard = state[playerKey].hand.some((c) => c.id === card.id);
+  const stateWithCard = hasCard
+    ? state
+    : {
+        ...state,
+        [playerKey]: {
+          ...state[playerKey],
+          hand: [...state[playerKey].hand, card]
+        }
+      };
+  return playCard(stateWithCard, { playerId, expectedVersion: version }, card);
 }
 
 function end(state, playerId, version) {
