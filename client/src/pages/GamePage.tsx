@@ -204,13 +204,34 @@ export default function GamePage() {
 
   useEffect(() => {
     if (!arenaMatchId) return;
-    if (joinedMatchRef.current === arenaMatchId) return;
+    if (!token || !userIdStr) return;
 
-    resetBoard();
-    joinedMatchRef.current = arenaMatchId;
-    setMatchError(null);
-    joinMatch(arenaMatchId);
-  }, [arenaMatchId, resetBoard]);
+    socket.auth = { token };
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    if (joinedMatchRef.current !== arenaMatchId) {
+      resetBoard();
+      joinedMatchRef.current = arenaMatchId;
+      setMatchError(null);
+    }
+
+    if (match?.matchId !== arenaMatchId) {
+      joinMatch(arenaMatchId);
+    }
+
+    const retryId = window.setTimeout(() => {
+      if (match?.matchId !== arenaMatchId) {
+        syncMatch();
+        joinMatch(arenaMatchId);
+      }
+    }, 1200);
+
+    return () => {
+      window.clearTimeout(retryId);
+    };
+  }, [arenaMatchId, resetBoard, token, userIdStr, match?.matchId]);
 
   const handCards: CardModel[] = useMemo(() => {
     if (!match || !userIdStr) return [];
