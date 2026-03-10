@@ -11,10 +11,7 @@ const playersRoutes = require("./routes/players")
 const { initSocket } = require("./sockets/index")
 
 dotenv.config()
-dotenv.config()
 
-const app = express()
-const server = http.createServer(app)
 const app = express()
 const server = http.createServer(app)
 
@@ -23,8 +20,6 @@ app.use(
     origin: process.env.CLIENT_URL || "http://localhost:5173",
     credentials: true
   })
-)
-app.use(express.json())
 )
 app.use(express.json())
 
@@ -38,9 +33,6 @@ app.use(express.static(path.join(__dirname, 'public')))
 initSocket(server)
 
 const PORT = process.env.PORT || 3001
-const PORT = process.env.PORT || 3001
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`)
-})
   console.log(`Server running on port ${PORT}`)
 })
