@@ -1,0 +1,201 @@
+.panel {
+  border: 2px solid var(--ink);
+  background: var(--panel-dark);
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+  flex-shrink: 0;
+}
+
+.diamond {
+  width: 9px;
+  height: 9px;
+  background: var(--blood);
+  border: 1px solid var(--ink);
+  transform: rotate(45deg);
+  flex-shrink: 0;
+}
+
+.label {
+  text-transform: uppercase;
+  font-size: 0.69rem;
+  letter-spacing: 0.22em;
+  color: var(--text-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.line {
+  height: 2px;
+  background: var(--ink);
+  flex: 1;
+}
+
+/* List area */
+.listWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.52rem;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 0.2rem;
+  flex: 1;
+}
+
+/* State indicators */
+.stateBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  padding: 2rem 1rem;
+  flex: 1;
+}
+
+.stateText,
+.stateEmpty,
+.stateError {
+  margin: 0;
+  text-transform: uppercase;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+}
+
+.stateText {
+  color: var(--text-muted);
+}
+
+.stateEmpty {
+  color: var(--text-muted);
+}
+
+.stateError {
+  color: #c05050;
+}
+
+.loader {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(217, 199, 168, 0.2);
+  border-top-color: var(--text-muted);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Match card */
+.matchCard {
+  display: grid;
+  grid-template-columns: 8px 1fr auto;
+  gap: 0.7rem;
+  align-items: center;
+  border: 2px solid var(--ink);
+  background: rgba(0, 0, 0, 0.28);
+  padding: 0.72rem 0.62rem;
+  transition: background 0.15s ease;
+  cursor: default;
+}
+
+.matchCard:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.indicatorVictory,
+.indicatorDefeat {
+  display: block;
+  height: 54px;
+  border: 1px solid var(--ink);
+}
+
+.indicatorVictory {
+  background: var(--blood);
+}
+
+.indicatorDefeat {
+  background: #2a241e;
+}
+
+.matchMain {
+  min-width: 0;
+}
+
+.matchRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.matchRow + .matchRow {
+  margin-top: 0.35rem;
+}
+
+.opponent {
+  font-size: 0.86rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.resultVictory,
+.resultDefeat {
+  text-transform: uppercase;
+  font-size: 0.58rem;
+  letter-spacing: 0.2em;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.resultVictory {
+  color: #6cca86;
+}
+
+.resultDefeat {
+  color: #c05050;
+}
+
+.meta {
+  color: var(--text-muted);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* HP box */
+.hpBox {
+  border: 1px solid var(--ink);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.4rem 0.45rem;
+  text-align: center;
+  min-width: 70px;
+}
+
+.hpLabel {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  font-size: 0.5rem;
+}
+
+.hpValue {
+  display: block;
+  font-size: 1rem;
+  line-height: 1.1;
+}
