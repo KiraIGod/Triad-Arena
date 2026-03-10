@@ -1,8 +1,9 @@
 const db = require("../db/models");
-const { playCard, endTurn } = require("../game/engine");
+const { playCard, attack, endTurn } = require("../game/engine");
 const { INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
 const { serializeGameState } = require("../game/stateSerializer");
 const { validateGameState } = require("../game/stateValidator");
+const { enqueueMatchAction, clearMatchQueue } = require("../game/actionQueue");
 const {
   loadMatchState,
   saveMatchState,
@@ -11,14 +12,18 @@ const {
   clearMatchRuntime
 } = require("../services/matchService");
 const { getActiveDeckId } = require("../services/deckBuilderService");
+
 const DEBUG_GAME_STATE = String(process.env.DEBUG_GAME_STATE || "").toLowerCase() === "true";
 const RATE_LIMIT_WINDOW_MS = 1000;
 const RATE_LIMIT_MAX_ACTIONS = 10;
+
 let waitingQueueEntry = null;
 const reconnectTimers = new Map();
 const activeMatchByUser = new Map();
 const runtimeMatchState = new Map();
 const turnTimers = new Map();
+
+// ─── Match tracking helpers ───────────────────────────────────────────────────
 
 function findActiveMatchByUser(userId) {
   return activeMatchByUser.get(userId) || null;
@@ -40,9 +45,19 @@ function unregisterActiveMatch(match) {
   activeMatchByUser.delete(match.player_two_id);
 }
 
+// ─── Error helpers ────────────────────────────────────────────────────────────
+
 function createSocketError(type, message) {
   return { type, message };
 }
+
+function emitSocketError(socket, error) {
+  const type = error?.type || INVALID_ACTION;
+  const message = error?.message || "Match action failed";
+  socket.emit("match:error", { type, message });
+}
+
+// ─── Version / rate-limit guards ─────────────────────────────────────────────
 
 function parseIncomingVersion(version) {
   const normalized = Number(version);
@@ -52,11 +67,22 @@ function parseIncomingVersion(version) {
   return normalized;
 }
 
-function emitSocketError(socket, error) {
-  const type = error?.type || INVALID_ACTION;
-  const message = error?.message || "Match action failed";
-  socket.emit("match:error", { type, message });
+function enforceActionRateLimit(socket) {
+  const now = Date.now();
+  const windowStart = now - RATE_LIMIT_WINDOW_MS;
+  const history = Array.isArray(socket?.data?.matchActionHistory)
+    ? socket.data.matchActionHistory.filter((stamp) => stamp > windowStart)
+    : [];
+
+  if (history.length >= RATE_LIMIT_MAX_ACTIONS) {
+    throw createSocketError("RATE_LIMIT", "Too many actions");
+  }
+
+  history.push(now);
+  socket.data.matchActionHistory = history;
 }
+
+// ─── State serialization ──────────────────────────────────────────────────────
 
 function getSerializedState(matchId, gameState) {
   const safeState = serializeGameState({ ...(gameState || {}), matchId: String(matchId) });
@@ -75,44 +101,24 @@ function buildMatchStatePayload(match, safeState) {
   };
 }
 
+// ─── Deck / access validators ─────────────────────────────────────────────────
+
 async function ensurePlayerDeckId(userId) {
   return getActiveDeckId(userId);
-}
-
-function enforceActionRateLimit(socket) {
-  const now = Date.now();
-  const windowStart = now - RATE_LIMIT_WINDOW_MS;
-  const history = Array.isArray(socket?.data?.matchActionHistory)
-    ? socket.data.matchActionHistory.filter((stamp) => stamp > windowStart)
-    : [];
-
-  if (history.length >= RATE_LIMIT_MAX_ACTIONS) {
-    throw createSocketError("RATE_LIMIT", "Too many actions");
-  }
-
-  history.push(now);
-  socket.data.matchActionHistory = history;
 }
 
 function validateMatchAccess(match, playerId) {
   if (!playerId) {
     throw createSocketError(INVALID_ACTION, "Player not identified");
   }
-
   if (match.player_one_id !== playerId && match.player_two_id !== playerId) {
     throw createSocketError(INVALID_ACTION, "Player is not part of this match");
   }
 }
 
 function resolvePlayerState(state, playerId) {
-  if (state?.player1?.id === playerId) {
-    return state.player1;
-  }
-
-  if (state?.player2?.id === playerId) {
-    return state.player2;
-  }
-
+  if (state?.player1?.id === playerId) return state.player1;
+  if (state?.player2?.id === playerId) return state.player2;
   return null;
 }
 
@@ -120,7 +126,6 @@ function validateCardPlayPreconditions(state, playerId, card) {
   if (state?.finished) {
     throw createSocketError("MATCH_FINISHED", "Game already finished");
   }
-
   if (state?.activePlayer !== playerId) {
     throw createSocketError("INVALID_TURN", "Not your turn");
   }
@@ -130,7 +135,7 @@ function validateCardPlayPreconditions(state, playerId, card) {
     throw createSocketError(INVALID_ACTION, "Invalid player");
   }
 
-  const actionCount = (state?.turnActions || []).filter((action) => action?.playerId === playerId).length;
+  const actionCount = (state?.turnActions || []).filter((a) => a?.playerId === playerId).length;
   if (actionCount >= 3) {
     throw createSocketError(INVALID_ACTION, "Card limit reached for this turn");
   }
@@ -139,6 +144,21 @@ function validateCardPlayPreconditions(state, playerId, card) {
     throw createSocketError(INVALID_ACTION, "Not enough energy");
   }
 }
+
+async function validateActiveDeckSize(userId) {
+  const deckId = await getActiveDeckId(userId);
+  if (!deckId) {
+    throw createSocketError("INVALID_DECK", "Deck must contain 20 cards");
+  }
+  const deckCards = await db.DeckCard.findAll({ where: { deck_id: deckId } });
+  const totalCards = deckCards.reduce((sum, dc) => sum + (Number(dc.quantity) || 0), 0);
+  if (totalCards !== 20) {
+    throw createSocketError("INVALID_DECK", "Deck must contain 20 cards");
+  }
+  return deckId;
+}
+
+// ─── Match lifecycle ──────────────────────────────────────────────────────────
 
 async function finalizeMatch(match, winnerId) {
   await db.Match.update(
@@ -155,20 +175,46 @@ function getWinnerId(match, state) {
   const player1Hp = state?.player1?.hp ?? 0;
   const player2Hp = state?.player2?.hp ?? 0;
 
-  if (player1Hp <= 0 && player2Hp <= 0) {
-    return null;
-  }
-
-  if (player1Hp <= 0) {
-    return state?.player2?.id || match.player_two_id || null;
-  }
-
-  if (player2Hp <= 0) {
-    return state?.player1?.id || match.player_one_id || null;
-  }
-
+  if (player1Hp <= 0 && player2Hp <= 0) return null;
+  if (player1Hp <= 0) return state?.player2?.id || match.player_two_id || null;
+  if (player2Hp <= 0) return state?.player1?.id || match.player_one_id || null;
   return null;
 }
+
+function clearMatchRuntime(matchId) {
+  clearMatchQueue(matchId);
+  runtimeMatchState.delete(String(matchId));
+}
+
+async function cleanupFinishedMatch(io, match, persistedState, safeState, matchId, events) {
+  const winnerId = getWinnerId(match, persistedState);
+  events.push(
+    ...appendMatchEvents(matchId, {
+      turn: persistedState.turn,
+      type: "MATCH_FINISHED",
+      payload: { winnerId }
+    })
+  );
+  await finalizeMatch(match, winnerId);
+  unregisterActiveMatch(match);
+  clearMatchRuntime(matchId);
+  clearTurnTimer(matchId);
+
+  const pendingTimer = reconnectTimers.get(String(matchId));
+  if (pendingTimer) {
+    clearTimeout(pendingTimer);
+    reconnectTimers.delete(String(matchId));
+  }
+
+  io.to(String(matchId)).emit("match:update", {
+    ...buildMatchStatePayload(match, safeState),
+    events
+  });
+  io.to(String(matchId)).emit("match:finish", { winnerId });
+  clearMatchRuntime(matchId);
+}
+
+// ─── Turn timer ───────────────────────────────────────────────────────────────
 
 function clearTurnTimer(matchId) {
   const timer = turnTimers.get(String(matchId));
@@ -187,10 +233,7 @@ function startTurnTimer(io, matchId, playerId) {
 async function forceEndTurn(io, matchId, playerId) {
   try {
     const { match, state } = await loadMatchState(matchId);
-
-    if (!state || state.finished || state.activePlayer !== playerId) {
-      return;
-    }
+    if (!state || state.finished || state.activePlayer !== playerId) return;
 
     const nextState = endTurn(state, { playerId, expectedVersion: state.version });
     const persistedState = await saveMatchState(matchId, nextState, state.version);
@@ -207,7 +250,8 @@ async function forceEndTurn(io, matchId, playerId) {
       const winnerId = getWinnerId(match, persistedState);
       await finalizeMatch(match, winnerId);
       unregisterActiveMatch(match);
-      runtimeMatchState.delete(String(matchId));
+      clearMatchRuntime(matchId);
+      clearTurnTimer(matchId);
       const pendingTimer = reconnectTimers.get(String(matchId));
       if (pendingTimer) {
         clearTimeout(pendingTimer);
@@ -226,35 +270,22 @@ async function forceEndTurn(io, matchId, playerId) {
       ...buildMatchStatePayload(match, safeState),
       events: [{ type: "TURN_TIMEOUT" }]
     });
-
     startTurnTimer(io, matchId, safeState.activePlayer);
   } catch (err) {
     console.error("[turnTimer] forceEndTurn failed:", err?.message || err);
   }
 }
 
-async function validateActiveDeckSize(userId) {
-  const deckId = await getActiveDeckId(userId);
-  if (!deckId) {
-    throw createSocketError("INVALID_DECK", "Deck must contain 20 cards");
-  }
-  const deckCards = await db.DeckCard.findAll({ where: { deck_id: deckId } });
-  const totalCards = deckCards.reduce((sum, dc) => sum + (Number(dc.quantity) || 0), 0);
-  if (totalCards !== 20) {
-    throw createSocketError("INVALID_DECK", "Deck must contain 20 cards");
-  }
-  return deckId;
-}
+// ─── Socket handlers ──────────────────────────────────────────────────────────
 
 async function handleJoin(io, socket, payload = {}) {
   const { matchId } = payload;
-  if (!matchId) {
-    throw createSocketError(INVALID_ACTION, "matchId is required");
-  }
+  if (!matchId) throw createSocketError(INVALID_ACTION, "matchId is required");
 
   const playerId = getPlayerFromSocket(socket);
   const { match, state } = await loadMatchState(matchId);
   validateMatchAccess(match, playerId);
+
   const safeState = getSerializedState(matchId, state);
   console.log(`[MATCH] Player ${playerId} joined match ${matchId}`);
   if (match.player_one_id && match.player_two_id) {
@@ -268,14 +299,11 @@ async function handleJoin(io, socket, payload = {}) {
 
   socket.join(String(matchId));
   socket.emit("match:state", buildMatchStatePayload(match, safeState));
-  return io;
 }
 
 async function handleQueue(io, socket) {
   const playerId = getPlayerFromSocket(socket);
-  if (!playerId) {
-    throw createSocketError(INVALID_ACTION, "Player not identified");
-  }
+  if (!playerId) throw createSocketError(INVALID_ACTION, "Player not identified");
 
   if (socket.data.inMatch || findActiveMatchByUser(playerId)) {
     throw createSocketError(INVALID_ACTION, "Already in a match");
@@ -324,7 +352,7 @@ async function handleQueue(io, socket) {
   const { state } = await loadMatchState(match.id);
   const safeState = getSerializedState(match.id, state);
   runtimeMatchState.set(String(match.id), safeState);
-  const payload = buildMatchStatePayload(match, safeState);
+  const matchPayload = buildMatchStatePayload(match, safeState);
 
   const matchId = String(match.id);
   const existingRoom = io.sockets.adapter.rooms.get(matchId);
@@ -334,12 +362,11 @@ async function handleQueue(io, socket) {
 
   waitingSocket.join(matchId);
   socket.join(matchId);
-
   waitingSocket.data.inMatch = true;
   socket.data.inMatch = true;
 
-  waitingSocket.emit("match:state", payload);
-  socket.emit("match:state", payload);
+  waitingSocket.emit("match:state", matchPayload);
+  socket.emit("match:state", matchPayload);
 
   startTurnTimer(io, matchId, safeState.activePlayer);
 }
@@ -349,6 +376,7 @@ async function handlePlayCard(io, socket, payload = {}) {
   if (!matchId || !cardId) {
     throw createSocketError(INVALID_ACTION, "matchId and cardId are required");
   }
+
   const incomingVersion = parseIncomingVersion(version);
   enforceActionRateLimit(socket);
   clearTurnTimer(matchId);
@@ -360,17 +388,11 @@ async function handlePlayCard(io, socket, payload = {}) {
   if (incomingVersion !== state.version) {
     throw createSocketError(STATE_OUTDATED, "Client state outdated");
   }
-  if (state?.finished) {
-    throw createSocketError("MATCH_FINISHED", "Game already finished");
-  }
-  if (state?.activePlayer !== playerId) {
-    throw createSocketError("INVALID_TURN", "Not your turn");
-  }
+  if (state?.finished) throw createSocketError("MATCH_FINISHED", "Game already finished");
+  if (state?.activePlayer !== playerId) throw createSocketError("INVALID_TURN", "Not your turn");
 
   const card = await db.Card.findByPk(cardId);
-  if (!card) {
-    throw createSocketError("INVALID_CARD", "Card not found");
-  }
+  if (!card) throw createSocketError("INVALID_CARD", "Card not found");
 
   const cardData = card.get({ plain: true });
   validateCardPlayPreconditions(state, playerId, cardData);
@@ -384,6 +406,7 @@ async function handlePlayCard(io, socket, payload = {}) {
   const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
   const safeState = getSerializedState(matchId, persistedState);
   runtimeMatchState.set(String(matchId), safeState);
+
   const events = appendMatchEvents(matchId, {
     turn: state.turn,
     type: "CARD_PLAYED",
@@ -407,36 +430,7 @@ async function handlePlayCard(io, socket, payload = {}) {
   });
 
   if (persistedState.finished) {
-    const winnerId = getWinnerId(match, persistedState);
-    events.push(
-      ...appendMatchEvents(matchId, {
-        turn: persistedState.turn,
-        type: "MATCH_FINISHED",
-        payload: { winnerId }
-      })
-    );
-    const latestAction = events.find((event) => event.type === "CARD_PLAYED");
-    if (latestAction) {
-      const lastTurnAction = persistedState.turnActions[persistedState.turnActions.length - 1];
-      if (lastTurnAction && Number.isFinite(lastTurnAction.actionIndex)) {
-        console.log(`[ACTION] Turn action #${lastTurnAction.actionIndex}`);
-      }
-    }
-    await finalizeMatch(match, winnerId);
-    unregisterActiveMatch(match);
-    runtimeMatchState.delete(String(matchId));
-    clearTurnTimer(matchId);
-    const pendingTimerPlayCard = reconnectTimers.get(String(matchId));
-    if (pendingTimerPlayCard) {
-      clearTimeout(pendingTimerPlayCard);
-      reconnectTimers.delete(String(matchId));
-    }
-    io.to(String(matchId)).emit("match:update", {
-      ...buildMatchStatePayload(match, safeState),
-      events
-    });
-    io.to(String(matchId)).emit("match:finish", { winnerId });
-    clearMatchRuntime(matchId);
+    await cleanupFinishedMatch(io, match, persistedState, safeState, matchId, events);
     return;
   }
 
@@ -444,6 +438,57 @@ async function handlePlayCard(io, socket, payload = {}) {
   if (lastTurnAction && Number.isFinite(lastTurnAction.actionIndex)) {
     console.log(`[ACTION] Turn action #${lastTurnAction.actionIndex}`);
   }
+
+  io.to(String(matchId)).emit("match:update", {
+    ...buildMatchStatePayload(match, safeState),
+    events
+  });
+}
+
+async function handleAttack(io, socket, payload = {}) {
+  const { matchId, unitId, targetType, targetId, actionId, version } = payload;
+
+  if (!matchId) throw createSocketError(INVALID_ACTION, "matchId is required");
+  if (!unitId) throw createSocketError(INVALID_ACTION, "unitId is required");
+  if (!targetType) throw createSocketError(INVALID_ACTION, "targetType is required");
+  if (!targetId) throw createSocketError(INVALID_ACTION, "targetId is required");
+  if (!actionId) throw createSocketError(INVALID_ACTION, "actionId is required");
+
+  const incomingVersion = parseIncomingVersion(version);
+  enforceActionRateLimit(socket);
+
+  const { match, state } = await loadMatchState(matchId);
+  const playerId = getPlayerFromSocket(socket);
+  validateMatchAccess(match, playerId);
+
+  if (incomingVersion !== state.version) {
+    throw createSocketError(STATE_OUTDATED, "Client state outdated");
+  }
+  if (state?.finished) throw createSocketError("MATCH_FINISHED", "Game already finished");
+  if (state?.activePlayer !== playerId) throw createSocketError("INVALID_TURN", "Not your turn");
+
+  console.log(`[ATTACK] ${playerId} attacking with ${unitId} → ${targetType}:${targetId}`);
+
+  const nextState = attack(
+    state,
+    { playerId, expectedVersion: incomingVersion },
+    { unitId, targetType, targetId, actionId, version: incomingVersion }
+  );
+  const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
+  const safeState = getSerializedState(matchId, persistedState);
+  runtimeMatchState.set(String(matchId), safeState);
+
+  const events = appendMatchEvents(matchId, {
+    turn: state.turn,
+    type: "UNIT_ATTACKED",
+    payload: { playerId, unitId, targetType, targetId, actionId }
+  });
+
+  if (persistedState.finished) {
+    await cleanupFinishedMatch(io, match, persistedState, safeState, matchId, events);
+    return;
+  }
+
   io.to(String(matchId)).emit("match:update", {
     ...buildMatchStatePayload(match, safeState),
     events
@@ -452,9 +497,8 @@ async function handlePlayCard(io, socket, payload = {}) {
 
 async function handleEndTurn(io, socket, payload = {}) {
   const { matchId, version } = payload;
-  if (!matchId) {
-    throw createSocketError(INVALID_ACTION, "matchId is required");
-  }
+  if (!matchId) throw createSocketError(INVALID_ACTION, "matchId is required");
+
   const incomingVersion = parseIncomingVersion(version);
   enforceActionRateLimit(socket);
   clearTurnTimer(matchId);
@@ -466,18 +510,16 @@ async function handleEndTurn(io, socket, payload = {}) {
   if (incomingVersion !== state.version) {
     throw createSocketError(STATE_OUTDATED, "Client state outdated");
   }
-  if (state?.finished) {
-    throw createSocketError("MATCH_FINISHED", "Game already finished");
-  }
-  if (state?.activePlayer !== playerId) {
-    throw createSocketError("INVALID_TURN", "Not your turn");
-  }
+  if (state?.finished) throw createSocketError("MATCH_FINISHED", "Game already finished");
+  if (state?.activePlayer !== playerId) throw createSocketError("INVALID_TURN", "Not your turn");
+
   console.log(`[TURN] ${playerId} ended turn`);
 
   const nextState = endTurn(state, { playerId, expectedVersion: incomingVersion });
   const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
   const safeState = getSerializedState(matchId, persistedState);
   runtimeMatchState.set(String(matchId), safeState);
+
   const events = appendMatchEvents(matchId, {
     turn: state.turn,
     type: "TURN_ENDED",
@@ -485,29 +527,7 @@ async function handleEndTurn(io, socket, payload = {}) {
   });
 
   if (persistedState.finished) {
-    const winnerId = getWinnerId(match, persistedState);
-    events.push(
-      ...appendMatchEvents(matchId, {
-        turn: persistedState.turn,
-        type: "MATCH_FINISHED",
-        payload: { winnerId }
-      })
-    );
-    await finalizeMatch(match, winnerId);
-    unregisterActiveMatch(match);
-    runtimeMatchState.delete(String(matchId));
-    clearTurnTimer(matchId);
-    const pendingTimerEndTurn = reconnectTimers.get(String(matchId));
-    if (pendingTimerEndTurn) {
-      clearTimeout(pendingTimerEndTurn);
-      reconnectTimers.delete(String(matchId));
-    }
-    io.to(String(matchId)).emit("match:update", {
-      ...buildMatchStatePayload(match, safeState),
-      events
-    });
-    io.to(String(matchId)).emit("match:finish", { winnerId });
-    clearMatchRuntime(matchId);
+    await cleanupFinishedMatch(io, match, persistedState, safeState, matchId, events);
     return;
   }
 
@@ -548,15 +568,11 @@ async function handleSync(io, socket) {
 
 async function handleLeave(io, socket, payload = {}) {
   const matchId = String(payload?.matchId || "");
-  if (!matchId) {
-    throw createSocketError(INVALID_ACTION, "matchId is required");
-  }
+  if (!matchId) throw createSocketError(INVALID_ACTION, "matchId is required");
 
   const playerId = getPlayerFromSocket(socket);
   const match = await db.Match.findByPk(matchId);
-  if (!match) {
-    throw createSocketError(INVALID_ACTION, "Match not found");
-  }
+  if (!match) throw createSocketError(INVALID_ACTION, "Match not found");
 
   validateMatchAccess(match, playerId);
   const opponentId = getOpponentId(match, playerId);
@@ -565,9 +581,7 @@ async function handleLeave(io, socket, payload = {}) {
   socket.data.inMatch = false;
   console.log(`[MATCH] Player ${socket.data?.userId || "unknown"} left match ${matchId}`);
 
-  if (match.status === "finished") {
-    return;
-  }
+  if (match.status === "finished") return;
 
   clearTurnTimer(matchId);
   const reconnectTimer = reconnectTimers.get(String(matchId));
@@ -578,7 +592,6 @@ async function handleLeave(io, socket, payload = {}) {
 
   await finalizeMatch(match, opponentId);
   unregisterActiveMatch(match);
-  runtimeMatchState.delete(String(matchId));
   clearMatchRuntime(matchId);
 
   socket.to(matchId).emit("match:finish", {
@@ -587,6 +600,8 @@ async function handleLeave(io, socket, payload = {}) {
     message: "Opponent cowardly left the arena"
   });
 }
+
+// ─── Wrapper & registration ───────────────────────────────────────────────────
 
 function wrapSocketHandler(socket, handler) {
   return async (payload) => {
@@ -601,18 +616,45 @@ function wrapSocketHandler(socket, handler) {
 module.exports = function registerMatchSocket(io) {
   io.on("connection", (socket) => {
     socket.data.matchActionHistory = [];
+
     socket.on("match:queue", wrapSocketHandler(socket, () => handleQueue(io, socket)));
+
     socket.on("match:cancel", () => {
-      if (waitingQueueEntry?.socketId === socket.id || waitingQueueEntry?.userId === socket.data?.userId) {
+      if (
+        waitingQueueEntry?.socketId === socket.id ||
+        waitingQueueEntry?.userId === socket.data?.userId
+      ) {
         waitingQueueEntry = null;
         console.log(`[match:cancel] Player ${socket.data?.userId} left queue`);
       }
     });
+
     socket.on("match:join", wrapSocketHandler(socket, (payload) => handleJoin(io, socket, payload)));
     socket.on("match:leave", wrapSocketHandler(socket, (payload) => handleLeave(io, socket, payload)));
-    socket.on("match:playCard", wrapSocketHandler(socket, (payload) => handlePlayCard(io, socket, payload)));
-    socket.on("match:endTurn", wrapSocketHandler(socket, (payload) => handleEndTurn(io, socket, payload)));
+
+    socket.on(
+      "match:playCard",
+      wrapSocketHandler(socket, (payload) =>
+        enqueueMatchAction(payload?.matchId, () => handlePlayCard(io, socket, payload))
+      )
+    );
+
+    socket.on(
+      "match:attack",
+      wrapSocketHandler(socket, (payload) =>
+        enqueueMatchAction(payload?.matchId, () => handleAttack(io, socket, payload))
+      )
+    );
+
+    socket.on(
+      "match:endTurn",
+      wrapSocketHandler(socket, (payload) =>
+        enqueueMatchAction(payload?.matchId, () => handleEndTurn(io, socket, payload))
+      )
+    );
+
     socket.on("match:sync", wrapSocketHandler(socket, () => handleSync(io, socket)));
+
     socket.on("disconnect", () => {
       if (waitingQueueEntry?.socketId === socket.id) {
         waitingQueueEntry = null;
@@ -631,7 +673,7 @@ module.exports = function registerMatchSocket(io) {
           try {
             unregisterActiveMatch(match);
             reconnectTimers.delete(String(match.id));
-            runtimeMatchState.delete(String(match.id));
+            clearMatchRuntime(match.id);
             await finalizeMatch(match, opponentId);
             io.to(String(match.id)).emit("match:finish", {
               winnerId: opponentId,
