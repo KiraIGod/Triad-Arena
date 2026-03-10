@@ -15,7 +15,9 @@ function createPlayer(id, cards = []) {
     statuses: [],
     hand,
     deck,
-    discard: []
+    discard: [],
+    board: [],
+    unitIndex: {}
   };
 }
 

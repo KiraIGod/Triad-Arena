@@ -471,6 +471,134 @@
   }
 }
 
+/* ─── Battlefield board rows ─────────────────────────────────────────────────── */
+
+.battlefield-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  min-height: 72px;
+  padding: 6px 12px;
+}
+
+.battlefield-row--enemy {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.battlefield-row--self {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.battlefield-empty {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ─── Unit card on the board ─────────────────────────────────────────────────── */
+
+.battlefield-unit {
+  position: relative;
+  width: 54px;
+  height: 64px;
+  background: rgba(30, 20, 20, 0.85);
+  border: 1px solid rgba(180, 120, 60, 0.35);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  cursor: default;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  user-select: none;
+}
+
+.battlefield-unit__atk {
+  font-size: 15px;
+  font-weight: 700;
+  color: #e8883a;
+  line-height: 1;
+}
+
+.battlefield-unit__hp {
+  font-size: 13px;
+  font-weight: 600;
+  color: #5ecf7a;
+  line-height: 1;
+}
+
+.battlefield-unit__badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 14px;
+}
+
+/* States */
+
+.battlefield-unit--can-attack {
+  border-color: rgba(232, 136, 58, 0.75);
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(232, 136, 58, 0.35);
+}
+
+.battlefield-unit--can-attack:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 14px rgba(232, 136, 58, 0.6);
+}
+
+.battlefield-unit--selected {
+  border-color: #e8883a;
+  box-shadow: 0 0 16px rgba(232, 136, 58, 0.8);
+}
+
+.battlefield-unit--targetable {
+  border-color: rgba(220, 60, 60, 0.75);
+  cursor: crosshair;
+  box-shadow: 0 0 8px rgba(220, 60, 60, 0.35);
+}
+
+.battlefield-unit--targetable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 14px rgba(220, 60, 60, 0.6);
+}
+
+.battlefield-unit--sick {
+  opacity: 0.55;
+}
+
+/* ─── Attack mode banner ──────────────────────────────────────────────────────── */
+
+.game-attack-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 16px;
+  background: rgba(232, 136, 58, 0.12);
+  border: 1px solid rgba(232, 136, 58, 0.3);
+  border-radius: 6px;
+  margin: 0 12px 4px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+  z-index: 5;
+}
+
+.game-attack-banner--error {
+  background: rgba(200, 50, 50, 0.12);
+  border-color: rgba(200, 50, 50, 0.3);
+}
+
+.game-state--attackable {
+  cursor: crosshair;
+  outline: 1px dashed rgba(220, 60, 60, 0.5);
+  border-radius: 4px;
+}
+
 
 
 
