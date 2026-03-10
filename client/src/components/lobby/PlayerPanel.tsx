@@ -1,6 +1,3 @@
-import { useNavigate } from "react-router-dom";
-import { useAppDispatch } from "../../store";
-import { clearCredentials } from "../../features/auth/authSlice";
 import type { DeckSummary } from "../../types/lobby";
 import type { PlayerStats } from "../../shared/api/lobbyApi";
 import styles from "./PlayerPanel.module.css";
@@ -13,9 +10,6 @@ type PlayerPanelProps = {
 };
 
 export function PlayerPanel({ nickname, stats, deck, onEditDeck }: PlayerPanelProps) {
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-
   const d = deck ?? { name: "—", cardsTotal: 0, cardsMax: 20, assault: 0, precision: 0, arcane: 0 };
   const isDeckReady = d.cardsTotal >= d.cardsMax;
 
@@ -26,11 +20,6 @@ export function PlayerPanel({ nickname, stats, deck, onEditDeck }: PlayerPanelPr
 
   const ratingDisplay = stats ? stats.rating.toLocaleString() : "—";
   const rankDisplay = stats?.rank != null ? `#${stats.rank}` : "—";
-
-  const handleLogout = () => {
-    dispatch(clearCredentials());
-    navigate("/login");
-  };
 
   return (
     <section className={styles.panel}>
@@ -80,9 +69,6 @@ export function PlayerPanel({ nickname, stats, deck, onEditDeck }: PlayerPanelPr
         {d.cardsTotal === 0 ? "Create Deck" : "Edit Deck"}
       </button>
 
-      <button type="button" className={styles.btnLogout} onClick={handleLogout}>
-        Logout
-      </button>
     </section>
   );
 }

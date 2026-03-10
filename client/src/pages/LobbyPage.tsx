@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAppSelector } from "../store";
+import { useAppSelector, useAppDispatch } from "../store";
+import { clearCredentials } from "../features/auth/authSlice";
 import { fetchUserDeck } from "../shared/api/deckBuilderApi";
 import { fetchMatchHistory, fetchPlayerStats } from "../shared/api/lobbyApi";
 import { useLobbyArena } from "../features/customHooks/useLobbyArena";
@@ -11,6 +12,14 @@ import { OnlineCounter } from "../components/lobby/OnlineCounter";
 import type { DeckSummary } from "../types/lobby";
 import type { MatchHistoryEntry, PlayerStats } from "../shared/api/lobbyApi";
 import styles from "./LobbyPage.module.css";
+
+type GameMode = "normal" | "ranked" | "private";
+
+const MODE_LABELS: Record<GameMode, { label: string; icon: string }> = {
+  normal: { label: "Normal", icon: "⚔" },
+  ranked: { label: "Ranked", icon: "🏆" },
+  private: { label: "Private", icon: "🔒" },
+};
 
 function summarizeDeck(
   name: string,
@@ -34,9 +43,16 @@ function summarizeDeck(
 
 export default function LobbyPage() {
   const navigate = useNavigate();
+  const dispatch = useAppDispatch();
   const token = useAppSelector((s) => s.auth.token);
   const nickname = useAppSelector((s) => s.auth.nickname) ?? "PILOT";
 
+  const handleLogout = () => {
+    dispatch(clearCredentials());
+    navigate("/login");
+  };
+
+  const [gameMode, setGameMode] = useState<GameMode>("normal");
   const [deck, setDeck] = useState<DeckSummary | null>(null);
   const [stats, setStats] = useState<PlayerStats | null>(null);
   const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
@@ -50,7 +66,7 @@ export default function LobbyPage() {
     handleJoinArena,
     isOnline,
     error,
-    cancelSearch
+    cancelSearch,
   } = useLobbyArena(token);
 
   useEffect(() => {
@@ -91,18 +107,26 @@ export default function LobbyPage() {
           <div className={styles.brandAccent} />
           <div className={styles.brand}>
             <h1 className={styles.title}>Triad Arena</h1>
-            <p className={styles.subtitle}>Sector_7 // Encampment</p>
           </div>
         </div>
 
         <div className={styles.headerRight}>
           <p className={styles.status}>
             Status{" "}
-            <span className={isOnline ? styles.statusOnline : styles.statusOffline}>
+            <span
+              className={isOnline ? styles.statusOnline : styles.statusOffline}
+            >
               {isOnline ? "Online" : "Offline"}
             </span>
           </p>
           <p className={styles.userLabel}>User: {nickname}</p>
+          <button
+            type="button"
+            className={styles.btnLogout}
+            onClick={handleLogout}
+          >
+            Logout
+          </button>
         </div>
       </header>
 
@@ -116,7 +140,23 @@ export default function LobbyPage() {
 
         <section className={styles.centerColumn}>
           <OnlineCounter />
+
+          <nav className={styles.modeTabs}>
+            {(Object.keys(MODE_LABELS) as GameMode[]).map((mode) => (
+              <button
+                key={mode}
+                type="button"
+                className={`${styles.modeTab} ${gameMode === mode ? styles.modeTabActive : ""}`}
+                onClick={() => setGameMode(mode)}
+              >
+                <span className={styles.modeTabIcon}>{MODE_LABELS[mode].icon}</span>
+                {MODE_LABELS[mode].label}
+              </button>
+            ))}
+          </nav>
+
           <MatchmakingPanel
+            gameMode={gameMode}
             deck={deck}
             isCreatingArena={isCreatingArena}
             isJoiningArena={isJoiningArena}
