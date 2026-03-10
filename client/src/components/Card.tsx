@@ -1,174 +1,215 @@
-import React from "react"
+import { useState, type KeyboardEvent } from "react";
 
-// ============ Types ============
-
-export type CardType = "UNIT" | "SPELL" | "ARTIFACT"
-export type TriadType = "ASSAULT" | "PRECISION" | "ARCANE"
+export type CardType = "UNIT" | "SPELL" | "ARTIFACT";
+export type TriadType = "ASSAULT" | "PRECISION" | "ARCANE";
 
 export interface CardModel {
-  id: string
-  name: string
-  type: CardType
-  triad_type: TriadType
-  mana_cost: number
-  attack: number | null
-  hp: number | null
-  description: string
-  image: string
-  created_at: string
+  id: string;
+  name: string;
+  type: CardType;
+  triad_type: TriadType;
+  mana_cost: number;
+  attack: number | null;
+  hp: number | null;
+  description: string;
+  image: string;
+  created_at: string;
 }
 
 export interface GameCardProps {
-  card: CardModel
-  onClick?: (card: CardModel) => void
-  disabled?: boolean
-  size?: "small" | "normal" | "large"
-  className?: string
+  card: CardModel;
+  onClick?: (card: CardModel) => void;
+  disabled?: boolean;
+  size?: "small" | "normal" | "large";
+  className?: string;
 }
 
-// ============ Helpers ============
+const triadAccents: Record<TriadType, string> = {
+  ASSAULT: "#A83E36",
+  PRECISION: "#C9A962",
+  ARCANE: "#8B5CF6"
+};
 
-function triadToModifier(triadType: TriadType): string {
-  const map: Record<TriadType, string> = {
-    ASSAULT: "assault",
-    PRECISION: "precision",
-    ARCANE: "arcane",
-  }
-  return map[triadType]
-}
+const sizeMap: Record<NonNullable<GameCardProps["size"]>, { width: number; height: number }> = {
+  small: { width: 152, height: 232 },
+  normal: { width: 180, height: 270 },
+  large: { width: 210, height: 320 }
+};
 
 function typeLabel(type: CardType): string {
-  const map: Record<CardType, string> = {
-    UNIT: "Unit",
-    SPELL: "Spell",
-    ARTIFACT: "Artifact",
-  }
-  return map[type]
+  if (type === "UNIT") return "Unit";
+  if (type === "SPELL") return "Spell";
+  return "Artifact";
 }
 
-// ============ Component ============
+function toImageUrl(image: string): string {
+  if (!image) return "";
+  if (image.startsWith("http://") || image.startsWith("https://")) return image;
+  return `${import.meta.env.VITE_STATIC_URL}/${image}`;
+}
 
-export const GameCard: React.FC<GameCardProps> = ({
+export function GameCard({
   card,
   onClick,
   disabled = false,
   size = "normal",
-  className,
-}) => {
-  const triadModifier = triadToModifier(card.triad_type)
-  const showStats =
-    card.type !== "SPELL" && (card.attack !== null || card.hp !== null)
+  className
+}: GameCardProps) {
+  const [isHovering, setIsHovering] = useState(false);
+  const isInteractive = Boolean(onClick) && !disabled;
+  const accentColor = triadAccents[card.triad_type] || "#A83E36";
+  const selectedColor = "#336f9b";
+  const dimensions = sizeMap[size];
+  const showStats = card.type !== "SPELL" && (card.attack !== null || card.hp !== null);
 
-  const baseClass = "game-card"
-  const triadClass = `game-card--${triadModifier}`
-  const sizeClass = `game-card--size-${size}`
-  const classNames = [baseClass, triadClass, sizeClass, className]
-    .filter(Boolean)
-    .join(" ")
+  const handleClick = () => {
+    if (!isInteractive || !onClick) return;
+    onClick(card);
+  };
 
-  const handleClick = (): void => {
-    if (disabled || !onClick) return
-    onClick(card)
-  }
-
-  const handleKeyDown = (e: React.KeyboardEvent): void => {
-    if (disabled || !onClick) return
+  const handleKeyDown = (e: KeyboardEvent<HTMLElement>) => {
+    if (!isInteractive || !onClick) return;
     if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault()
-      onClick(card)
+      e.preventDefault();
+      onClick(card);
     }
-  }
-
-  const isInteractive = Boolean(onClick) && !disabled
+  };
 
   return (
     <article
-      className={classNames}
+      className={className}
       role={isInteractive ? "button" : undefined}
-      tabIndex={disabled ? -1 : isInteractive ? 0 : undefined}
-      aria-disabled={disabled ? true : undefined}
+      tabIndex={isInteractive ? 0 : -1}
+      aria-disabled={disabled}
       onClick={isInteractive ? handleClick : undefined}
       onKeyDown={isInteractive ? handleKeyDown : undefined}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      style={{
+        width: dimensions.width,
+        height: dimensions.height,
+        cursor: isInteractive ? "pointer" : "default",
+        userSelect: "none",
+        transition: "transform 0.2s ease, opacity 0.2s ease",
+        transform: isHovering && !disabled ? "translateY(-4px)" : "none",
+        opacity: disabled ? 0.72 : 1
+      }}
     >
-      <header className="game-card__header">
-        <div className="game-card__mana" aria-label="Mana cost">
-          {card.mana_cost}
-        </div>
-        <div className="game-card__meta">
-          <div className="game-card__name">{card.name}</div>
-          <div className="game-card__type">{typeLabel(card.type)}</div>
-          <div className="game-card__triad">{card.triad_type}</div>
-        </div>
-      </header>
-
-      <div className="game-card__art" aria-hidden="true">
-        <img
-        src={`${import.meta.env.VITE_STATIC_URL}/${card.image}`}
-        alt={card.name}
-        className="game-card__art-image"
+      <div
+        className="h-full flex flex-col ink-border-thin parchment-texture"
         style={{
-          width: "100%",
-          height: "100%",
-          objectFit: "cover"
+          background: "linear-gradient(135deg, #1A1612 0%, #0E0E0E 100%)",
+          boxShadow: "inset 0 0 12px rgba(0, 0, 0, 0.8), 0 4px 0 rgba(0, 0, 0, 0.4)"
         }}
-        />
-      </div>
-
-      <section className="game-card__body">
-        <p className="game-card__description">{card.description}</p>
-      </section>
-
-      <footer className="game-card__footer">
-        {showStats && (
-          <div className="game-card__stats" aria-label="Stats">
-            {card.attack !== null && (
-              <div className="game-card__stat game-card__stat--attack">
-                <span className="game-card__stat-label">ATK</span>
-                <span className="game-card__stat-value">{card.attack}</span>
-              </div>
-            )}
-            {card.hp !== null && (
-              <div className="game-card__stat game-card__stat--hp">
-                <span className="game-card__stat-label">HP</span>
-                <span className="game-card__stat-value">{card.hp}</span>
-              </div>
-            )}
+      >
+        <div className="px-3 py-2 relative" style={{ background: "rgba(0, 0, 0, 0.5)" }}>
+          <div className="flex justify-between items-center mb-1">
+            <span
+              className="uppercase"
+              style={{
+                fontFamily: "var(--font-heading)",
+                fontSize: 12,
+                color: "#D9C7A8",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                textShadow: "1px 1px 0 #000000"
+              }}
+            >
+              {card.name}
+            </span>
+            <span
+              className="uppercase px-2 py-1"
+              style={{
+                fontFamily: "var(--font-body)",
+                fontSize: 8,
+                color: "#0E0E0E",
+                fontWeight: 700,
+                letterSpacing: "0.1em",
+                background: accentColor,
+                border: "1px solid #000000"
+              }}
+            >
+              {card.triad_type.toLowerCase()}
+            </span>
           </div>
+          <div style={{ height: 2, background: "#000000", boxShadow: `0 1px 0 ${accentColor}40` }} />
+        </div>
+
+        <div className="flex-1 relative overflow-hidden">
+          <div
+            className="absolute inset-0 z-20 pointer-events-none"
+            style={{ boxShadow: "inset 0 0 20px rgba(0, 0, 0, 0.9)", border: "1px solid #000000" }}
+          />
+          <img
+            src={toImageUrl(card.image)}
+            alt={card.name}
+            className="w-full h-full"
+            style={{
+              objectFit: "cover",
+              objectPosition: "center 30%",
+              filter: "saturate(0.7) contrast(1.3) brightness(0.72)"
+            }}
+          />
+          <div className="absolute inset-0 pointer-events-none darkest-vignette" />
+        </div>
+
+        <div className="px-3 py-3" style={{ background: "rgba(0, 0, 0, 0.7)" }}>
+          <div className="flex items-center gap-3">
+            <div
+              className="flex items-center justify-center flex-shrink-0 relative"
+              style={{
+                width: 36,
+                height: 36,
+                border: "2px solid #000000",
+                background: accentColor,
+                boxShadow: `inset 0 0 8px rgba(0, 0, 0, 0.6), 0 0 12px ${accentColor}60`
+              }}
+            >
+              <span
+                className="comic-text-shadow"
+                style={{ fontFamily: "var(--font-heading)", fontSize: 20, color: "#D9C7A8", fontWeight: 900 }}
+              >
+                {card.mana_cost}
+              </span>
+              <div className="absolute -top-1 -left-1 w-2 h-2 bg-black" />
+              <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-black" />
+            </div>
+
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <span
+                style={{
+                  display: "block",
+                  fontFamily: "var(--font-body)",
+                  fontSize: 10,
+                  color: "#8B7E6F",
+                  lineHeight: "1.3",
+                  letterSpacing: "0.02em"
+                }}
+              >
+                {card.description}
+              </span>
+              <span
+                style={{
+                  display: "block",
+                  marginTop: 4,
+                  fontFamily: "var(--font-body)",
+                  fontSize: 9,
+                  color: "#D9C7A8",
+                  letterSpacing: "0.08em",
+                  textTransform: "uppercase"
+                }}
+              >
+                {typeLabel(card.type)}
+                {showStats ? ` | ATK ${card.attack ?? 0} | HP ${card.hp ?? 0}` : ""}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {isHovering && !disabled && (
+          <div style={{ height: 3, background: selectedColor, boxShadow: `0 0 12px ${selectedColor}` }} />
         )}
-      </footer>
+      </div>
     </article>
-  )
+  );
 }
-
-/*
-  Example mock card and render:
-
-  const mockCard: CardModel = {
-    id: "550e8400-e29b-41d4-a716-446655440000",
-    name: "Fire Drake",
-    type: "UNIT",
-    triad_type: "ASSAULT",
-    mana_cost: 4,
-    attack: 5,
-    hp: 4,
-    description: "Deals 1 damage to a random enemy on play.",
-    created_at: "2025-03-04T12:00:00Z",
-  };
-
-  // Spell example (no stats):
-  const mockSpell: CardModel = {
-    id: "660e8400-e29b-41d4-a716-446655440001",
-    name: "Lightning Bolt",
-    type: "SPELL",
-    triad_type: "ARCANE",
-    mana_cost: 2,
-    attack: null,
-    hp: null,
-    description: "Deal 3 damage to target unit.",
-    created_at: "2025-03-04T12:00:00Z",
-  };
-
-  // Usage:
-  <GameCard card={mockCard} size="normal" onClick={(c) => console.log(c)} />
-  <GameCard card={mockSpell} size="small" disabled />
-*/

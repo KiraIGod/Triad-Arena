@@ -6,6 +6,7 @@ import socket from "../shared/socket/socket";
 import {
   endMatchTurn,
   joinMatch,
+  leaveMatch,
   offMatchError,
   offMatchFinish,
   offMatchState,
@@ -17,6 +18,7 @@ import {
   playMatchCard,
   syncMatch,
   type MatchErrorPayload,
+  type MatchFinishPayload,
   type MatchStatePayload
 } from "../shared/socket/matchSocket";
 import "./GamePage.css";
@@ -42,6 +44,7 @@ export default function GamePage() {
   const [logEntries, setLogEntries] = useState<string[]>(["Awaiting actions..."]);
   const [selectedCardReason, setSelectedCardReason] = useState<string | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
+  const [finishReason, setFinishReason] = useState<string | null>(null);
   const joinedMatchRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -83,21 +86,16 @@ export default function GamePage() {
     if (!socket.connected) socket.connect();
     socket.emit("join_game", arenaId);
 
-    const updateOpponentFromPlayers = (players?: Array<{ nickname?: string }>) => {
+    const updateOpponentFromPlayers = (players?: Array<{ userId?: string | number; nickname?: string }>) => {
       if (!Array.isArray(players)) return;
-      const names = players
-        .map((player) => player?.nickname)
-        .filter((value): value is string => Boolean(value));
-
-      const ownName = (nickname ?? "").toLowerCase();
-      const candidate = names.find((name) => name.toLowerCase() !== ownName);
-      setOpponentNickname(candidate ?? "UNKNOWN");
+      const opponent = players.find((player) => String(player?.userId ?? "") !== String(userIdStr ?? ""));
+      setOpponentNickname(opponent?.nickname || "UNKNOWN");
     };
 
     socket.emit(
       "arena:get-state",
       { arenaId },
-      (res?: { matchId?: string; players?: Array<{ nickname?: string }> }) => {
+      (res?: { matchId?: string; players?: Array<{ userId?: string | number; nickname?: string }> }) => {
         updateOpponentFromPlayers(res?.players);
         if (res?.matchId) {
           setArenaMatchId(res.matchId);
@@ -105,7 +103,9 @@ export default function GamePage() {
       }
     );
 
-    const onArenaReady = (payload?: { arenaId?: string; matchId?: string; players?: Array<{ nickname?: string }> }) => {
+    const onArenaReady = (
+      payload?: { arenaId?: string; matchId?: string; players?: Array<{ userId?: string | number; nickname?: string }> }
+    ) => {
       if (!payload?.arenaId || payload.arenaId !== arenaId) return;
       updateOpponentFromPlayers(payload.players);
       if (payload.matchId) {
@@ -117,7 +117,7 @@ export default function GamePage() {
     return () => {
       socket.off("arena:ready", onArenaReady);
     };
-  }, [arenaId, nickname, token]);
+  }, [arenaId, token, userIdStr]);
 
   useEffect(() => {
     if (!token || !userIdStr) return;
@@ -160,8 +160,20 @@ export default function GamePage() {
       }
     };
 
-    const handleFinish = (payload: { winnerId: string | null; reason?: string }) => {
+    const handleFinish = (payload: MatchFinishPayload) => {
+      setFinishReason(payload.reason ?? null);
       setWinnerId(payload.winnerId ?? null);
+      setSelectedCardId(null);
+      setSelectedCardReason(null);
+      setMatch((prev) => (prev ? { ...prev, state: { ...prev.state, finished: true } } : prev));
+
+      if (payload.reason === "opponent_left") {
+        const cowardMessage = "Opponent cowardly left the arena";
+        setMatchError(cowardMessage);
+        appendLog(cowardMessage);
+        return;
+      }
+
       appendLog(payload.reason ? `Match finished: ${payload.reason}` : "Match finished");
     };
 
@@ -272,9 +284,14 @@ export default function GamePage() {
   }, [match, userIdStr]);
 
   const matchResultLabel = useMemo(() => {
+    if (finishReason === "opponent_left") {
+      return "Opponent cowardly left the arena";
+    }
     if (!winnerId || !userIdStr) return null;
     return winnerId === userIdStr ? "Victory" : "Defeat";
-  }, [winnerId, userIdStr]);
+  }, [finishReason, winnerId, userIdStr]);
+
+  const isMatchFinished = Boolean(match?.state.finished || finishReason || winnerId);
 
   const playedCardIdsThisTurn = useMemo(() => {
     if (!match || !userIdStr) return new Set<string>();
@@ -332,9 +349,17 @@ export default function GamePage() {
   };
 
   const handleLeaveArenaClick = () => {
+    const leavingMatchId = match?.matchId || arenaMatchId;
+    if (leavingMatchId) {
+      leaveMatch(leavingMatchId);
+    }
     if (arenaId && arenaId !== "unknown") {
       socket.emit("leave_game", arenaId);
     }
+    joinedMatchRef.current = null;
+    setMatch(null);
+    setWinnerId(null);
+    setFinishReason(null);
     navigate("/lobby");
   };
 
@@ -438,12 +463,12 @@ export default function GamePage() {
         )}
       </main>
 
-      {match?.state.finished && (
-        <div className="game-overlay">
+      {isMatchFinished && (
+        <div className="game-overlay game-overlay--finish">
           <div className="game-overlay__panel parchment-panel">
             <span className="comic-text-shadow">{matchResultLabel ?? "Match finished"}</span>
             <div style={{ marginTop: 12, textAlign: "center" }}>
-              <button type="button" className="game-end-turn stress-warning" onClick={() => navigate("/lobby")}>
+              <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
                 Back to Lobby
               </button>
             </div>
@@ -497,7 +522,11 @@ export default function GamePage() {
         </div>
       </footer>
 
-      <section className="game-hand" aria-label="Hand">
+      <section
+        className={`game-hand ${handCards.length === 0 ? "game-hand--empty" : ""}`.trim()}
+        aria-label="Hand"
+      >
+        {handCards.length === 0 && <p className="game-hand__placeholder">No cards in hand</p>}
         {handCards.map((card, index) => {
           const isSelected = selectedCardId === card.id;
           const isDisabled = !canPlayCard(card);

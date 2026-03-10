@@ -18,7 +18,7 @@ export default function App() {
         <Route path="/lobby" element={<ProtectedRoute><LobbyPage /></ProtectedRoute>} />
         <Route path="/deck-builder" element={<ProtectedRoute><DeckBuilderPage /></ProtectedRoute>} />
               //добавить протект на game в прод:
-        <Route path="/game" element={<GamePage />} />
+        <Route path="/game" element={<ProtectedRoute><GamePage /></ProtectedRoute>} />
       </Routes>
     </AppLayout>
   );
