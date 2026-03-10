@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector } from "../store";
 import { fetchUserDeck } from "../shared/api/deckBuilderApi";
@@ -16,7 +16,11 @@ function summarizeDeck(
   name: string,
   totalCards: number,
   maxCards: number,
-  cards: Array<{ cardId: string; quantity: number; card: { triad_type: string } }>
+  cards: Array<{
+    cardId: string;
+    quantity: number;
+    card: { triad_type: string };
+  }>,
 ): DeckSummary {
   const triadCounts = { assault: 0, precision: 0, arcane: 0 };
   for (const item of cards) {
@@ -53,7 +57,11 @@ export default function LobbyPage() {
     if (!token) return;
 
     fetchUserDeck(token)
-      .then((res) => setDeck(summarizeDeck(res.name, res.totalCards, res.maxCards, res.cards)))
+      .then((res) =>
+        setDeck(
+          summarizeDeck(res.name, res.totalCards, res.maxCards, res.cards),
+        ),
+      )
       .catch(() => setDeck(null));
 
     fetchPlayerStats(token)
