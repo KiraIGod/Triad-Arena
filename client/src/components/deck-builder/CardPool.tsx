@@ -1,25 +1,25 @@
-import { useMemo, useState } from 'react'
-import type { DeckBuilderCard } from '../../types/deckBuilder'
+import { useMemo, useState } from "react";
+import type { DeckBuilderCard } from "../../types/deckBuilder";
 
 type CardPoolProps = {
-  cards: DeckBuilderCard[]
-  collectionByCardId: Record<string, number>
-  deckByCardId: Record<string, number>
-  maxDeckSize: number
-  maxCopiesPerCard: number
-  totalCards: number
-  onAddCard: (cardId: string) => void
-}
+  cards: DeckBuilderCard[];
+  collectionByCardId: Record<string, number>;
+  deckByCardId: Record<string, number>;
+  maxDeckSize: number;
+  maxCopiesPerCard: number;
+  totalCards: number;
+  onAddCard: (cardId: string) => void;
+};
 
-type SortKey = 'mana' | 'type' | 'nameDesc'
+type SortKey = "mana" | "type" | "nameDesc";
 
 function triadModifier(triad: string): string {
   const map: Record<string, string> = {
     assault: "assault",
     precision: "precision",
     arcane: "arcane",
-  }
-  return map[triad] ?? ""
+  };
+  return map[triad] ?? "";
 }
 
 export default function CardPool({
@@ -31,17 +31,30 @@ export default function CardPool({
   totalCards,
   onAddCard,
 }: CardPoolProps) {
-  const [sortKey, setSortKey] = useState<SortKey>('mana')
-  const [searchQuery, setSearchQuery] = useState('')
+  const [sortKey, setSortKey] = useState<SortKey>("mana");
+  const [searchQuery, setSearchQuery] = useState("");
 
   const filteredAndSortedCards = useMemo(() => {
-    const filtered = cards.filter(card => card.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    const filtered = cards.filter((card) => {
+      const query = searchQuery.trim().toLowerCase()
+      const isNumber = /^\d+$/.test(query)
+
+      if (isNumber) {
+        return card.mana_cost === parseInt(query, 10)
+      }
+
+      if (query === "spell" || query === "unit") {
+        return card.type.toLowerCase() === query
+      }
+
+      return card.name.toLowerCase().includes(query)
+    })
 
     switch (sortKey) {
-      case 'mana':
+      case "mana":
         return filtered.sort((a, b) => a.mana_cost - b.mana_cost)
 
-      case 'type':
+      case "type":
         return filtered.sort((a, b) => {
           if (a.type === b.type) {
             return a.name.localeCompare(b.name)
@@ -49,8 +62,9 @@ export default function CardPool({
           return a.type.localeCompare(b.type)
         })
 
-      case 'nameDesc':
-        return filtered.sort((a, b) => b.name.localeCompare(a.name))
+      case "nameDesc":
+        return filtered.sort((a, b) => a.name.localeCompare(b.name))
+
       default:
         return filtered
     }
@@ -59,21 +73,30 @@ export default function CardPool({
   return (
     <section className="cardPool">
       <div className="cardPool__header">
-        <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '10px'
-          }}>
-          <h2 className="cardPool__title" style={{ margin: 0 }}>Card Pool</h2>
-          <span className="cardPool__count">{filteredAndSortedCards.length} cards</span>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: "10px",
+          }}
+        >
+          <h2 className="cardPool__title" style={{ margin: 0 }}>
+            Card Pool
+          </h2>
+          <span className="cardPool__count">
+            {filteredAndSortedCards.length} cards
+          </span>
         </div>
 
-        <div className="cardPool__controls" style={{
-            display: 'flex',
-            gap: '15px',
-            marginBottom: '15px'
-          }}>
+        <div
+          className="cardPool__controls"
+          style={{
+            display: "flex",
+            gap: "15px",
+            marginBottom: "15px",
+          }}
+        >
           <div className="cardPool__search">
             <input
               type="text"
@@ -81,11 +104,11 @@ export default function CardPool({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               style={{
-                padding: '4px 8px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                background: 'transparent',
-                color: 'inherit'
+                padding: "4px 8px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                background: "transparent",
+                color: "inherit",
               }}
             />
           </div>
@@ -96,11 +119,11 @@ export default function CardPool({
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as SortKey)}
               style={{
-                padding: '4px',
-                borderRadius: '4px',
-                border: '1px solid #ccc',
-                background: 'transparent',
-                color: 'inherit'
+                padding: "4px",
+                borderRadius: "4px",
+                border: "1px solid #ccc",
+                background: "transparent",
+                color: "inherit",
               }}
             >
               <option value="mana">Mana cost</option>
@@ -121,9 +144,8 @@ export default function CardPool({
             <button
               key={card.id}
               type="button"
-              className={`poolCard ${modifier ? `poolCard--${modifier}` : ""} ${totalCards >= maxDeckSize ? "poolCard--exhausted" : inDeck >= maxCopiesPerCard ? "poolCard--copiesMax" : inDeck >= owned ? "poolCard--exhausted" : inDeck > 0 ? "poolCard--inDeck" : ""}`}
+              className={`poolCard ${modifier ? `poolCard--${modifier}` : ""} ${inDeck >= owned || totalCards >= maxDeckSize ? "poolCard--exhausted" : inDeck >= maxCopiesPerCard ? "poolCard--copiesMax" : inDeck > 0 ? "poolCard--inDeck" : ""}`}
               onClick={() => onAddCard(card.id)}
-              disabled={totalCards >= maxDeckSize || (inDeck >= owned && inDeck < maxCopiesPerCard)}
             >
               <div className="poolCard__mana">{card.mana_cost}</div>
               <div className="poolCard__name">{card.name}</div>
@@ -147,9 +169,9 @@ export default function CardPool({
                 Owned: {owned} &middot; In deck: <span>{inDeck}</span>
               </div>
             </button>
-          )
+          );
         })}
       </div>
     </section>
-  )
+  );
 }

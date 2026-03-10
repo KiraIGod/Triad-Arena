@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAppSelector } from "../store";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAppSelector } from "../store"
 import {
   fetchAllCards,
   fetchUserCollection,
@@ -11,272 +11,294 @@ import {
   activateDeck,
   resetUserDeck,
   updateUserDeckPartial,
-} from "../shared/api/deckBuilderApi";
-import type { DeckBuilderCard, DeckData } from "../types/deckBuilder";
-import CardPool from "../components/deck-builder/CardPool";
-import CurrentDeck from "../components/deck-builder/CurrentDeck";
-import CardModal from "../components/deck-builder/CardModal";
-import CardViewer from "../components/deck-builder/CardViewer";
-import "./DeckBuilder.css";
+} from "../shared/api/deckBuilderApi"
+import type { DeckBuilderCard, DeckData } from "../types/deckBuilder"
+import CardPool from "../components/deck-builder/CardPool"
+import CurrentDeck from "../components/deck-builder/CurrentDeck"
+import CardModal from "../components/deck-builder/CardModal"
+import CardViewer from "../components/deck-builder/CardViewer"
+import "./DeckBuilder.css"
 
-const MAX_DECK_SIZE = 20;
-const MAX_DECKS = 3;
-const MAX_COPIES_PER_CARD = 2;
+const MAX_DECK_SIZE = 20
+const MAX_DECKS = 3
+const MAX_COPIES_PER_CARD = 2
 
 function toMap(
   items: Array<{ cardId: string; quantity: number }>,
 ): Record<string, number> {
   return items.reduce<Record<string, number>>((acc, item) => {
-    acc[item.cardId] = item.quantity;
-    return acc;
-  }, {});
+    acc[item.cardId] = item.quantity
+    return acc
+  }, {})
 }
 
 export default function DeckBuilderPage() {
-  const navigate = useNavigate();
-  const token = useAppSelector((state) => state.auth.token);
+  const navigate = useNavigate()
+  const token = useAppSelector((state) => state.auth.token)
 
-  const [cards, setCards] = useState<DeckBuilderCard[]>([]);
+  const [cards, setCards] = useState<DeckBuilderCard[]>([])
   const [collectionByCardId, setCollectionByCardId] = useState<
     Record<string, number>
-  >({});
-  const [decks, setDecks] = useState<DeckData[]>([]);
-  const [activeDeckId, setActiveDeckId] = useState<string | null>(null);
-  const [deckByCardId, setDeckByCardId] = useState<Record<string, number>>({});
+  >({})
+  const [decks, setDecks] = useState<DeckData[]>([])
+  const [activeDeckId, setActiveDeckId] = useState<string | null>(null)
+  const [deckByCardId, setDeckByCardId] = useState<Record<string, number>>({})
   const [selectedCard, setSelectedCard] = useState<DeckBuilderCard | null>(
     null,
-  );
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isResetting, setIsResetting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
-  const [renamingDeckId, setRenamingDeckId] = useState<string | null>(null);
-  const [renameValue, setRenameValue] = useState("");
+  )
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState<string | null>(null)
+  const [isViewerOpen, setIsViewerOpen] = useState(false)
+  const [renamingDeckId, setRenamingDeckId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState("")
+  const [toast, setToast] = useState<string | null>(null)
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const showToast = useCallback((msg: string) => {
+    if (toastTimer.current) clearTimeout(toastTimer.current)
+    setToast(msg)
+    toastTimer.current = setTimeout(() => setToast(null), 3000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (toastTimer.current) clearTimeout(toastTimer.current)
+    };
+  }, [])
 
   const cardsById = useMemo<Record<string, DeckBuilderCard>>(
     () =>
       cards.reduce<Record<string, DeckBuilderCard>>((acc, card) => {
-        acc[card.id] = card;
+        acc[card.id] = card
         return acc;
       }, {}),
     [cards],
-  );
+  )
 
   const totalCards = useMemo(
     () =>
       Object.values(deckByCardId).reduce((sum, quantity) => sum + quantity, 0),
     [deckByCardId],
-  );
+  )
 
   const syncDeckCards = useCallback((deck: DeckData | undefined) => {
     if (!deck) {
-      setDeckByCardId({});
-      return;
+      setDeckByCardId({})
+      return
     }
-    setDeckByCardId(toMap(deck.cards));
-  }, []);
+    setDeckByCardId(toMap(deck.cards))
+  }, [])
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) return
 
     const load = async () => {
-      setIsLoading(true);
-      setError(null);
+      setIsLoading(true)
+      setError(null)
       try {
         const [cardsList, collection, userDecks] = await Promise.all([
           fetchAllCards(token),
           fetchUserCollection(token),
           fetchUserDecks(token),
-        ]);
-        setCards(cardsList);
-        setCollectionByCardId(toMap(collection));
-        setDecks(userDecks);
+        ])
+        setCards(cardsList)
+        setCollectionByCardId(toMap(collection))
+        setDecks(userDecks)
 
-        const active = userDecks.find((d) => d.isActive) ?? userDecks[0];
+        const active = userDecks.find((d) => d.isActive) ?? userDecks[0]
         if (active) {
-          setActiveDeckId(active.id);
-          syncDeckCards(active);
+          setActiveDeckId(active.id)
+          syncDeckCards(active)
         }
       } catch {
-        setError("Failed to load deck builder data");
+        setError("Failed to load deck builder data")
       } finally {
-        setIsLoading(false);
+        setIsLoading(false)
       }
-    };
+    }
 
-    void load();
-  }, [token, syncDeckCards]);
+    void load()
+  }, [token, syncDeckCards])
 
   const switchToDeck = (deckId: string) => {
-    setActiveDeckId(deckId);
-    const deck = decks.find((d) => d.id === deckId);
-    syncDeckCards(deck);
-    setStatus(null);
-    setError(null);
-  };
+    setActiveDeckId(deckId)
+    const deck = decks.find((d) => d.id === deckId)
+    syncDeckCards(deck)
+    setStatus(null)
+    setError(null)
+  }
 
   const canAddCard = (cardId: string): boolean => {
-    const owned = collectionByCardId[cardId] ?? 0;
-    const inDeck = deckByCardId[cardId] ?? 0;
-    if (totalCards >= MAX_DECK_SIZE) return false;
-    if (inDeck >= MAX_COPIES_PER_CARD) return false;
-    return inDeck < owned;
-  };
+    const owned = collectionByCardId[cardId] ?? 0
+    const inDeck = deckByCardId[cardId] ?? 0
+    if (totalCards >= MAX_DECK_SIZE) return false
+    if (inDeck >= MAX_COPIES_PER_CARD) return false
+    return inDeck < owned
+  }
 
   const canRemoveCard = (cardId: string): boolean => {
-    return (deckByCardId[cardId] ?? 0) > 0;
-  };
+    return (deckByCardId[cardId] ?? 0) > 0
+  }
 
   const handleAddCard = () => {
-    if (!selectedCard || !canAddCard(selectedCard.id)) return;
+    if (!selectedCard || !canAddCard(selectedCard.id)) return
     setDeckByCardId((prev) => ({
       ...prev,
       [selectedCard.id]: (prev[selectedCard.id] ?? 0) + 1,
-    }));
-    setStatus(null);
-  };
+    }))
+    setStatus(null)
+  }
 
   const handleRemoveCard = () => {
-    if (!selectedCard || !canRemoveCard(selectedCard.id)) return;
-    removeCardFromDeck(selectedCard.id);
-  };
+    if (!selectedCard || !canRemoveCard(selectedCard.id)) return
+    removeCardFromDeck(selectedCard.id)
+  }
 
   const addCardToDeck = (cardId: string) => {
-    const inDeck = deckByCardId[cardId] ?? 0;
-    if (inDeck >= MAX_COPIES_PER_CARD) {
-      setError("No more than 2 identical cards in a deck");
-      return;
+    const inDeck = deckByCardId[cardId] ?? 0
+    if (totalCards >= MAX_DECK_SIZE) {
+      showToast(`Deck is full (max ${MAX_DECK_SIZE} cards)`)
+      return
     }
-    if (!canAddCard(cardId)) return;
-    setError(null);
+    if (inDeck >= MAX_COPIES_PER_CARD) {
+      showToast("No more than 2 copies of the same card allowed")
+      return
+    }
+    const owned = collectionByCardId[cardId] ?? 0
+    if (inDeck >= owned) {
+      showToast("Not enough copies in your collection")
+      return
+    }
+    setError(null)
     setDeckByCardId((prev) => ({
       ...prev,
       [cardId]: (prev[cardId] ?? 0) + 1,
-    }));
-    setStatus(null);
-  };
+    }))
+    setStatus(null)
+  }
 
   const removeCardFromDeck = (cardId: string) => {
     setDeckByCardId((prev) => {
-      const current = prev[cardId] ?? 0;
-      if (current <= 0) return prev;
-      const next = current - 1;
+      const current = prev[cardId] ?? 0
+      if (current <= 0) return prev
+      const next = current - 1
       if (next <= 0) {
-        const { [cardId]: _removed, ...rest } = prev;
-        return rest;
+        const { [cardId]: _removed, ...rest } = prev
+        return rest
       }
-      return { ...prev, [cardId]: next };
-    });
-    setStatus(null);
-  };
+      return { ...prev, [cardId]: next }
+    })
+    setStatus(null)
+  }
 
   const handleSaveProgress = async () => {
-    if (!token || !activeDeckId) return;
-    setIsUpdating(true);
-    setError(null);
+    if (!token || !activeDeckId) return
+    setIsUpdating(true)
+    setError(null)
     try {
       const deckItems = Object.entries(deckByCardId).map(
         ([cardId, quantity]) => ({ cardId, quantity }),
-      );
+      )
       const updatedDeck = await updateUserDeckPartial(
         token,
         activeDeckId,
         deckItems,
-      );
+      )
       setDecks((prev) =>
         prev.map((d) => (d.id === updatedDeck.id ? updatedDeck : d)),
-      );
-      setDeckByCardId(toMap(updatedDeck.cards));
-      setStatus("Deck progress saved");
+      )
+      setDeckByCardId(toMap(updatedDeck.cards))
+      setStatus("Deck progress saved")
     } catch {
-      setError("Failed to save deck progress");
-      setStatus(null);
+      setError("Failed to save deck progress")
+      setStatus(null)
     } finally {
-      setIsUpdating(false);
+      setIsUpdating(false)
     }
-  };
+  }
 
   const handleResetDeck = async () => {
-    if (!token || !activeDeckId) return;
-    setIsResetting(true);
-    setError(null);
+    if (!token || !activeDeckId) return
+    setIsResetting(true)
+    setError(null)
     try {
       const resetDeckData = await resetUserDeck(token, activeDeckId);
       setDecks((prev) =>
         prev.map((d) => (d.id === resetDeckData.id ? resetDeckData : d)),
-      );
-      setDeckByCardId(toMap(resetDeckData.cards));
-      setSelectedCard(null);
-      setStatus("Deck reset");
+      )
+      setDeckByCardId(toMap(resetDeckData.cards))
+      setSelectedCard(null)
+      setStatus("Deck reset")
     } catch {
-      setError("Failed to reset deck");
-      setStatus(null);
+      setError("Failed to reset deck")
+      setStatus(null)
     } finally {
-      setIsResetting(false);
+      setIsResetting(false)
     }
-  };
+  }
 
   const handleCreateDeck = async () => {
-    if (!token || decks.length >= MAX_DECKS) return;
-    setError(null);
+    if (!token || decks.length >= MAX_DECKS) return
+    setError(null)
     try {
-      const name = `Deck ${decks.length + 1}`;
-      const newDeck = await createDeck(token, name);
-      setDecks((prev) => [...prev, newDeck]);
-      setActiveDeckId(newDeck.id);
-      syncDeckCards(newDeck);
-      setStatus("New deck created");
+      const name = `Deck ${decks.length + 1}`
+      const newDeck = await createDeck(token, name)
+      setDecks((prev) => [...prev, newDeck])
+      setActiveDeckId(newDeck.id)
+      syncDeckCards(newDeck)
+      setStatus("New deck created")
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to create deck";
-      setError(msg);
+      const msg = err instanceof Error ? err.message : "Failed to create deck"
+      setError(msg)
     }
-  };
+  }
 
   const handleDeleteDeck = async (deckId: string) => {
-    if (!token || decks.length <= 1) return;
-    setError(null);
+    if (!token || decks.length <= 1) return
+    setError(null)
     try {
-      const updatedDecks = await deleteDeck(token, deckId);
-      setDecks(updatedDecks);
+      const updatedDecks = await deleteDeck(token, deckId)
+      setDecks(updatedDecks)
 
       if (activeDeckId === deckId) {
-        const active = updatedDecks.find((d) => d.isActive) ?? updatedDecks[0];
+        const active = updatedDecks.find((d) => d.isActive) ?? updatedDecks[0]
         if (active) {
-          setActiveDeckId(active.id);
-          syncDeckCards(active);
+          setActiveDeckId(active.id)
+          syncDeckCards(active)
         }
       }
-      setStatus("Deck deleted");
+      setStatus("Deck deleted")
     } catch {
-      setError("Failed to delete deck");
+      setError("Failed to delete deck")
     }
-  };
+  }
 
   const handleStartRename = (deck: DeckData) => {
-    setRenamingDeckId(deck.id);
-    setRenameValue(deck.name);
-  };
+    setRenamingDeckId(deck.id)
+    setRenameValue(deck.name)
+  }
 
   const handleConfirmRename = async () => {
     if (!token || !renamingDeckId || !renameValue.trim()) {
-      setRenamingDeckId(null);
-      return;
+      setRenamingDeckId(null)
+      return
     }
     try {
       const updated = await renameDeck(
         token,
         renamingDeckId,
         renameValue.trim(),
-      );
-      setDecks((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
+      )
+      setDecks((prev) => prev.map((d) => (d.id === updated.id ? updated : d)))
     } catch {
-      setError("Failed to rename deck");
+      setError("Failed to rename deck")
     } finally {
-      setRenamingDeckId(null);
+      setRenamingDeckId(null)
     }
-  };
+  }
 
   const handleSetActive = async (deckId: string) => {
     if (!token) return;
@@ -288,7 +310,7 @@ export default function DeckBuilderPage() {
     } catch {
       setError("Failed to set active deck");
     }
-  };
+  }
 
   if (!token) {
     return <div className="deckBuilder">Authorization required</div>;
@@ -341,7 +363,6 @@ export default function DeckBuilderPage() {
         </div>
       </div>
 
-      {/* Deck Tabs */}
       <div className="deckTabs">
         {decks.map((deck) => (
           <div
@@ -481,6 +502,12 @@ export default function DeckBuilderPage() {
           onClose={() => setIsViewerOpen(false)}
         />
       )}
+
+      {toast && (
+        <div className="deckBuilder__toast" role="alert">
+          {toast}
+        </div>
+      )}
     </main>
-  );
+  )
 }

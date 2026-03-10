@@ -29,6 +29,31 @@
     0 0 20px rgba(127, 30, 29, 0.5),
     inset 0 2px 4px rgba(0, 0, 0, 0.6);
   border: 2px solid #000000;
+  transition:
+    box-shadow 0.16s ease,
+    filter 0.16s ease,
+    transform 0.08s ease;
+}
+
+.stress-warning:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow:
+    0 0 24px rgba(168, 62, 54, 0.58),
+    inset 0 2px 4px rgba(0, 0, 0, 0.58);
+}
+
+.stress-warning:active:not(:disabled) {
+  transform: translateY(1px);
+  filter: brightness(0.95);
+  box-shadow:
+    0 0 12px rgba(168, 62, 54, 0.42),
+    inset 0 3px 6px rgba(0, 0, 0, 0.65);
+}
+
+.stress-warning:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+  filter: grayscale(0.2);
 }
 
 .parchment-panel {

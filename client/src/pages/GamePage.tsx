@@ -1,11 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
-import { GameCard, type CardModel } from "../components/Card";
+import type { CardModel } from "../components/Card";
+import MatchBoard from "../components/MatchBoard";
+import HandCards from "../components/HandCards";
 import socket from "../shared/socket/socket";
 import {
   endMatchTurn,
   joinMatch,
+  leaveMatch,
   offMatchError,
   offMatchFinish,
   offMatchState,
@@ -17,8 +20,10 @@ import {
   playMatchCard,
   syncMatch,
   type MatchErrorPayload,
+  type MatchFinishPayload,
   type MatchStatePayload
 } from "../shared/socket/matchSocket";
+import { useMatchBoard } from "../features/customHooks/useMatchBoard";
 import "./GamePage.css";
 
 export default function GamePage() {
@@ -42,7 +47,11 @@ export default function GamePage() {
   const [logEntries, setLogEntries] = useState<string[]>(["Awaiting actions..."]);
   const [selectedCardReason, setSelectedCardReason] = useState<string | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
+  const [finishReason, setFinishReason] = useState<string | null>(null);
   const joinedMatchRef = useRef<string | null>(null);
+  const { playedCards, applyEvents, resetBoard } = useMatchBoard();
+  const isSameUser = (value: string | number | null | undefined) =>
+    String(value ?? "").trim().toLowerCase() === String(userIdStr ?? "").trim().toLowerCase();
 
   useEffect(() => {
     const fromQueryOpponent = searchParams.get("opponent");
@@ -83,21 +92,16 @@ export default function GamePage() {
     if (!socket.connected) socket.connect();
     socket.emit("join_game", arenaId);
 
-    const updateOpponentFromPlayers = (players?: Array<{ nickname?: string }>) => {
+    const updateOpponentFromPlayers = (players?: Array<{ userId?: string | number; nickname?: string }>) => {
       if (!Array.isArray(players)) return;
-      const names = players
-        .map((player) => player?.nickname)
-        .filter((value): value is string => Boolean(value));
-
-      const ownName = (nickname ?? "").toLowerCase();
-      const candidate = names.find((name) => name.toLowerCase() !== ownName);
-      setOpponentNickname(candidate ?? "UNKNOWN");
+      const opponent = players.find((player) => !isSameUser(player?.userId));
+      setOpponentNickname(opponent?.nickname || "UNKNOWN");
     };
 
     socket.emit(
       "arena:get-state",
       { arenaId },
-      (res?: { matchId?: string; players?: Array<{ nickname?: string }> }) => {
+      (res?: { matchId?: string; players?: Array<{ userId?: string | number; nickname?: string }> }) => {
         updateOpponentFromPlayers(res?.players);
         if (res?.matchId) {
           setArenaMatchId(res.matchId);
@@ -105,7 +109,9 @@ export default function GamePage() {
       }
     );
 
-    const onArenaReady = (payload?: { arenaId?: string; matchId?: string; players?: Array<{ nickname?: string }> }) => {
+    const onArenaReady = (
+      payload?: { arenaId?: string; matchId?: string; players?: Array<{ userId?: string | number; nickname?: string }> }
+    ) => {
       if (!payload?.arenaId || payload.arenaId !== arenaId) return;
       updateOpponentFromPlayers(payload.players);
       if (payload.matchId) {
@@ -117,7 +123,7 @@ export default function GamePage() {
     return () => {
       socket.off("arena:ready", onArenaReady);
     };
-  }, [arenaId, nickname, token]);
+  }, [arenaId, token, userIdStr]);
 
   useEffect(() => {
     if (!token || !userIdStr) return;
@@ -139,6 +145,7 @@ export default function GamePage() {
       setMatch(payload);
       setArenaMatchId(payload.matchId);
       if (payload.events?.length) {
+        applyEvents(payload.events);
         payload.events.forEach((event) => appendLog(toActionLogEntry(event)));
       }
     };
@@ -148,6 +155,7 @@ export default function GamePage() {
       setSelectedCardReason(null);
       setMatch(payload);
       if (payload.events?.length) {
+        applyEvents(payload.events);
         payload.events.forEach((event) => appendLog(toActionLogEntry(event)));
       }
     };
@@ -160,8 +168,20 @@ export default function GamePage() {
       }
     };
 
-    const handleFinish = (payload: { winnerId: string | null; reason?: string }) => {
+    const handleFinish = (payload: MatchFinishPayload) => {
+      setFinishReason(payload.reason ?? null);
       setWinnerId(payload.winnerId ?? null);
+      setSelectedCardId(null);
+      setSelectedCardReason(null);
+      setMatch((prev) => (prev ? { ...prev, state: { ...prev.state, finished: true } } : prev));
+
+      if (payload.reason === "opponent_left") {
+        const cowardMessage = "Opponent cowardly left the arena";
+        setMatchError(cowardMessage);
+        appendLog(cowardMessage);
+        return;
+      }
+
       appendLog(payload.reason ? `Match finished: ${payload.reason}` : "Match finished");
     };
 
@@ -180,21 +200,43 @@ export default function GamePage() {
       offMatchError(handleError);
       offMatchFinish(handleFinish);
     };
-  }, [token, userIdStr]);
+  }, [applyEvents, token, userIdStr]);
 
   useEffect(() => {
     if (!arenaMatchId) return;
-    if (joinedMatchRef.current === arenaMatchId) return;
+    if (!token || !userIdStr) return;
 
-    joinedMatchRef.current = arenaMatchId;
-    setMatchError(null);
-    joinMatch(arenaMatchId);
-  }, [arenaMatchId]);
+    socket.auth = { token };
+    if (!socket.connected) {
+      socket.connect();
+    }
+
+    if (joinedMatchRef.current !== arenaMatchId) {
+      resetBoard();
+      joinedMatchRef.current = arenaMatchId;
+      setMatchError(null);
+    }
+
+    if (match?.matchId !== arenaMatchId) {
+      joinMatch(arenaMatchId);
+    }
+
+    const retryId = window.setTimeout(() => {
+      if (match?.matchId !== arenaMatchId) {
+        syncMatch();
+        joinMatch(arenaMatchId);
+      }
+    }, 1200);
+
+    return () => {
+      window.clearTimeout(retryId);
+    };
+  }, [arenaMatchId, resetBoard, token, userIdStr, match?.matchId]);
 
   const handCards: CardModel[] = useMemo(() => {
     if (!match || !userIdStr) return [];
 
-    const selfIndex = match.players.findIndex((id) => id === userIdStr);
+    const selfIndex = match.players.findIndex((id) => isSameUser(id));
     if (selfIndex < 0) return [];
 
     const selfKey = selfIndex === 0 ? "player1" : "player2";
@@ -203,6 +245,7 @@ export default function GamePage() {
     return playerHand.map<CardModel>((card, index) => ({
       id: `${card.id}:${index}`,
       name: card.name,
+      image: card.image || "crimson_duelist.png",
       type: String(card.type).toUpperCase() as CardModel["type"],
       triad_type: String(card.triad_type).toUpperCase() as CardModel["triad_type"],
       mana_cost: card.mana_cost,
@@ -215,7 +258,7 @@ export default function GamePage() {
 
   const selfDeckCount = useMemo(() => {
     if (!match || !userIdStr) return 0;
-    const ownIndex = match.players.findIndex((id) => id === userIdStr);
+    const ownIndex = match.players.findIndex((id) => isSameUser(id));
     if (ownIndex < 0) return 0;
     const ownKey = ownIndex === 0 ? "player1" : "player2";
     return match.state.players[ownKey].deckCount ?? 0;
@@ -234,7 +277,7 @@ export default function GamePage() {
       };
     }
 
-    const selfIndex = match.players.findIndex((id) => id === userIdStr);
+    const selfIndex = match.players.findIndex((id) => isSameUser(id));
     if (selfIndex < 0) {
       return {
         playerHPPercent: 100,
@@ -263,7 +306,7 @@ export default function GamePage() {
       playerHPPercent: clampPercent(selfStats.hp),
       opponentHPPercent: clampPercent(oppStats.hp),
       currentEnergy: selfStats.energy ?? 0,
-      isMyTurn: match.state.activePlayer === userIdStr && !match.state.finished,
+      isMyTurn: isSameUser(match.state.activePlayer) && !match.state.finished,
       selfIndex,
       selfStats,
       oppStats
@@ -271,14 +314,19 @@ export default function GamePage() {
   }, [match, userIdStr]);
 
   const matchResultLabel = useMemo(() => {
+    if (finishReason === "opponent_left") {
+      return "Opponent cowardly left the arena";
+    }
     if (!winnerId || !userIdStr) return null;
-    return winnerId === userIdStr ? "Victory" : "Defeat";
-  }, [winnerId, userIdStr]);
+    return isSameUser(winnerId) ? "Victory" : "Defeat";
+  }, [finishReason, winnerId, userIdStr]);
+
+  const isMatchFinished = Boolean(match?.state.finished || finishReason || winnerId);
 
   const playedCardIdsThisTurn = useMemo(() => {
     if (!match || !userIdStr) return new Set<string>();
     const ids = match.state.turnActions
-      .filter((action) => action.playerId === userIdStr)
+      .filter((action) => isSameUser(action.playerId))
       .map((action) => action.cardId);
     return new Set(ids);
   }, [match, userIdStr]);
@@ -322,7 +370,7 @@ export default function GamePage() {
     setSelectedCardId(null);
     setSelectedCardReason(null);
     if (!match || !userIdStr) return;
-    if (match.state.finished || match.state.activePlayer !== userIdStr) return;
+    if (match.state.finished || !isSameUser(match.state.activePlayer)) return;
 
     endMatchTurn({
       matchId: match.matchId,
@@ -331,9 +379,18 @@ export default function GamePage() {
   };
 
   const handleLeaveArenaClick = () => {
+    const leavingMatchId = match?.matchId || arenaMatchId;
+    if (leavingMatchId) {
+      leaveMatch(leavingMatchId);
+    }
     if (arenaId && arenaId !== "unknown") {
       socket.emit("leave_game", arenaId);
     }
+    joinedMatchRef.current = null;
+    setMatch(null);
+    setWinnerId(null);
+    setFinishReason(null);
+    resetBoard();
     navigate("/lobby");
   };
 
@@ -388,12 +445,7 @@ export default function GamePage() {
         </div>
       )}
 
-      <div className="game-state">
-        <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
-          Leave Arena
-        </button>
-      </div>
-      
+      {/* 
       <div className="game-state">
         <p className="game-state__label">Arena</p>
         <p className="game-state__value">{arenaId}</p>
@@ -401,22 +453,43 @@ export default function GamePage() {
       <div className="game-state">
         <p className="game-state__label">Match</p>
         <p className="game-state__value">{match ?match.matchId : arenaMatchId ? "Connecting..." : "Waiting arena..."}</p>
-      </div>
-      <div className="game-state">
-        <p className="game-state__label">Turn</p>
-        <p className="game-state__value">{match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}</p>
-      </div>
+      </div> */}
 
+      <section className="game-content">
+        
+        <div className="game-top-row">
+          <aside className="game-deck-panel">
+            <p>My Deck</p>
+            <p className="game-log__entry">Cards left: {selfDeckCount}</p>
+            <p className="game-log__entry">Cards in hand: {handCards.length}</p>
+          </aside>
 
-      <main className="game-battlefield">
+          <div className="game-state">
+            <p className="game-state__label">Turn</p>
+            <p className="game-state__value">{match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}</p>
+          </div>
 
-        <aside className="game-deck-panel">
-          <p>My Deck</p>
-          <p className="game-log__entry">Cards left: {selfDeckCount}</p>
-          <p className="game-log__entry">Cards in hand: {handCards.length}</p>
-        </aside>
+          <div className="game-state game-state--right">
+            <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
+              Leave Arena
+            </button>
+          </div>
+        </div>
 
-        <aside className="game-log">
+        <main className="game-battlefield">
+          <MatchBoard cards={playedCards} />
+        </main>
+
+      <HandCards
+        handCards={handCards}
+        selectedCardId={selectedCardId}
+        canPlayCard={canPlayCard}
+        onCardClick={handleCardClick}
+        cardSize={window.innerWidth <= 768 ? "small" : "normal"}
+      />
+      </section>
+
+      {/* <aside className="game-log">
           <p className="game-log__title">Battle Log</p>
           {matchResultLabel && <p className="game-log__entry game-log__entry--active">{matchResultLabel}</p>}
           {matchError && <p className="game-log__entry game-log__entry--active">{matchError}</p>}
@@ -426,30 +499,29 @@ export default function GamePage() {
               {entry}
             </p>
           ))}
-        </aside>
+        </aside> */}
 
-        {selectedCardId && (
+      {/* {selectedCardId && (
           <div className="game-overlay">
             <div className="game-overlay__panel parchment-panel">
               <span className="comic-text-shadow">Choose Your Target</span>
             </div>
           </div>
-        )}
-      </main>
+        )} */}
 
-      {match?.state.finished && (
-        <div className="game-overlay">
+
+      {isMatchFinished && (
+        <div className="game-overlay game-overlay--finish">
           <div className="game-overlay__panel parchment-panel">
             <span className="comic-text-shadow">{matchResultLabel ?? "Match finished"}</span>
             <div style={{ marginTop: 12, textAlign: "center" }}>
-              <button type="button" className="game-end-turn stress-warning" onClick={() => navigate("/lobby")}>
+              <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
                 Back to Lobby
               </button>
             </div>
           </div>
         </div>
       )}
-
       <footer className="game-hud game-hud--bottom parchment-panel">
         <div className="game-hud__identity">
           <div className="game-hud__accent game-hud__accent--gold" />
@@ -496,21 +568,7 @@ export default function GamePage() {
         </div>
       </footer>
 
-      <section className="game-hand" aria-label="Hand">
-        {handCards.map((card, index) => {
-          const isSelected = selectedCardId === card.id;
-          const isDisabled = !canPlayCard(card);
-          return (
-            <div
-              key={card.id}
-              className={`game-hand__slot ${isSelected ? "is-selected" : ""}`}
-              style={{ "--slot-rotation": `${(index - 2) * 2}deg` } as CSSProperties}
-            >
-              <GameCard card={card} onClick={handleCardClick} disabled={isDisabled} />
-            </div>
-          );
-        })}
-      </section>
     </div>
   );
 }
+

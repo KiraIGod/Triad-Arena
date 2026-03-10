@@ -62,6 +62,7 @@ function mapCardForMatchState(card) {
     attack: card.attack,
     hp: card.hp,
     description: card.description,
+    image: card.image,
     created_at: card.created_at
   };
 }

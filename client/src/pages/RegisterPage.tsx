@@ -22,7 +22,7 @@ export default function RegisterPage() {
   const onFinish: FormProps<RegisterFields>["onFinish"] = async (values) => {
     setLoading(true)
     try {
-      const { data } = await api.post<{ token: string; userId: number; nickname: string }>(
+      const { data } = await api.post<{ token: string; userId: string | number; nickname: string }>(
         "/auth/register",
         {
           username: values.username.trim(),
@@ -30,7 +30,7 @@ export default function RegisterPage() {
         },
       )
       dispatch(setCredentials({ token: data.token, userId: data.userId, nickname: typeof data.nickname === "string" ? data.nickname : "" }))
-      message.success("Регистрация успешна")
+      message.success("Registration is successful")
       navigate("/lobby", { replace: true })
     } catch (err) {
       const msg =
@@ -41,7 +41,7 @@ export default function RegisterPage() {
           ?.data?.message === "string"
           ? (err as { response: { data: { message: string } } }).response.data
               .message
-          : "Ошибка регистрации"
+          : "Registration error"
       message.error(msg)
     } finally {
       setLoading(false)
@@ -130,7 +130,7 @@ export default function RegisterPage() {
             >
               <Form.Item
                 name="username"
-                rules={[{ required: true, message: "Введите имя пользователя" }]}
+                rules={[{ required: true, message: "Enter the user's name" }]}
               >
                 <Input
                   placeholder="USERNAME"
@@ -143,10 +143,10 @@ export default function RegisterPage() {
                 name="password"
                 rules={[
                   { required: true, message: "Enter password" },
-                  { min: 8, message: 'Чуваааак, пароль должен быть минимум 8 символов'},
+                  { min: 8, message: 'Minimum of 8 characters'},
                   {
                     pattern: /^(?=.*[!@#$%^&*()_\-+=[\]{};:'",.<>/?\\|])/,
-                    message: 'И..., минимум один спецсимвол',
+                    message: 'At least one special character',
                   },
                 ]}
               >
@@ -161,13 +161,13 @@ export default function RegisterPage() {
                 name="confirmPassword"
                 dependencies={["password"]}
                 rules={[
-                  { required: true, message: "Повторите пароль" },
+                  { required: true, message: "Repeat the password" },
                   ({ getFieldValue }) => ({
                     validator(_, value) {
                       if (!value || getFieldValue("password") === value) {
                         return Promise.resolve();
                       }
-                      return Promise.reject(new Error("Пароли не совпадают"));
+                      return Promise.reject(new Error("Passwords don't match"));
                     },
                   }),
                 ]}
