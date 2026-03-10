@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { store, useAppSelector } from "../store";
+import { useAppSelector } from "../store";
 import styles from "./LobbyPage.module.css";
-import socket from "../shared/socket/socket";
 import { fetchUserDeck } from "../shared/api/deckBuilderApi";
 import { useLobbyArena } from "../features/customHooks/useLobbyArena";
 
@@ -212,19 +211,15 @@ function MatchHistoryPanel() {
 export default function LobbyPage() {
   const navigate = useNavigate();
   const token = useAppSelector((s) => s.auth.token);
-  const userId = useAppSelector((s) => s.auth.userId);
   const [deck, setDeck] = useState<DeckSummary | null>(null);
   const {
     isCreatingArena,
     isJoiningArena,
     handleCreateArena,
     handleJoinArena,
-    isOnline,
     error,
   } = useLobbyArena(token);
   const [deckError, setDeckError] = useState<string | null>(null);
-
-  const displayName = userId != null ? `PILOT_${userId}` : "PILOT_ZERO";
 
   useEffect(() => {
     if (!token) return;
@@ -241,7 +236,7 @@ export default function LobbyPage() {
 
   const guardedJoinArena = useCallback(() => {
     if (!isDeckReady) {
-      setDeckError("Create a deck and add cards");
+      setDeckError("Create a deck and add 20 cards");
       return;
     }
     setDeckError(null);
@@ -250,7 +245,7 @@ export default function LobbyPage() {
 
   const guardedCreateArena = useCallback(() => {
     if (!isDeckReady) {
-      setDeckError("Create a deck and add cards");
+      setDeckError("Create a deck and add 20 cards");
       return;
     }
     setDeckError(null);
@@ -266,28 +261,6 @@ export default function LobbyPage() {
       <div className={styles.bgImage} />
       <div className={`${styles.bgTexture} parchment-texture`} />
       <div className={`${styles.bgVignette} darkest-vignette`} />
-
-      <header className={styles.header}>
-        <div className={styles.brandWrap}>
-          <div className={styles.brandAccent} />
-          <div className={styles.brand}>
-            <h1 className={styles.title}>Triad Arena</h1>
-            <p className={styles.subtitle}>Sector_7 // Encampment</p>
-          </div>
-        </div>
-
-        <div className={styles.headerRight}>
-          <p className={styles.status}>
-            Status{" "}
-            <span
-              className={isOnline ? styles.statusOnline : styles.statusOffline}
-            >
-              {isOnline ? "Online" : "Offline"}
-            </span>
-          </p>
-          <p className={styles.userLabel}>User: {displayName}</p>
-        </div>
-      </header>
 
       <div className={styles.layout}>
         <DeckPanel deck={deck} onEditDeck={handleOpenDeckBuilder} />

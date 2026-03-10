@@ -262,7 +262,7 @@ async function handleJoin(io, socket, payload = {}) {
   }
 
   const matchRoom = io.sockets.adapter.rooms.get(String(matchId));
-  if (matchRoom && matchRoom.size >= 2) {
+  if (matchRoom && matchRoom.size >= 2 && !matchRoom.has(socket.id)) {
     throw createSocketError("MATCH_FULL", "Match is full");
   }
 
@@ -387,7 +387,23 @@ async function handlePlayCard(io, socket, payload = {}) {
   const events = appendMatchEvents(matchId, {
     turn: state.turn,
     type: "CARD_PLAYED",
-    payload: { playerId, cardId, actionId: actionId || null }
+    payload: {
+      playerId,
+      cardId,
+      actionId: actionId || null,
+      card: {
+        id: cardData.id,
+        name: cardData.name,
+        type: cardData.type,
+        triad_type: cardData.triad_type,
+        mana_cost: cardData.mana_cost,
+        attack: cardData.attack,
+        hp: cardData.hp,
+        description: cardData.description,
+        image: cardData.image,
+        created_at: cardData.created_at
+      }
+    }
   });
 
   if (persistedState.finished) {
@@ -530,6 +546,48 @@ async function handleSync(io, socket) {
   socket.emit("match:state", buildMatchStatePayload(match, safeState));
 }
 
+async function handleLeave(io, socket, payload = {}) {
+  const matchId = String(payload?.matchId || "");
+  if (!matchId) {
+    throw createSocketError(INVALID_ACTION, "matchId is required");
+  }
+
+  const playerId = getPlayerFromSocket(socket);
+  const match = await db.Match.findByPk(matchId);
+  if (!match) {
+    throw createSocketError(INVALID_ACTION, "Match not found");
+  }
+
+  validateMatchAccess(match, playerId);
+  const opponentId = getOpponentId(match, playerId);
+
+  socket.leave(matchId);
+  socket.data.inMatch = false;
+  console.log(`[MATCH] Player ${socket.data?.userId || "unknown"} left match ${matchId}`);
+
+  if (match.status === "finished") {
+    return;
+  }
+
+  clearTurnTimer(matchId);
+  const reconnectTimer = reconnectTimers.get(String(matchId));
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimers.delete(String(matchId));
+  }
+
+  await finalizeMatch(match, opponentId);
+  unregisterActiveMatch(match);
+  runtimeMatchState.delete(String(matchId));
+  clearMatchRuntime(matchId);
+
+  socket.to(matchId).emit("match:finish", {
+    winnerId: opponentId || null,
+    reason: "opponent_left",
+    message: "Opponent cowardly left the arena"
+  });
+}
+
 function wrapSocketHandler(socket, handler) {
   return async (payload) => {
     try {
@@ -551,6 +609,7 @@ module.exports = function registerMatchSocket(io) {
       }
     });
     socket.on("match:join", wrapSocketHandler(socket, (payload) => handleJoin(io, socket, payload)));
+    socket.on("match:leave", wrapSocketHandler(socket, (payload) => handleLeave(io, socket, payload)));
     socket.on("match:playCard", wrapSocketHandler(socket, (payload) => handlePlayCard(io, socket, payload)));
     socket.on("match:endTurn", wrapSocketHandler(socket, (payload) => handleEndTurn(io, socket, payload)));
     socket.on("match:sync", wrapSocketHandler(socket, () => handleSync(io, socket)));

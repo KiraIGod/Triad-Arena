@@ -22,6 +22,7 @@ export type MatchStatePayload = {
           attack: number | null;
           hp: number | null;
           description: string;
+          image?: string;
           created_at: string;
         }>;
         deckCount?: number;
@@ -40,6 +41,7 @@ export type MatchStatePayload = {
           attack: number | null;
           hp: number | null;
           description: string;
+          image?: string;
           created_at: string;
         }>;
         deckCount?: number;
@@ -53,13 +55,36 @@ export type MatchStatePayload = {
     turn: number | null;
     type: string;
     timestamp: number;
-    payload: Record<string, unknown>;
+    payload: {
+      playerId?: string;
+      cardId?: string;
+      actionId?: string | null;
+      card?: {
+        id: string;
+        name: string;
+        type: string;
+        triad_type: string;
+        mana_cost: number;
+        attack: number | null;
+        hp: number | null;
+        description: string;
+        image?: string;
+        created_at: string;
+      };
+      [key: string]: unknown;
+    };
   }>;
 };
 
 export type MatchErrorPayload = {
   type: string;
   message: string;
+};
+
+export type MatchFinishPayload = {
+  winnerId: string | null;
+  reason?: string;
+  message?: string;
 };
 
 export function syncMatch(): void {
@@ -74,6 +99,13 @@ export function joinMatch(matchId: string): void {
     matchSocket.connect();
   }
   matchSocket.emit("match:join", { matchId });
+}
+
+export function leaveMatch(matchId: string): void {
+  if (!matchSocket.connected) {
+    return;
+  }
+  matchSocket.emit("match:leave", { matchId });
 }
 
 export function playMatchCard(payload: {
@@ -114,13 +146,13 @@ export function offMatchError(handler: (payload: MatchErrorPayload) => void): vo
 }
 
 export function onMatchFinish(
-  handler: (payload: { winnerId: string | null; reason?: string }) => void
+  handler: (payload: MatchFinishPayload) => void
 ): void {
   matchSocket.on("match:finish", handler);
 }
 
 export function offMatchFinish(
-  handler: (payload: { winnerId: string | null; reason?: string }) => void
+  handler: (payload: MatchFinishPayload) => void
 ): void {
   matchSocket.off("match:finish", handler);
 }

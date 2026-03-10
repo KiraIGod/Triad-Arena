@@ -1,6 +1,7 @@
 const { randomUUID } = require("crypto");
 const jwt = require("jsonwebtoken");
-const { User, Deck, Match } = require("../db/models");
+const { User, DeckCard, Match } = require("../db/models");
+const { getActiveDeckId } = require("../services/deckBuilderService");
 
 
 async function getNicknameFromSocket(socket) {
@@ -26,21 +27,18 @@ function pickWaitingArena(activeGames) {
 }
 
 async function ensurePlayerDeckId(userId) {
-  const existingDeck = await Deck.findOne({
-    where: { user_id: userId },
-    order: [["created_at", "ASC"]]
-  });
-
-  if (existingDeck) {
-    return existingDeck.id;
+  const deckId = await getActiveDeckId(userId);
+  if (!deckId) {
+    throw new Error("Active deck not found");
   }
 
-  const createdDeck = await Deck.create({
-    user_id: userId,
-    name: "Main Deck"
-  });
+  const deckCards = await DeckCard.findAll({ where: { deck_id: deckId } });
+  const totalCards = deckCards.reduce((sum, dc) => sum + (Number(dc.quantity) || 0), 0);
+  if (totalCards !== 20) {
+    throw new Error("Deck must contain 20 cards");
+  }
 
-  return createdDeck.id;
+  return deckId;
 }
 
 module.exports = function registerArenaSocket(io, activeGames) {

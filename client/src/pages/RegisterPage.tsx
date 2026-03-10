@@ -22,7 +22,7 @@ export default function RegisterPage() {
   const onFinish: FormProps<RegisterFields>["onFinish"] = async (values) => {
     setLoading(true)
     try {
-      const { data } = await api.post<{ token: string; userId: number; nickname: string }>(
+      const { data } = await api.post<{ token: string; userId: string | number; nickname: string }>(
         "/auth/register",
         {
           username: values.username.trim(),

@@ -1,0 +1,70 @@
+.app-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-top: 3px solid #050505;
+  border-bottom: 2px solid #050505;
+  background: rgba(28, 22, 16, 0.9);
+}
+
+.app-header__brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.app-header__brand-accent {
+  width: 8px;
+  height: 42px;
+  border: 2px solid #050505;
+  background: #a83e36;
+}
+
+.app-header__brand {
+  text-transform: uppercase;
+}
+
+.app-header__title {
+  margin: 0;
+  font-size: clamp(1rem, 2.3vw, 1.2rem);
+  letter-spacing: 0.2em;
+  font-weight: 900;
+}
+
+.app-header__subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.68rem;
+  letter-spacing: 0.2em;
+  color: #8b7e6f;
+}
+
+.app-header__right {
+  text-align: right;
+}
+
+.app-header__status,
+.app-header__user {
+  margin: 0;
+  text-transform: uppercase;
+  font-size: 0.66rem;
+  letter-spacing: 0.15em;
+}
+
+.app-header__status {
+  margin-bottom: 0.35rem;
+}
+
+.app-header__online {
+  color: #6cca86;
+}
+
+.app-header__offline {
+  color: #d06058;
+}
+
+.app-header__user {
+  color: #8b7e6f;
+}

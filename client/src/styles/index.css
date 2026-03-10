@@ -2,5 +2,6 @@
 @import "./theme.css";
 @import "./antd-overrides.css";
 @import "./tailwind.css";
+@import "./layout.css";
 
 

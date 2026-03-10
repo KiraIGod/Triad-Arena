@@ -1,5 +1,6 @@
-﻿export type AuthState = {
+export type AuthState = {
   token: string | null;
-  userId: number | null;
+  userId: string | number | null;
   nickname: string | null;
 };
+
