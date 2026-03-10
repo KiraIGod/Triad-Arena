@@ -1,8 +1,10 @@
-﻿.game-screen {
+.game-screen {
   position: relative;
-  min-height: calc(100vh - 72px);
+  min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   overflow: hidden;
   background: #0e0e0e;
   color: var(--foreground);
@@ -134,9 +136,9 @@
 }
 
 .game-state {
-  position: relative;
-  z-index: 2;
-  text-align: right;
+  display: grid;
+  grid-template-columns: 1fr;
+  justify-items: center;
   text-transform: uppercase;
 }
 
@@ -163,6 +165,17 @@
   min-height: 280px;
 }
 
+.game-content {
+  position: relative;
+  z-index: 2;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
 .game-battlefield__divider {
   position: absolute;
   left: 0;
@@ -174,8 +187,8 @@
 }
 
 .game-board {
-  position: absolute;
-  inset: 24px 300px 24px 300px;
+  /* position: absolute; */
+  /* inset: 24px 300px 24px 300px; */
   z-index: 1;
   display: block;
 }
@@ -202,7 +215,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  align-content: flex-start;
+  /* align-content: flex-start; */
 }
 
 .game-board__card-slot {
@@ -366,10 +379,6 @@
   box-sizing: border-box;
 }
 
-.game-state--center {
-  text-align: center;
-}
-
 .game-state--right {
   justify-self: end;
   text-align: right;
@@ -378,12 +387,15 @@
 
 @media (max-width: 768px) {
   .game-screen {
-    min-height: calc(100vh - 56px);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow: hidden;
   }
 
   .game-hud {
     grid-template-columns: 1fr;
-    gap: 12px;
+    gap: 8px;
+    padding: 8px 12px;
   }
 
   .game-state {
@@ -397,11 +409,12 @@
   .game-board {
     position: relative;
     inset: auto;
-    margin: 12px;
+    margin: 8px 12px;
+    min-height: 120px;
   }
 
   .game-board__card-slot {
-    transform: scale(0.62);
+    transform: scale(0.52);
   }
 
   .game-deck-panel {
@@ -411,12 +424,31 @@
   }
   
   .game-end-turn {
-    min-height: 40px;
+    min-height: 36px;
   }
 
   .game-hand {
-    min-height: 190px;
+    min-height: 170px;
+    padding: 6px 8px 10px;
+    overflow-x: auto;
+    overflow-y: visible;
+  }
+
+  .game-content {
+    justify-content: flex-start;
+    gap: 6px;
+    min-height: 0;
+  }
+
+  .game-battlefield {
+    min-height: 120px;
+  }
+
+  .game-top-row {
+    padding: 8px 12px;
   }
 }
+
+
 
 

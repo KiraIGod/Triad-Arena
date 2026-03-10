@@ -7,8 +7,8 @@ type MatchBoardProps = {
 export default function MatchBoard({ cards }: MatchBoardProps) {
   return (
     <section className="game-board" aria-label="Match board">
-      <div className="game-board__side">
-        <p className="game-board__title">Played Cards</p>
+      <div >
+        {/* <p className="game-board__title">Played Cards</p> */}
         <div className="game-board__cards">
           {cards.map((card, index) => (
             <div key={`${card.id}-board-${index}`} className="game-board__card-slot">

@@ -22,6 +22,7 @@ export type MatchStatePayload = {
           attack: number | null;
           hp: number | null;
           description: string;
+          image?: string;
           created_at: string;
         }>;
         deckCount?: number;
@@ -40,6 +41,7 @@ export type MatchStatePayload = {
           attack: number | null;
           hp: number | null;
           description: string;
+          image?: string;
           created_at: string;
         }>;
         deckCount?: number;

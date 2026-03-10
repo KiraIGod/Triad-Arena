@@ -21,7 +21,7 @@ export default function LoginPage() {
   const onFinish: FormProps<LoginFields>["onFinish"] = async (values) => {
     setLoading(true)
     try {
-      const { data } = await api.post<{ token: string; userId: number; nickname: string }>(
+      const { data } = await api.post<{ token: string; userId: string | number; nickname: string }>(
         "/auth/login",
         {
           username: values.username.trim(),

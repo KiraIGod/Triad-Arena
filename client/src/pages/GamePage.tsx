@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
-import { GameCard, type CardModel } from "../components/Card";
+import type { CardModel } from "../components/Card";
 import MatchBoard from "../components/MatchBoard";
+import HandCards from "../components/HandCards";
 import socket from "../shared/socket/socket";
 import {
   endMatchTurn,
@@ -50,7 +51,7 @@ export default function GamePage() {
   const joinedMatchRef = useRef<string | null>(null);
   const { playedCards, applyEvents, resetBoard } = useMatchBoard();
   const isSameUser = (value: string | number | null | undefined) =>
-    String(value ?? "") === String(userIdStr ?? "");
+    String(value ?? "").trim().toLowerCase() === String(userIdStr ?? "").trim().toLowerCase();
 
   useEffect(() => {
     const fromQueryOpponent = searchParams.get("opponent");
@@ -223,7 +224,7 @@ export default function GamePage() {
     return playerHand.map<CardModel>((card, index) => ({
       id: `${card.id}:${index}`,
       name: card.name,
-      image: "crimson_duelist.png",
+      image: card.image || "crimson_duelist.png",
       type: String(card.type).toUpperCase() as CardModel["type"],
       triad_type: String(card.triad_type).toUpperCase() as CardModel["triad_type"],
       mana_cost: card.mana_cost,
@@ -433,32 +434,41 @@ export default function GamePage() {
         <p className="game-state__value">{match ?match.matchId : arenaMatchId ? "Connecting..." : "Waiting arena..."}</p>
       </div> */}
 
-      <div className="game-top-row">
-        <aside className="game-deck-panel">
-          <p>My Deck</p>
-          <p className="game-log__entry">Cards left: {selfDeckCount}</p>
-          <p className="game-log__entry">Cards in hand: {handCards.length}</p>
-        </aside>
+      <section className="game-content">
+        
+        <div className="game-top-row">
+          <aside className="game-deck-panel">
+            <p>My Deck</p>
+            <p className="game-log__entry">Cards left: {selfDeckCount}</p>
+            <p className="game-log__entry">Cards in hand: {handCards.length}</p>
+          </aside>
 
-        <div className="game-state game-state--center">
-          <p className="game-state__label">Turn</p>
-          <p className="game-state__value">{match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}</p>
+          <div className="game-state">
+            <p className="game-state__label">Turn</p>
+            <p className="game-state__value">{match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}</p>
+          </div>
+
+          <div className="game-state game-state--right">
+            <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
+              Leave Arena
+            </button>
+          </div>
         </div>
 
-        <div className="game-state game-state--right">
-          <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
-            Leave Arena
-          </button>
-        </div>
-      </div>
+        <main className="game-battlefield">
+          <MatchBoard cards={playedCards} />
+        </main>
 
+      <HandCards
+        handCards={handCards}
+        selectedCardId={selectedCardId}
+        canPlayCard={canPlayCard}
+        onCardClick={handleCardClick}
+        cardSize={window.innerWidth <= 768 ? "small" : "normal"}
+      />
+      </section>
 
-
-      <main className="game-battlefield">
-        <MatchBoard cards={playedCards} />
-
-
-        {/* <aside className="game-log">
+      {/* <aside className="game-log">
           <p className="game-log__title">Battle Log</p>
           {matchResultLabel && <p className="game-log__entry game-log__entry--active">{matchResultLabel}</p>}
           {matchError && <p className="game-log__entry game-log__entry--active">{matchError}</p>}
@@ -470,14 +480,14 @@ export default function GamePage() {
           ))}
         </aside> */}
 
-        {/* {selectedCardId && (
+      {/* {selectedCardId && (
           <div className="game-overlay">
             <div className="game-overlay__panel parchment-panel">
               <span className="comic-text-shadow">Choose Your Target</span>
             </div>
           </div>
         )} */}
-      </main>
+
 
       {isMatchFinished && (
         <div className="game-overlay game-overlay--finish">
@@ -491,7 +501,6 @@ export default function GamePage() {
           </div>
         </div>
       )}
-
       <footer className="game-hud game-hud--bottom parchment-panel">
         <div className="game-hud__identity">
           <div className="game-hud__accent game-hud__accent--gold" />
@@ -538,25 +547,7 @@ export default function GamePage() {
         </div>
       </footer>
 
-      <section
-        className={`game-hand ${handCards.length === 0 ? "game-hand--empty" : ""}`.trim()}
-        aria-label="Hand"
-      >
-        {handCards.length === 0 && <p className="game-hand__placeholder">No cards in hand</p>}
-        {handCards.map((card, index) => {
-          const isSelected = selectedCardId === card.id;
-          const isDisabled = !canPlayCard(card);
-          return (
-            <div
-              key={card.id}
-              className={`game-hand__slot ${isSelected ? "is-selected" : ""}`}
-              style={{ "--slot-rotation": `${(index - 2) * 2}deg` } as CSSProperties}
-            >
-              <GameCard card={card} onClick={handleCardClick} disabled={isDisabled} />
-            </div>
-          );
-        })}
-      </section>
     </div>
   );
 }
+
