@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import { GameCard, type CardModel } from "./Card";
 
 type MatchBoardProps = {
@@ -11,7 +12,11 @@ export default function MatchBoard({ cards }: MatchBoardProps) {
         {/* <p className="game-board__title">Played Cards</p> */}
         <div className="game-board__cards">
           {cards.map((card, index) => (
-            <div key={`${card.id}-board-${index}`} className="game-board__card-slot">
+            <div
+              key={`${card.id}-board-${index}`}
+              className="game-board__card-slot"
+              style={{ "--card-enter-delay": `${index * 60}ms` } as CSSProperties}
+            >
               <GameCard card={card} size="small" disabled />
             </div>
           ))}

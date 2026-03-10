@@ -120,7 +120,7 @@ export function GameCard({
             >
               {card.name}
             </span>
-            <span
+            {/* <span
               className="uppercase"
               style={{
                 fontFamily: "var(--font-body)",
@@ -134,7 +134,7 @@ export function GameCard({
               }}
             >
               {card.triad_type.toLowerCase()}
-            </span>
+            </span> */}
           </div>
           <div style={{ height: 2, background: "#000000", boxShadow: `0 1px 0 ${accentColor}40` }} />
         </div>
@@ -222,7 +222,7 @@ export function GameCard({
         </div>
 
         {isHovering && !disabled && (
-          <div style={{ height: 3, background: selectedColor, boxShadow: `0 0 12px ${selectedColor}` }} />
+          <div style={{ height: 3, background: accentColor, boxShadow: `0 0 12px ${accentColor}` }} />
         )}
       </div>
     </article>

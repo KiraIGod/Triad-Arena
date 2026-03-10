@@ -221,6 +221,28 @@
 .game-board__card-slot {
   transform: scale(0.75);
   transform-origin: top left;
+  opacity: 0;
+  animation: game-board-card-appear 280ms ease-out forwards;
+  animation-delay: var(--card-enter-delay, 0ms);
+  will-change: transform, opacity;
+}
+
+@keyframes game-board-card-appear {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.68);
+  }
+  to {
+    opacity: 1;
+    transform: scale(0.75);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-board__card-slot {
+    animation: none;
+    opacity: 1;
+  }
 }
 
 .game-log {
@@ -339,7 +361,7 @@
   align-items: flex-end;
   gap: 10px;
   padding: 12px 12px 18px;
-  overflow-x: auto;
+  /* overflow-x: auto; */
   min-height: 260px;
   box-sizing: border-box;
 }
