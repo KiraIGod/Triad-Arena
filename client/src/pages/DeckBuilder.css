@@ -1,6 +1,9 @@
 .deckBuilder {
   min-height: 100vh;
-  background: var(--background);
+  background:
+    linear-gradient(180deg, rgba(14, 14, 14, 0.55) 0%, rgba(14, 14, 14, 0.72) 100%),
+    radial-gradient(circle at 20% 15%, rgba(168, 62, 54, 0.16), transparent 42%),
+    url("/assets/deck-bg.png") center / cover no-repeat;
   color: var(--foreground);
   font-family: var(--font-body);
   padding: 24px 32px;
@@ -269,11 +272,16 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, #2a241e 0%, #1a1612 100%);
+  background: linear-gradient(
+  135deg,
+  rgba(42, 36, 30, 0.6) 0%,
+  rgba(26, 22, 18, 0.8) 100%
+);
   border: 3px solid #000;
   box-shadow:
     inset 0 0 20px rgba(0, 0, 0, 0.6),
     0 4px 0 rgba(0, 0, 0, 0.4);
+
 }
 
 .cardPool__header {
@@ -477,12 +485,14 @@
 .currentDeck {
   width: 300px;
   min-width: 260px;
-  display: flex;
-  flex-direction: column;
-  background: linear-gradient(135deg, #2a241e 0%, #1a1612 100%);
-  border: 3px solid #000;
-  box-shadow:
-    inset 0 0 20px rgba(0, 0, 0, 0.6),
+    display: flex;
+    flex-direction: column;
+    background: linear-gradient(135deg,
+        rgba(42, 36, 30, 0.6) 0%,
+        rgba(26, 22, 18, 0.8) 100%);
+    border: 3px solid #000;
+    box-shadow:
+      inset 0 0 20px rgba(0, 0, 0, 0.6),
     0 4px 0 rgba(0, 0, 0, 0.4);
 }
 
