@@ -33,13 +33,14 @@
       rgba(201, 169, 98, 0.11),
       transparent 42%
     ),
-    linear-gradient(160deg, #080808 0%, #151312 48%, #0b0a09 100%);
-  filter: brightness(0.8) contrast(1.15);
+    linear-gradient(160deg, rgba(8, 8, 8, 0.45) 0%, rgba(21, 19, 18, 0.6) 48%, rgba(11, 10, 9, 0.75) 100%),
+    url("/assets/lobby-bg.png") center / cover no-repeat;
+  filter: brightness(0.95) contrast(1.05);
 }
 
 .bgTexture {
   background-color: var(--bg-main);
-  opacity: 0.92;
+  opacity: 0.45;
 }
 
 .bgVignette {

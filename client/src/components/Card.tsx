@@ -80,7 +80,7 @@ export function GameCard({
       onClick={isInteractive ? handleClick : undefined}
       onKeyDown={isInteractive ? handleKeyDown : undefined}
     >
-      <div className="game-card__shell ink-border-thin parchment-texture">
+      <div className="game-card__shell ink-border-thin ">
         <div className="game-card__header">
           <div className="game-card__head-row">
             <span className="game-card__name uppercase">

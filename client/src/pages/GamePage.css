@@ -20,8 +20,9 @@
 
 .game-screen__bg {
   background:
-    radial-gradient(circle at 50% 50%, rgba(168, 62, 54, 0.18), rgba(14, 14, 14, 0.94) 60%),
-    linear-gradient(180deg, #1a1612 0%, #0e0e0e 100%);
+    radial-gradient(circle at 50% 50%, rgba(168, 62, 54, 0.18), rgba(14, 14, 14, 0.74) 60%),
+    linear-gradient(180deg, rgba(26, 22, 18, 0.55) 0%, rgba(14, 14, 14, 0.7) 100%),
+    url("/assets/game-bg.png") center / cover no-repeat;
 }
 
 .game-screen__texture {
