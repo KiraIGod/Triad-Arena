@@ -48,7 +48,7 @@
 
 .game-card__header {
   position: relative;
-  padding: 8px 12px;
+  padding: 4px 8px;
   background: rgba(0, 0, 0, 0.5);
 }
 
@@ -56,7 +56,6 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 4px;
 }
 
 .game-card__name {
@@ -116,14 +115,14 @@
 }
 
 .game-card__body {
-  padding: 12px;
+  padding: 5px;
   background: rgba(0, 0, 0, 0.7);
 }
 
 .game-card__body-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .game-card__mana {
@@ -132,8 +131,8 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   border: 2px solid #000;
   box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.6);
 }
@@ -155,7 +154,7 @@
 
 .game-card__mana-value {
   font-family: var(--font-heading);
-  font-size: 20px;
+  font-size: 17px;
   color: #d9c7a8;
   font-weight: 900;
 }
@@ -185,7 +184,7 @@
 .game-card__description {
   display: block;
   font-family: var(--font-body);
-  font-size: 10px;
+  font-size: 15px;
   color: #8b7e6f;
   line-height: 1.3;
   letter-spacing: 0.02em;
