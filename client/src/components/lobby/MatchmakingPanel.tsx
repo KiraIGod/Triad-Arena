@@ -11,6 +11,7 @@ type MatchmakingPanelProps = {
   isJoiningArena: boolean;
   error: string | null;
   activeMatchId: string | null;
+  searchTimeLeft: number;
   onFindMatch: () => void;
   onCreateArena: () => void;
   onCancelSearch: () => void;
@@ -36,6 +37,41 @@ function ReconnectBanner({ onReconnect }: { onReconnect: () => void }) {
   );
 }
 
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function SearchOverlay({
+  timeLeft,
+  onCancel,
+}: {
+  timeLeft: number;
+  onCancel: () => void;
+}) {
+  return (
+    <div className={styles.searchOverlay}>
+      <span className={styles.searchSpinner} aria-hidden />
+      <p className={styles.searchTitle}>Searching for opponent...</p>
+      <p className={styles.searchTimer}>{formatTime(timeLeft)}</p>
+      <div className={styles.searchBarTrack}>
+        <div
+          className={styles.searchBarFill}
+          style={{ width: `${(timeLeft / 60) * 100}%` }}
+        />
+      </div>
+      <button
+        type="button"
+        className={styles.btnCancel}
+        onClick={onCancel}
+      >
+        Cancel Search
+      </button>
+    </div>
+  );
+}
+
 export function MatchmakingPanel({
   gameMode,
   deck,
@@ -43,6 +79,7 @@ export function MatchmakingPanel({
   isJoiningArena,
   error,
   activeMatchId,
+  searchTimeLeft,
   onFindMatch,
   onCreateArena,
   onCancelSearch,
@@ -53,6 +90,14 @@ export function MatchmakingPanel({
   const hasActiveMatch = activeMatchId !== null;
   const isBlocked = isSearching || !isDeckReady || hasActiveMatch;
   const [roomCode, setRoomCode] = useState("");
+
+  if (isJoiningArena) {
+    return (
+      <div className={styles.panel}>
+        <SearchOverlay timeLeft={searchTimeLeft} onCancel={onCancelSearch} />
+      </div>
+    );
+  }
 
   const deckWarning = !isDeckReady && deck !== null && !hasActiveMatch && (
     <div className={styles.deckWarning}>
@@ -83,24 +128,9 @@ export function MatchmakingPanel({
           disabled={isBlocked}
           onClick={onFindMatch}
         >
-          {isJoiningArena ? (
-            <>
-              <span className={styles.loader} aria-hidden />
-              Searching for opponent...
-            </>
-          ) : (
-            <>
-              <span className={styles.btnIcon} aria-hidden>🏆</span>
-              Ranked Match
-            </>
-          )}
+          <span className={styles.btnIcon} aria-hidden>🏆</span>
+          Ranked Match
         </button>
-
-        {isJoiningArena && (
-          <button type="button" className={styles.btnCancel} onClick={onCancelSearch}>
-            Cancel
-          </button>
-        )}
 
         {error && <p className={styles.errorText}>{error}</p>}
       </div>
@@ -181,24 +211,9 @@ export function MatchmakingPanel({
         disabled={isBlocked}
         onClick={onFindMatch}
       >
-        {isJoiningArena ? (
-          <>
-            <span className={styles.loader} aria-hidden />
-            Searching for opponent...
-          </>
-        ) : (
-          <>
-            <span className={styles.btnIcon} aria-hidden>⚔</span>
-            Find Match
-          </>
-        )}
+        <span className={styles.btnIcon} aria-hidden>⚔</span>
+        Find Match
       </button>
-
-      {isJoiningArena && (
-        <button type="button" className={styles.btnCancel} onClick={onCancelSearch}>
-          Cancel
-        </button>
-      )}
 
       <div className={styles.divider}>
         <span className={styles.dividerLine} />

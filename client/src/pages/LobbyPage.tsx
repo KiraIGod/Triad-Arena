@@ -68,6 +68,7 @@ export default function LobbyPage() {
     isOnline,
     error,
     activeMatchId,
+    searchTimeLeft,
     cancelSearch,
   } = useLobbyArena(token);
 
@@ -166,6 +167,7 @@ export default function LobbyPage() {
             isJoiningArena={isJoiningArena}
             error={error}
             activeMatchId={activeMatchId}
+            searchTimeLeft={searchTimeLeft}
             onFindMatch={handleJoinArena}
             onCreateArena={handleCreateArena}
             onCancelSearch={cancelSearch}
