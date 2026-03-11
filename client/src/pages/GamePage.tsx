@@ -12,16 +12,19 @@ import {
   offMatchError,
   offMatchFinish,
   offMatchState,
+  offMatchTimer,
   offMatchUpdate,
   onMatchError,
   onMatchFinish,
   onMatchState,
+  onMatchTimer,
   onMatchUpdate,
   playMatchCard,
   syncMatch,
   type MatchErrorPayload,
   type MatchFinishPayload,
   type MatchStatePayload,
+  type MatchTimerPayload,
   type UnitInstance
 } from "../shared/socket/matchSocket";
 import { useMatchBoard } from "../features/customHooks/useMatchBoard";
@@ -59,6 +62,7 @@ export default function GamePage() {
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [finishReason, setFinishReason] = useState<string | null>(null);
   const [attackState, setAttackState] = useState<AttackState>({ mode: "idle" });
+  const [timerRemaining, setTimerRemaining] = useState(45);
 
   const joinedMatchRef = useRef<string | null>(null);
   const { playedCards, applyEvents, resetBoard } = useMatchBoard();
@@ -209,12 +213,17 @@ export default function GamePage() {
       appendLog(payload.reason ? `Match finished: ${payload.reason}` : "Match finished");
     };
 
+    const handleTimer = (payload: MatchTimerPayload) => {
+      setTimerRemaining(payload.remaining);
+    };
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     onMatchState(handleState);
     onMatchUpdate(handleUpdate);
     onMatchError(handleError);
     onMatchFinish(handleFinish);
+    onMatchTimer(handleTimer);
 
     return () => {
       socket.off("connect", onConnect);
@@ -223,6 +232,7 @@ export default function GamePage() {
       offMatchUpdate(handleUpdate);
       offMatchError(handleError);
       offMatchFinish(handleFinish);
+      offMatchTimer(handleTimer);
     };
   }, [applyEvents, token, userIdStr]);
 
@@ -481,6 +491,10 @@ export default function GamePage() {
 
   const turnKey = match ? `${match.state.turn}:${match.state.activePlayer}` : "idle";
 
+  useEffect(() => {
+    setTimerRemaining(45);
+  }, [turnKey]);
+
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -554,17 +568,16 @@ export default function GamePage() {
 
 
           <div className="game-state">
-            {/* <p className="game-state__label">Turn</p> */}
-            {match ? (isMyTurn ? 
-            <p className="game-hud__name game-state__value--active-turn comic-text-shadow">Your turn</p> : 
-            <p className="game-hud__name game-state__value">Opponent's turn</p>) : "-"}
-            {match ? (isMyTurn ? 
-            <p className="game-hud__name game-state__value--active-turn comic-text-shadow">
-              <TurnCountdown turnKey={turnKey} seconds={30} paused={!match || match.state.finished} />
-            </p> :
+            {match ? (isMyTurn ?
+              <p className="game-hud__name game-state__value--active-turn comic-text-shadow">Your turn</p> :
+              <p className="game-hud__name game-state__value">Opponent's turn</p>) : "-"}
+            {match && !match.state.finished ? (isMyTurn ?
+              <p className="game-hud__name game-state__value--active-turn comic-text-shadow">
+                <TurnCountdown remaining={timerRemaining} />
+              </p> :
               <p className="game-hud__name game-state__value">
-                <TurnCountdown turnKey={turnKey} seconds={30} paused={!match || match.state.finished} />
-              </p>) : "-"}
+                <TurnCountdown remaining={timerRemaining} />
+              </p>) : null}
           </div>
 
           <div className="game-state game-state--right">
@@ -625,6 +638,9 @@ export default function GamePage() {
         <div className="game-overlay game-overlay--finish">
           <div className="game-overlay__panel parchment-panel">
             <span className="comic-text-shadow">{matchResultLabel ?? "Match finished"}</span>
+            {finishReason === "disconnect" && (
+              <p style={{ marginTop: 8, textAlign: "center" }}>Opponent disconnected</p>
+            )}
             <div style={{ marginTop: 12, textAlign: "center" }}>
               <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
                 Back to Lobby
