@@ -168,15 +168,32 @@ async function validateActiveDeckSize(userId) {
 
 // ─── Match lifecycle ──────────────────────────────────────────────────────────
 
-async function finalizeMatch(match, winnerId) {
+async function finalizeMatch(match, winnerId, state) {
+  const now = new Date();
+
   await db.Match.update(
     {
       status: "finished",
       winner_id: winnerId || null,
-      finished_at: new Date()
+      finished_at: now
     },
     { where: { id: match.id } }
   );
+
+  try {
+    await db.MatchHistory.create({
+      match_id: match.id,
+      player_one_id: match.player_one_id,
+      player_two_id: match.player_two_id,
+      winner_id: winnerId || null,
+      total_turns: state?.turn ?? 0,
+      player_one_final_hp: state?.player1?.hp ?? 0,
+      player_two_final_hp: state?.player2?.hp ?? 0,
+      finished_at: now
+    });
+  } catch (err) {
+    console.error("[finalizeMatch] Failed to create MatchHistory:", err?.message || err);
+  }
 }
 
 function getWinnerId(match, state) {
@@ -204,7 +221,7 @@ async function cleanupFinishedMatch(io, match, persistedState, safeState, matchI
       payload: { winnerId }
     })
   );
-  await finalizeMatch(match, winnerId);
+  await finalizeMatch(match, winnerId, persistedState);
   unregisterActiveMatch(match);
   clearSocketMatchRuntime(matchId);
   clearTurnTimer(matchId);
@@ -257,7 +274,7 @@ async function forceEndTurn(io, matchId, playerId) {
 
     if (persistedState.finished) {
       const winnerId = getWinnerId(match, persistedState);
-      await finalizeMatch(match, winnerId);
+      await finalizeMatch(match, winnerId, persistedState);
       unregisterActiveMatch(match);
       clearSocketMatchRuntime(matchId);
       clearTurnTimer(matchId);
@@ -599,7 +616,13 @@ async function handleLeave(io, socket, payload = {}) {
     reconnectTimers.delete(String(matchId));
   }
 
-  await finalizeMatch(match, opponentId);
+  let leaveState = null;
+  try {
+    const loaded = await loadMatchState(matchId);
+    leaveState = loaded.state;
+  } catch (_) {}
+
+  await finalizeMatch(match, opponentId, leaveState);
   unregisterActiveMatch(match);
   clearSocketMatchRuntime(matchId);
 
@@ -680,10 +703,16 @@ module.exports = function registerMatchSocket(io) {
       if (!reconnectTimers.has(String(match.id))) {
         const timer = setTimeout(async () => {
           try {
+            let dcState = null;
+            try {
+              const loaded = await loadMatchState(match.id);
+              dcState = loaded.state;
+            } catch (_) {}
+
             unregisterActiveMatch(match);
             reconnectTimers.delete(String(match.id));
             clearSocketMatchRuntime(match.id);
-            await finalizeMatch(match, opponentId);
+            await finalizeMatch(match, opponentId, dcState);
             io.to(String(match.id)).emit("match:finish", {
               winnerId: opponentId,
               reason: "disconnect"

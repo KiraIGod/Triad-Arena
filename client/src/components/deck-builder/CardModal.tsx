@@ -69,7 +69,11 @@ export default function CardModal({
           ✕
         </button>
 
-        <img className="cardModal__image" src={toStaticUrl(card.image)} alt={card.name} />
+        <img
+          className="cardModal__image"
+          src={toStaticUrl(card.image)}
+          alt={card.name}
+        />
 
         <div className="cardModal__body">
           <h3 className="cardModal__name">{card.name}</h3>

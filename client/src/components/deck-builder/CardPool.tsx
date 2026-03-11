@@ -1,6 +1,6 @@
-import { useMemo, useState, useEffect } from "react"
-import type { DeckBuilderCard } from "../../types/deckBuilder"
-import { toStaticUrl } from "../../shared/lib/toStaticUrl"
+import { useMemo, useState, useEffect } from "react";
+import type { DeckBuilderCard } from "../../types/deckBuilder";
+import { toStaticUrl } from "../../shared/lib/toStaticUrl";
 
 type CardPoolProps = {
   cards: DeckBuilderCard[];
@@ -60,17 +60,13 @@ export default function CardPool({
 
   const toggleMana = (mana: number) => {
     setSelectedManas((prev) =>
-      prev.includes(mana)
-        ? prev.filter((m) => m !== mana)
-        : [...prev, mana]
+      prev.includes(mana) ? prev.filter((m) => m !== mana) : [...prev, mana],
     );
   };
 
   const toggleTriad = (triad: TriadType) => {
     setSelectedTriads((prev) =>
-      prev.includes(triad)
-        ? prev.filter((t) => t !== triad)
-        : [...prev, triad]
+      prev.includes(triad) ? prev.filter((t) => t !== triad) : [...prev, triad],
     );
   };
 
@@ -81,7 +77,10 @@ export default function CardPool({
       }
 
       if (sortKey === "type" && selectedTriads.length > 0) {
-        if (!selectedTriads.includes(card.triad_type.toLowerCase() as TriadType)) return false;
+        if (
+          !selectedTriads.includes(card.triad_type.toLowerCase() as TriadType)
+        )
+          return false;
       }
 
       const query = debouncedSearchQuery.trim().toLowerCase();
@@ -151,7 +150,7 @@ export default function CardPool({
             backgroundColor: "rgba(0, 0, 0, 0.3)",
             padding: "10px",
             borderRadius: "8px",
-            border: "1px solid rgba(255, 255, 255, 0.05)"
+            border: "1px solid rgba(255, 255, 255, 0.05)",
           }}
         >
           <div
@@ -161,17 +160,21 @@ export default function CardPool({
               alignItems: "center",
               gap: "8px",
               minHeight: "36px",
-              flexShrink: 0
+              flexShrink: 0,
             }}
           >
             {sortKey === "mana" && (
               <>
-                <span style={{
+                <span
+                  style={{
                     color: "#888",
                     fontSize: "12px",
                     marginRight: "4px",
-                    textTransform: "uppercase"
-                  }}>Mana:</span>
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Mana:
+                </span>
 
                 {manaOptions.map((mana) => {
                   const isActive = selectedManas.includes(mana);
@@ -184,7 +187,9 @@ export default function CardPool({
                         width: "32px",
                         height: "32px",
                         borderRadius: "50%",
-                        border: isActive ? "2px solid #D4AF37" : "1px solid #444",
+                        border: isActive
+                          ? "2px solid #D4AF37"
+                          : "1px solid #444",
                         backgroundColor: isActive ? "#1A4A8A" : "#111",
                         color: isActive ? "#fff" : "#888",
                         fontWeight: "bold",
@@ -194,8 +199,10 @@ export default function CardPool({
                         alignItems: "center",
                         justifyContent: "center",
                         transition: "all 0.2s",
-                        boxShadow: isActive ? "0 0 8px rgba(26, 74, 138, 0.6)" : "none",
-                        flexShrink: 0
+                        boxShadow: isActive
+                          ? "0 0 8px rgba(26, 74, 138, 0.6)"
+                          : "none",
+                        flexShrink: 0,
                       }}
                     >
                       {mana}
@@ -211,7 +218,7 @@ export default function CardPool({
                       color: "#ff4444",
                       cursor: "pointer",
                       fontSize: "12px",
-                      marginLeft: "4px"
+                      marginLeft: "4px",
                     }}
                   >
                     Clear
@@ -222,12 +229,16 @@ export default function CardPool({
 
             {sortKey === "type" && (
               <>
-                <span style={{
+                <span
+                  style={{
                     color: "#888",
                     fontSize: "12px",
                     marginRight: "4px",
-                    textTransform: "uppercase"
-                  }}>Type:</span>
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Type:
+                </span>
                 {triadOptions.map((triad) => {
                   const isActive = selectedTriads.includes(triad.value);
                   return (
@@ -237,7 +248,9 @@ export default function CardPool({
                       style={{
                         padding: "6px 12px",
                         borderRadius: "4px",
-                        border: isActive ? `1px solid ${triad.color}` : "1px solid #444",
+                        border: isActive
+                          ? `1px solid ${triad.color}`
+                          : "1px solid #444",
                         backgroundColor: isActive ? triad.color : "#111",
                         color: isActive ? "#fff" : "#888",
                         fontWeight: "bold",
@@ -246,8 +259,10 @@ export default function CardPool({
                         letterSpacing: "1px",
                         cursor: "pointer",
                         transition: "all 0.2s",
-                        boxShadow: isActive ? `0 0 8px ${triad.color}80` : "none",
-                        whiteSpace: "nowrap"
+                        boxShadow: isActive
+                          ? `0 0 8px ${triad.color}80`
+                          : "none",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {triad.label}
@@ -263,7 +278,7 @@ export default function CardPool({
                       color: "#ff4444",
                       cursor: "pointer",
                       fontSize: "12px",
-                      marginLeft: "4px"
+                      marginLeft: "4px",
                     }}
                   >
                     Clear
@@ -278,7 +293,7 @@ export default function CardPool({
             style={{
               display: "flex",
               flex: "1 1 auto",
-              minWidth: "200px"
+              minWidth: "200px",
             }}
           >
             <input
@@ -294,7 +309,7 @@ export default function CardPool({
                 color: "#fff",
                 fontSize: "14px",
                 width: "100%",
-                boxSizing: "border-box"
+                boxSizing: "border-box",
               }}
             />
           </div>
@@ -304,15 +319,19 @@ export default function CardPool({
             style={{
               display: "flex",
               alignItems: "center",
-              flexShrink: 0
+              flexShrink: 0,
             }}
           >
-            <label style={{
+            <label
+              style={{
                 marginRight: "8px",
                 color: "#aaa",
                 fontSize: "14px",
-                whiteSpace: "nowrap"
-              }}>Sort by:</label>
+                whiteSpace: "nowrap",
+              }}
+            >
+              Sort by:
+            </label>
             <select
               value={sortKey}
               onChange={(e) => {
@@ -328,7 +347,7 @@ export default function CardPool({
                 color: "#fff",
                 cursor: "pointer",
                 fontSize: "14px",
-                minWidth: "140px"
+                minWidth: "140px",
               }}
             >
               <option value="mana">Mana cost</option>
