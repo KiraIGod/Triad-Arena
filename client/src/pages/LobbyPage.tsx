@@ -64,8 +64,10 @@ export default function LobbyPage() {
     isJoiningArena,
     handleCreateArena,
     handleJoinArena,
+    handleReconnect,
     isOnline,
     error,
+    activeMatchId,
     cancelSearch,
   } = useLobbyArena(token);
 
@@ -149,7 +151,9 @@ export default function LobbyPage() {
                 className={`${styles.modeTab} ${gameMode === mode ? styles.modeTabActive : ""}`}
                 onClick={() => setGameMode(mode)}
               >
-                <span className={styles.modeTabIcon}>{MODE_LABELS[mode].icon}</span>
+                <span className={styles.modeTabIcon}>
+                  {MODE_LABELS[mode].icon}
+                </span>
                 {MODE_LABELS[mode].label}
               </button>
             ))}
@@ -161,9 +165,11 @@ export default function LobbyPage() {
             isCreatingArena={isCreatingArena}
             isJoiningArena={isJoiningArena}
             error={error}
+            activeMatchId={activeMatchId}
             onFindMatch={handleJoinArena}
             onCreateArena={handleCreateArena}
             onCancelSearch={cancelSearch}
+            onReconnect={handleReconnect}
           />
         </section>
 

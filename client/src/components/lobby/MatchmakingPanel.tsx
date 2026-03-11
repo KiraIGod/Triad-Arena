@@ -10,10 +10,31 @@ type MatchmakingPanelProps = {
   isCreatingArena: boolean;
   isJoiningArena: boolean;
   error: string | null;
+  activeMatchId: string | null;
   onFindMatch: () => void;
   onCreateArena: () => void;
   onCancelSearch: () => void;
+  onReconnect: () => void;
 };
+
+function ReconnectBanner({ onReconnect }: { onReconnect: () => void }) {
+  return (
+    <div className={styles.reconnectBanner}>
+      <div className={styles.reconnectIcon} aria-hidden>⚡</div>
+      <p className={styles.reconnectTitle}>Active Match Found</p>
+      <p className={styles.reconnectDesc}>
+        You have an unfinished match. Rejoin before the timer expires!
+      </p>
+      <button
+        type="button"
+        className={styles.btnReconnect}
+        onClick={onReconnect}
+      >
+        Reconnect
+      </button>
+    </div>
+  );
+}
 
 export function MatchmakingPanel({
   gameMode,
@@ -21,34 +42,45 @@ export function MatchmakingPanel({
   isCreatingArena,
   isJoiningArena,
   error,
+  activeMatchId,
   onFindMatch,
   onCreateArena,
   onCancelSearch,
+  onReconnect,
 }: MatchmakingPanelProps) {
   const isDeckReady = deck != null && deck.cardsTotal >= deck.cardsMax;
   const isSearching = isJoiningArena || isCreatingArena;
+  const hasActiveMatch = activeMatchId !== null;
+  const isBlocked = isSearching || !isDeckReady || hasActiveMatch;
   const [roomCode, setRoomCode] = useState("");
 
-  const deckWarning = !isDeckReady && deck !== null && (
+  const deckWarning = !isDeckReady && deck !== null && !hasActiveMatch && (
     <div className={styles.deckWarning}>
       ⚠&nbsp;&nbsp;Incomplete deck — fill it before entering the arena
     </div>
   );
 
+  const reconnectBanner = hasActiveMatch && (
+    <ReconnectBanner onReconnect={onReconnect} />
+  );
+
   if (gameMode === "ranked") {
     return (
       <div className={styles.panel}>
+        {reconnectBanner}
         {deckWarning}
 
-        <div className={styles.modeDescription}>
-          Ranked matches affect your rank. Wins increase your rating,
-          losses decrease it.
-        </div>
+        {!hasActiveMatch && (
+          <div className={styles.modeDescription}>
+            Ranked matches affect your rank. Wins increase your rating,
+            losses decrease it.
+          </div>
+        )}
 
         <button
           type="button"
-          className={`${styles.btnPrimary} ${styles.btnRanked} ${!isDeckReady ? styles.btnDimmed : ""}`}
-          disabled={isSearching || !isDeckReady}
+          className={`${styles.btnPrimary} ${styles.btnRanked} ${isBlocked ? styles.btnDimmed : ""}`}
+          disabled={isBlocked}
           onClick={onFindMatch}
         >
           {isJoiningArena ? (
@@ -78,17 +110,20 @@ export function MatchmakingPanel({
   if (gameMode === "private") {
     return (
       <div className={styles.panel}>
+        {reconnectBanner}
         {deckWarning}
 
-        <div className={styles.modeDescription}>
-          Create a private room and share the code with a friend,
-          or enter a code to join.
-        </div>
+        {!hasActiveMatch && (
+          <div className={styles.modeDescription}>
+            Create a private room and share the code with a friend,
+            or enter a code to join.
+          </div>
+        )}
 
         <button
           type="button"
-          className={`${styles.btnPrimary} ${!isDeckReady ? styles.btnDimmed : ""}`}
-          disabled={isSearching || !isDeckReady}
+          className={`${styles.btnPrimary} ${isBlocked ? styles.btnDimmed : ""}`}
+          disabled={isBlocked}
           onClick={onCreateArena}
         >
           {isCreatingArena ? (
@@ -118,11 +153,12 @@ export function MatchmakingPanel({
             value={roomCode}
             onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
             maxLength={8}
+            disabled={hasActiveMatch}
           />
           <button
             type="button"
-            className={`${styles.btnSecondary} ${!isDeckReady || !roomCode.trim() ? styles.btnDimmed : ""}`}
-            disabled={isSearching || !isDeckReady || !roomCode.trim()}
+            className={`${styles.btnSecondary} ${isBlocked || !roomCode.trim() ? styles.btnDimmed : ""}`}
+            disabled={isBlocked || !roomCode.trim()}
             onClick={onFindMatch}
           >
             Join
@@ -136,12 +172,13 @@ export function MatchmakingPanel({
 
   return (
     <div className={styles.panel}>
+      {reconnectBanner}
       {deckWarning}
 
       <button
         type="button"
-        className={`${styles.btnPrimary} ${!isDeckReady ? styles.btnDimmed : ""}`}
-        disabled={isSearching || !isDeckReady}
+        className={`${styles.btnPrimary} ${isBlocked ? styles.btnDimmed : ""}`}
+        disabled={isBlocked}
         onClick={onFindMatch}
       >
         {isJoiningArena ? (
@@ -171,8 +208,8 @@ export function MatchmakingPanel({
 
       <button
         type="button"
-        className={`${styles.btnSecondary} ${!isDeckReady ? styles.btnDimmed : ""}`}
-        disabled={isSearching || !isDeckReady}
+        className={`${styles.btnSecondary} ${isBlocked ? styles.btnDimmed : ""}`}
+        disabled={isBlocked}
         onClick={onCreateArena}
       >
         {isCreatingArena ? (

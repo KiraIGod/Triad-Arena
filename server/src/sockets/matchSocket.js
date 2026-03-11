@@ -12,6 +12,11 @@ const {
   clearMatchRuntime
 } = require("../services/matchService");
 const { getActiveDeckId } = require("../services/deckBuilderService");
+const {
+  registerActiveMatch,
+  unregisterActiveMatch,
+  findActiveMatchByUser
+} = require("../services/activeMatchTracker");
 
 const DEBUG_GAME_STATE = String(process.env.DEBUG_GAME_STATE || "").toLowerCase() === "true";
 const RATE_LIMIT_WINDOW_MS = 1000;
@@ -19,30 +24,15 @@ const RATE_LIMIT_MAX_ACTIONS = 10;
 
 let waitingQueueEntry = null;
 const reconnectTimers = new Map();
-const activeMatchByUser = new Map();
 const runtimeMatchState = new Map();
 const turnTimers = new Map();
 
 // ─── Match tracking helpers ───────────────────────────────────────────────────
 
-function findActiveMatchByUser(userId) {
-  return activeMatchByUser.get(userId) || null;
-}
-
 function getOpponentId(match, userId) {
-  if (match.player_one_id === userId) return match.player_two_id;
-  if (match.player_two_id === userId) return match.player_one_id;
+  if (String(match.player_one_id) === String(userId)) return match.player_two_id;
+  if (String(match.player_two_id) === String(userId)) return match.player_one_id;
   return null;
-}
-
-function registerActiveMatch(match) {
-  activeMatchByUser.set(match.player_one_id, match);
-  activeMatchByUser.set(match.player_two_id, match);
-}
-
-function unregisterActiveMatch(match) {
-  activeMatchByUser.delete(match.player_one_id);
-  activeMatchByUser.delete(match.player_two_id);
 }
 
 // ─── Error helpers ────────────────────────────────────────────────────────────
@@ -686,6 +676,18 @@ module.exports = function registerMatchSocket(io) {
     );
 
     socket.on("match:sync", wrapSocketHandler(socket, () => handleSync(io, socket)));
+
+    socket.on("match:check-active", (callback) => {
+      const userId = socket.data?.userId;
+      if (!userId || typeof callback !== "function") return;
+
+      const match = findActiveMatchByUser(userId);
+      if (match) {
+        callback({ hasActiveMatch: true, matchId: String(match.id) });
+      } else {
+        callback({ hasActiveMatch: false, matchId: null });
+      }
+    });
 
     socket.on("disconnect", () => {
       if (waitingQueueEntry?.socketId === socket.id) {

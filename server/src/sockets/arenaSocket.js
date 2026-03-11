@@ -2,6 +2,7 @@ const { randomUUID } = require("crypto");
 const jwt = require("jsonwebtoken");
 const { User, Card, DeckCard, Match } = require("../db/models");
 const { getActiveDeckId } = require("../services/deckBuilderService");
+const { registerActiveMatch } = require("../services/activeMatchTracker");
 
 
 async function getNicknameFromSocket(socket) {
@@ -151,6 +152,7 @@ module.exports = function registerArenaSocket(io, activeGames) {
             });
 
             arena.matchId = String(match.id);
+            registerActiveMatch(match);
           }
 
           arena.status = "ready";

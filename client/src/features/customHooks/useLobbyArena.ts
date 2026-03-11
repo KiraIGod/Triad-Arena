@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import socket from "../../shared/socket/socket";
 
@@ -14,13 +14,20 @@ type JoinArenaResponse = {
   error?: string;
 };
 
+type CheckActiveResponse = {
+  hasActiveMatch: boolean;
+  matchId: string | null;
+};
+
 type UseLobbyArenaResult = {
   isOnline: boolean;
   isCreatingArena: boolean;
   isJoiningArena: boolean;
   error: string | null;
+  activeMatchId: string | null;
   handleCreateArena: () => void;
   handleJoinArena: () => void;
+  handleReconnect: () => void;
   cancelSearch: () => void;
 };
 
@@ -30,8 +37,20 @@ export function useLobbyArena(token: string | null): UseLobbyArenaResult {
   const [isJoiningArena, setIsJoiningArena] = useState(false);
   const [isOnline, setIsOnline] = useState(socket.connected);
   const [error, setError] = useState<string | null>(null);
+  const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
 
   const joinCancelledRef = useRef(false);
+
+  const checkActiveMatch = useCallback(() => {
+    if (!socket.connected) return;
+    socket.emit("match:check-active", (res?: CheckActiveResponse) => {
+      if (res?.hasActiveMatch && res.matchId) {
+        setActiveMatchId(res.matchId);
+      } else {
+        setActiveMatchId(null);
+      }
+    });
+  }, []);
 
   useEffect(() => {
     if (token) {
@@ -41,17 +60,30 @@ export function useLobbyArena(token: string | null): UseLobbyArenaResult {
       }
     }
     socket.connect();
-    const onConnect = () => setIsOnline(true);
+
+    const onConnect = () => {
+      setIsOnline(true);
+      checkActiveMatch();
+    };
     const onDisconnect = () => setIsOnline(false);
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
 
+    if (socket.connected) {
+      checkActiveMatch();
+    }
+
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
     };
-  }, [token]);
+  }, [token, checkActiveMatch]);
+
+  const handleReconnect = () => {
+    if (!activeMatchId) return;
+    navigate(`/game?matchId=${encodeURIComponent(activeMatchId)}`);
+  };
 
   const cancelSearch = () => {
     joinCancelledRef.current = true;
@@ -60,7 +92,7 @@ export function useLobbyArena(token: string | null): UseLobbyArenaResult {
   };
 
   const handleCreateArena = () => {
-    if (isCreatingArena) return;
+    if (isCreatingArena || activeMatchId) return;
 
     setError(null);
     setIsCreatingArena(true);
@@ -89,7 +121,7 @@ export function useLobbyArena(token: string | null): UseLobbyArenaResult {
   };
 
   const handleJoinArena = () => {
-    if (isJoiningArena) return;
+    if (isJoiningArena || activeMatchId) return;
 
     joinCancelledRef.current = false;
     setError(null);
@@ -128,8 +160,10 @@ export function useLobbyArena(token: string | null): UseLobbyArenaResult {
     isCreatingArena,
     isJoiningArena,
     error,
+    activeMatchId,
     handleCreateArena,
     handleJoinArena,
+    handleReconnect,
     cancelSearch
   };
 }
