@@ -26,6 +26,7 @@ import {
 } from "../shared/socket/matchSocket";
 import { useMatchBoard } from "../features/customHooks/useMatchBoard";
 import "./GamePage.css";
+import TurnCountdown from "../components/TurnCountdown";
 
 // ─── Attack flow state ────────────────────────────────────────────────────────
 
@@ -478,6 +479,9 @@ export default function GamePage() {
     );
   };
 
+  const turnKey = match ? `${match.state.turn}:${match.state.activePlayer}` : "idle";
+
+
   // ─────────────────────────────────────────────────────────────────────────────
 
   return (
@@ -548,11 +552,15 @@ export default function GamePage() {
             <p className="game-log__entry">Cards in hand: {handCards.length}</p>
           </aside>
 
+
           <div className="game-state">
-            <p className="game-state__label">Turn</p>
-            <p className="game-state__value">
-              {match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}
-            </p>
+            {/* <p className="game-state__label">Turn</p> */}
+              <p className="game-hud__name game-state__value comic-text-shadow">
+                {match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}
+              </p>
+              <p className="game-hud__name game-state__value comic-text-shadow">
+                <TurnCountdown turnKey={turnKey} seconds={30} paused={!match || match.state.finished} />
+              </p>
           </div>
 
           <div className="game-state game-state--right">
@@ -561,6 +569,8 @@ export default function GamePage() {
             </button>
           </div>
         </div>
+
+
 
         {/* Attack mode banner */}
         {isSelectingTarget && (

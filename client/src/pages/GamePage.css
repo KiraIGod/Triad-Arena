@@ -33,13 +33,13 @@
 }
 
 .game-hud {
-  position: relative;
-  z-index: 2;
+
   display: grid;
+  grid-template-columns: 1fr 60% 1fr;
+  justify-content: space-between;
   align-items: center;
-  grid-template-columns: minmax(200px, 1fr) minmax(220px, 520px) minmax(120px, auto);
-  gap: 18px;
   padding: 14px 24px;
+  z-index: 2;
 }
 
 .game-hud--top {
@@ -89,7 +89,9 @@
 }
 
 .game-hp {
-  width: 100%;
+  width: 70%;
+  min-width: 350px;
+  justify-self: center;
 }
 
 .game-hp__meta {
@@ -142,10 +144,21 @@
   text-transform: uppercase;
 }
 
+.game-state--inline {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.game-state__pair {
+  display: grid;
+  justify-items: center;
+}
+
 .game-state__label {
   margin: 0;
   font-family: var(--font-body);
-  font-size: 9px;
+  font-size: 13px;
   color: #8b7e6f;
   letter-spacing: 0.18em;
 }
@@ -154,7 +167,7 @@
   margin: 4px 0 0;
   font-family: var(--font-heading);
   color: var(--blood-red);
-  font-size: 12px;
+  font-size: 15px;
   letter-spacing: 0.12em;
 }
 
@@ -270,12 +283,12 @@
 }
 
 .game-log__entry {
-  margin: 0 0 8px;
+  margin: 0 0 4px;
   font-family: var(--font-body);
-  font-size: 10px;
+  font-size: 12px;
   text-transform: uppercase;
   color: #8b7e6f;
-  opacity: 0.55;
+  opacity: 0.7;
 }
 
 .game-log__entry--active {
