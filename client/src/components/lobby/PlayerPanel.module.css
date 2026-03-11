@@ -1,7 +1,7 @@
 .panel {
   border: 2px solid var(--ink);
   background: var(--panel-dark);
-  padding: 1rem;
+  padding: 1.3rem;
   overflow: auto;
   display: flex;
   flex-direction: column;
@@ -12,13 +12,13 @@
 .header {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 1rem;
+  gap: 0.7rem;
+  margin-bottom: 1.2rem;
 }
 
 .diamond {
-  width: 9px;
-  height: 9px;
+  width: 11px;
+  height: 11px;
   background: var(--gold);
   border: 1px solid var(--ink);
   transform: rotate(45deg);
@@ -27,7 +27,7 @@
 
 .label {
   text-transform: uppercase;
-  font-size: 0.69rem;
+  font-size: 0.9rem;
   letter-spacing: 0.22em;
   color: var(--text-muted);
   font-weight: 700;
@@ -46,22 +46,22 @@
 .ratingCard {
   border: 2px solid var(--ink);
   background: rgba(17, 13, 11, 0.92);
-  padding: 0.9rem 1rem 1rem;
-  margin-bottom: 0.9rem;
+  padding: 1.1rem 1.2rem 1.2rem;
+  margin-bottom: 1rem;
 }
 
 .kicker {
-  margin: 0 0 0.45rem;
+  margin: 0 0 0.5rem;
   text-transform: uppercase;
-  font-size: 0.62rem;
+  font-size: 0.8rem;
   letter-spacing: 0.22em;
   color: var(--text-muted);
   font-weight: 700;
 }
 
 .ratingNumber {
-  margin: 0 0 0.5rem;
-  font-size: clamp(2rem, 5vw, 3rem);
+  margin: 0 0 0.6rem;
+  font-size: clamp(2.4rem, 5vw, 3.4rem);
   line-height: 1;
   letter-spacing: -0.03em;
   font-weight: 900;
@@ -71,24 +71,24 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.6rem;
   flex-wrap: wrap;
 }
 
 .rankBadge {
   display: inline-block;
-  padding: 0.18rem 0.55rem;
+  padding: 0.25rem 0.65rem;
   border: 1px solid var(--ink);
   background: rgba(201, 169, 98, 0.12);
   color: var(--gold);
-  font-size: 0.62rem;
+  font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.15em;
   text-transform: uppercase;
 }
 
 .winrate {
-  font-size: 0.62rem;
+  font-size: 0.8rem;
   letter-spacing: 0.1em;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -98,22 +98,22 @@
 .statCard {
   border: 2px solid var(--ink);
   background: rgba(22, 18, 14, 0.9);
-  padding: 0.75rem 0.9rem;
-  margin-bottom: 0.7rem;
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 0.8rem;
 }
 
 .deckName {
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.07em;
-  font-size: 1.05rem;
+  font-size: 1.2rem;
   font-weight: 800;
 }
 
 .deckMeta {
-  margin: 0.28rem 0 0;
+  margin: 0.35rem 0 0;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
@@ -122,37 +122,37 @@
 .triadGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.45rem;
-  margin: 0 0 0.8rem;
+  gap: 0.55rem;
+  margin: 0 0 0.9rem;
 }
 
 .triadBox {
   border: 2px solid var(--ink);
   background: rgba(10, 8, 7, 0.75);
-  padding: 0.5rem 0.35rem;
+  padding: 0.6rem 0.45rem;
   text-align: center;
 }
 
 .triadBox span {
   display: block;
   text-transform: uppercase;
-  font-size: 0.56rem;
+  font-size: 0.72rem;
   letter-spacing: 0.15em;
   color: var(--text-muted);
 }
 
 .triadBox strong {
   display: block;
-  margin-top: 0.2rem;
-  font-size: 1rem;
+  margin-top: 0.25rem;
+  font-size: 1.2rem;
 }
 
 /* Deck readiness */
 .deckReady,
 .deckIncomplete {
-  padding: 0.5rem 0.75rem;
-  margin-bottom: 0.75rem;
-  font-size: 0.62rem;
+  padding: 0.6rem 0.9rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.18em;
   text-transform: uppercase;
@@ -181,11 +181,11 @@
   text-transform: uppercase;
   font-weight: 900;
   letter-spacing: 0.18em;
-  font-size: 0.72rem;
-  padding: 0.8rem;
+  font-size: 0.9rem;
+  padding: 0.9rem;
   cursor: pointer;
   transition: filter 0.2s ease;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
 }
 
 .btnEdit:hover {
@@ -200,8 +200,8 @@
   text-transform: uppercase;
   font-weight: 700;
   letter-spacing: 0.18em;
-  font-size: 0.66rem;
-  padding: 0.6rem;
+  font-size: 0.85rem;
+  padding: 0.7rem;
   cursor: pointer;
   transition: color 0.2s ease, background 0.2s ease;
 }

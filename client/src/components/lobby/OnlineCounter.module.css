@@ -1,12 +1,12 @@
 .counter {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   text-transform: uppercase;
-  font-size: 0.62rem;
+  font-size: 0.85rem;
   letter-spacing: 0.18em;
   color: var(--text-muted);
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.9rem;
 }
 
 .counter strong {
@@ -15,8 +15,8 @@
 }
 
 .dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   background: #6cca86;
   flex-shrink: 0;
