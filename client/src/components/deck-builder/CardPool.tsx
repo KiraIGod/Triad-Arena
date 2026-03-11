@@ -1,5 +1,6 @@
 import { useMemo, useState, useEffect } from "react"
 import type { DeckBuilderCard } from "../../types/deckBuilder"
+import { toStaticUrl } from "../../shared/lib/toStaticUrl"
 
 type CardPoolProps = {
   cards: DeckBuilderCard[];
@@ -352,6 +353,18 @@ export default function CardPool({
               onClick={() => onAddCard(card.id)}
             >
               <div className="poolCard__mana">{card.mana_cost}</div>
+
+              {card.image && (
+                <div className="poolCard__imageWrap">
+                  <img
+                    className="poolCard__image"
+                    src={toStaticUrl(card.image)}
+                    alt={card.name}
+                    loading="lazy"
+                  />
+                </div>
+              )}
+
               <div className="poolCard__name">{card.name}</div>
               <div className="poolCard__type">{card.type}</div>
 
