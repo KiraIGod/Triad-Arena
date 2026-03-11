@@ -555,12 +555,16 @@ export default function GamePage() {
 
           <div className="game-state">
             {/* <p className="game-state__label">Turn</p> */}
-              <p className="game-hud__name game-state__value comic-text-shadow">
-                {match ? (isMyTurn ? "Your turn" : "Opponent's turn") : "-"}
-              </p>
-              <p className="game-hud__name game-state__value comic-text-shadow">
+            {match ? (isMyTurn ? 
+            <p className="game-hud__name game-state__value--active-turn comic-text-shadow">Your turn</p> : 
+            <p className="game-hud__name game-state__value">Opponent's turn</p>) : "-"}
+            {match ? (isMyTurn ? 
+            <p className="game-hud__name game-state__value--active-turn comic-text-shadow">
+              <TurnCountdown turnKey={turnKey} seconds={30} paused={!match || match.state.finished} />
+            </p> :
+              <p className="game-hud__name game-state__value">
                 <TurnCountdown turnKey={turnKey} seconds={30} paused={!match || match.state.finished} />
-              </p>
+              </p>) : "-"}
           </div>
 
           <div className="game-state game-state--right">
@@ -679,3 +683,4 @@ export default function GamePage() {
     </div>
   );
 }
+

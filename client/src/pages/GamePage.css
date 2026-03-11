@@ -171,6 +171,13 @@
   letter-spacing: 0.12em;
 }
 
+.game-state__value--active-turn {
+  color: var(--gold-accent);
+  text-shadow:
+    0 0 6px rgba(201, 169, 98, 0.55),
+    0 0 12px rgba(201, 169, 98, 0.35);
+}
+
 .game-battlefield {
   position: relative;
   z-index: 1;
