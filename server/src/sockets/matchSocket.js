@@ -232,18 +232,36 @@ async function cleanupFinishedMatch(io, match, persistedState, safeState, matchI
 
 // ─── Turn timer ───────────────────────────────────────────────────────────────
 
+const TURN_DURATION = 45;
+
 function clearTurnTimer(matchId) {
-  const timer = turnTimers.get(String(matchId));
-  if (timer) {
-    clearTimeout(timer);
+  const entry = turnTimers.get(String(matchId));
+  if (entry) {
+    clearInterval(entry.interval);
     turnTimers.delete(String(matchId));
   }
 }
 
 function startTurnTimer(io, matchId, playerId) {
   clearTurnTimer(matchId);
-  const timer = setTimeout(() => forceEndTurn(io, matchId, playerId), 30000);
-  turnTimers.set(String(matchId), timer);
+
+  let remaining = TURN_DURATION;
+  io.to(String(matchId)).emit("match:timer", { remaining });
+
+  const interval = setInterval(() => {
+    remaining -= 1;
+    io.to(String(matchId)).emit("match:timer", { remaining });
+
+    if (remaining <= 0) {
+      clearInterval(interval);
+      turnTimers.delete(String(matchId));
+      forceEndTurn(io, matchId, playerId).catch((err) =>
+        console.error("[turnTimer] forceEndTurn failed:", err?.message || err)
+      );
+    }
+  }, 1000);
+
+  turnTimers.set(String(matchId), { interval, getRemaining: () => remaining });
 }
 
 async function forceEndTurn(io, matchId, playerId) {
@@ -395,7 +413,6 @@ async function handlePlayCard(io, socket, payload = {}) {
 
   const incomingVersion = parseIncomingVersion(version);
   enforceActionRateLimit(socket);
-  clearTurnTimer(matchId);
 
   const { match, state } = await loadMatchState(matchId);
   const playerId = getPlayerFromSocket(socket);
@@ -569,6 +586,11 @@ async function handleSync(io, socket) {
   }
 
   socket.join(String(match.id));
+
+  const timerEntry = turnTimers.get(String(match.id));
+  if (timerEntry) {
+    socket.emit("match:timer", { remaining: timerEntry.getRemaining() });
+  }
 
   const cachedState = runtimeMatchState.get(String(match.id));
   if (cachedState) {

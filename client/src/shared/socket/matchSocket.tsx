@@ -79,6 +79,10 @@ export type MatchFinishPayload = {
   message?: string;
 };
 
+export type MatchTimerPayload = {
+  remaining: number;
+};
+
 // ─── Emit helpers ─────────────────────────────────────────────────────────────
 
 export function syncMatch(): void {
@@ -152,4 +156,12 @@ export function offMatchError(handler: (payload: MatchErrorPayload) => void): vo
 
 export function offMatchFinish(handler: (payload: MatchFinishPayload) => void): void {
   matchSocket.off("match:finish", handler);
+}
+
+export function onMatchTimer(handler: (payload: MatchTimerPayload) => void): void {
+  matchSocket.on("match:timer", handler);
+}
+
+export function offMatchTimer(handler: (payload: MatchTimerPayload) => void): void {
+  matchSocket.off("match:timer", handler);
 }
