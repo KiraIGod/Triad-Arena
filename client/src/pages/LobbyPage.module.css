@@ -40,7 +40,7 @@
 
 .bgTexture {
   background-color: var(--bg-main);
-  opacity: 0.45;
+  opacity: 0.3;
 }
 
 .bgVignette {
