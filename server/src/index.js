@@ -28,7 +28,7 @@ app.use("/api/leaderboard", leaderboardRoutes)
 app.use("/api/deck-builder", deckBuilderRoutes)
 app.use("/api/matches", matchesRoutes)
 app.use("/api/players", playersRoutes)
-app.use(express.static(path.join(__dirname, 'public')))
+app.use('/static', express.static(path.join(__dirname, 'public')))
 
 initSocket(server)
 
