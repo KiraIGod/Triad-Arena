@@ -648,7 +648,7 @@ export default function GamePage() {
 
 
 
-        {matchError && (
+        {matchError && matchError !== "This unit cannot attack yet" && (
           <div className="game-attack-banner game-attack-banner--error">
             <span>{matchError}</span>
           </div>
@@ -657,11 +657,18 @@ export default function GamePage() {
         <main className="game-battlefield">
           <div className="game-battlefield-layout">
             {/* My board (left) */}
-            <div className="battlefield-row battlefield-row--self">
-              <p className="battlefield-col-title">My Units</p>
-              {selfStats.board.length > 0
-                ? selfStats.board.map((unit) => renderUnit(unit, true))
-                : <span className="battlefield-empty">No units</span>}
+            <div className="battlefield-self-col">
+              {matchError === "This unit cannot attack yet" && (
+                <div className="battlefield-target-overlay battlefield-target-overlay--self">
+                  <span className="game-state__target-hint">This unit cannot attack yet</span>
+                </div>
+              )}
+              <div className="battlefield-row battlefield-row--self">
+                <p className="battlefield-col-title">My Units</p>
+                {selfStats.board.length > 0
+                  ? selfStats.board.map((unit) => renderUnit(unit, true))
+                  : <span className="battlefield-empty">No units</span>}
+              </div>
             </div>
 
             {/* Center board */}

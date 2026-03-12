@@ -5,7 +5,8 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
   background: #0e0e0e;
   color: var(--foreground);
 }
@@ -258,6 +259,10 @@
   z-index: 6;
 }
 
+.battlefield-target-overlay--self {
+  left: 0;
+}
+
 .game-battlefield-layout {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr) minmax(220px, 1fr);
@@ -268,7 +273,8 @@
   height: 100%;
 }
 
-.game-battlefield-layout > .battlefield-row--self {
+.game-battlefield-layout > .battlefield-row--self,
+.game-battlefield-layout > .battlefield-self-col {
   grid-column: 1;
   min-width: 220px;
 }
@@ -291,6 +297,16 @@
   display: flex;
 }
 
+.battlefield-self-col {
+  position: relative;
+  min-height: 0;
+  display: flex;
+}
+
+.battlefield-self-col > .battlefield-row--self {
+  flex: 1 1 auto;
+}
+
 .battlefield-enemy-col > .battlefield-row--enemy {
   flex: 1 1 auto;
 }
@@ -304,7 +320,7 @@
   flex-direction: column;
   align-items: stretch;
   justify-content: space-between;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .game-battlefield__divider {
@@ -507,13 +523,13 @@
 
 .game-hand {
   position: relative;
-  z-index: 2;
+  z-index: 12;
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  gap: 10px;
+  gap: 0;
   padding: 8px 12px 10px;
-  /* overflow-x: auto; */
+  overflow: visible;
   min-height: 150px;
   box-sizing: border-box;
   flex: 0 0 auto;
@@ -534,12 +550,19 @@
 }
 
 .game-hand__slot {
+  position: relative;
   transform: rotate(var(--slot-rotation));
   transition: transform 0.2s ease;
 }
 
+.game-hand__slot:hover {
+  transform: translateY(-16px) rotate(var(--slot-rotation));
+  z-index: 999 !important;
+}
+
 .game-hand__slot.is-selected {
   transform: translateY(-20px) rotate(0deg);
+  z-index: 1000 !important;
 }
 
 .game-top-row {
@@ -564,7 +587,8 @@
   .game-screen {
     height: 100vh;
     height: 100dvh;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
 
   .game-hud {
@@ -601,8 +625,7 @@
   .game-hand {
     min-height: 120px;
     padding: 6px 8px 10px;
-    overflow-x: auto;
-    overflow-y: visible;
+    overflow: visible;
   }
 
   .game-content {
@@ -627,7 +650,9 @@
   }
 
   .game-battlefield-layout > .battlefield-row--self,
+  .game-battlefield-layout > .battlefield-self-col,
   .game-battlefield-layout > .battlefield-row--enemy,
+  .game-battlefield-layout > .battlefield-enemy-col,
   .game-battlefield-layout > .game-board {
     width: auto;
     min-width: 0;
