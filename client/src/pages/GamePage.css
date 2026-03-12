@@ -374,6 +374,15 @@
   cursor: pointer;
 }
 
+.game-end-turn--gold {
+  background: linear-gradient(180deg, #c9a962 0%, #8f7440 100%);
+  color: #1a1612;
+  padding: 0 27px;
+  box-shadow:
+    0 0 16px rgba(201, 169, 98, 0.35),
+    inset 0 2px 4px rgba(0, 0, 0, 0.35);
+}
+
 .game-hand {
   position: relative;
   z-index: 2;
