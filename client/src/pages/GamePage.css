@@ -211,11 +211,12 @@
   /* position: absolute; */
   /* inset: 24px 300px 24px 300px; */
   z-index: 1;
-  display: block;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
 }
 
 .game-board__side {
-  border: 2px solid #000;
   background: rgba(18, 14, 10, 0.5);
   padding: 10px;
   display: flex;

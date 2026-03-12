@@ -47,7 +47,14 @@ export type MatchStatePayload = {
       player1: PlayerState;
       player2: PlayerState;
     };
-    turnActions: Array<{ actionId: string; cardId: string; playerId: string }>;
+    turnActions: Array<{
+      actionIndex: number | null;
+      actionId: string | null;
+      playerId: string | null;
+      turnOwnerId: string | null;
+      cardId: string | null;
+      timestamp: number | null;
+    }>;
     finished: boolean;
   };
   events?: Array<{

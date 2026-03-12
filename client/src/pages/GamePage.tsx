@@ -31,6 +31,7 @@ import { useMatchBoard } from "../features/customHooks/useMatchBoard";
 import "./GamePage.css";
 import TurnCountdown from "../components/TurnCountdown";
 import LeaveArenaConfirmModal from "../components/LeaveArenaConfirmModal";
+import MatchBoard from "../components/MatchBoard";
 
 
 // ─── Attack flow state ────────────────────────────────────────────────────────
@@ -38,6 +39,8 @@ import LeaveArenaConfirmModal from "../components/LeaveArenaConfirmModal";
 type AttackState =
   | { mode: "idle" }
   | { mode: "selectingTarget"; attackerInstanceId: string };
+
+type StatusView = { type: string; turns?: number; amount?: number };
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -71,6 +74,23 @@ export default function GamePage() {
 
   const isSameUser = (value: string | number | null | undefined) =>
     String(value ?? "").trim().toLowerCase() === String(userIdStr ?? "").trim().toLowerCase();
+
+  const formatStatuses = (statuses?: StatusView[]): string => {
+    if (!Array.isArray(statuses) || statuses.length === 0) return "None";
+
+    return statuses
+      .map((status) => {
+        const type = String(status?.type || "unknown");
+        const hasTurns = Number.isFinite(status?.turns);
+        const hasAmount = Number.isFinite(status?.amount);
+
+        if (hasAmount && hasTurns) return `${type}(+${status.amount},${status.turns})`;
+        if (hasAmount) return `${type}(+${status.amount})`;
+        if (hasTurns) return `${type}(${status.turns})`;
+        return type;
+      })
+      .join(", ");
+  };
 
   // ── URL params sync ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -542,7 +562,7 @@ export default function GamePage() {
           <p className="game-state__label">Opponent Status</p>
           <p className="game-state__value">
             {(oppStats.statuses || []).length
-              ? (oppStats.statuses || []).map((s) => s.type).join(", ")
+              ? formatStatuses(oppStats.statuses)
               : isSelectingTarget ? "← Click to attack hero" : "None"}
           </p>
         </div>
@@ -614,6 +634,8 @@ export default function GamePage() {
         )}
 
         <main className="game-battlefield">
+          <MatchBoard cards={playedCards} currentUserId={userIdStr} />
+
           {/* Enemy board */}
           <div className="battlefield-row battlefield-row--enemy">
             {oppStats.board.length > 0
@@ -688,9 +710,7 @@ export default function GamePage() {
           <div className="game-state">
             <p className="game-state__label">Your Status</p>
             <p className="game-state__value">
-              {(selfStats.statuses || []).length
-                ? (selfStats.statuses || []).map((s) => s.type).join(", ")
-                : "None"}
+              {formatStatuses(selfStats.statuses)}
             </p>
           </div>
           <div className="game-energy" aria-label="Resolve">
