@@ -24,6 +24,7 @@ function toCardModel(card: NonNullable<NonNullable<MatchStatePayload["events"]>[
 
 export function useMatchBoard() {
   const [playedCards, setPlayedCards] = useState<PlayedBoardCard[]>([]);
+  const [cardCatalog, setCardCatalog] = useState<Record<string, CardModel>>({});
   const processedKeysRef = useRef<Set<string>>(new Set());
 
   const applyEvents = useCallback((events?: MatchStatePayload["events"]) => {
@@ -47,6 +48,7 @@ export function useMatchBoard() {
       processedKeysRef.current.add(uniqueKey);
 
       const mappedCard = toCardModel(payload.card);
+      setCardCatalog((prev) => ({ ...prev, [mappedCard.id]: mappedCard }));
       setPlayedCards((prev) => [
         ...prev,
         { card: mappedCard, playerId: typeof payload.playerId === "string" ? payload.playerId : null }
@@ -57,10 +59,12 @@ export function useMatchBoard() {
   const resetBoard = useCallback(() => {
     processedKeysRef.current.clear();
     setPlayedCards([]);
+    setCardCatalog({});
   }, []);
 
   return {
     playedCards,
+    cardCatalog,
     applyEvents,
     resetBoard
   };
