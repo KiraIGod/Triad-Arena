@@ -81,6 +81,8 @@ export default function GamePage() {
   const [selectedCardReason, setSelectedCardReason] = useState<string | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [finishReason, setFinishReason] = useState<string | null>(null);
+  const [ratingChange, setRatingChange] = useState<number | null>(null);
+  const [finishGameMode, setFinishGameMode] = useState<string | null>(null);
   const [attackState, setAttackState] = useState<AttackState>({ mode: "idle" });
   const [timerRemaining, setTimerRemaining] = useState(45);
 
@@ -239,11 +241,16 @@ export default function GamePage() {
     const handleFinish = (payload: MatchFinishPayload) => {
       setFinishReason(payload.reason ?? null);
       setWinnerId(payload.winnerId ?? null);
+      setFinishGameMode(payload.gameMode ?? null);
       setTimerRemaining(0);
       setSelectedCardId(null);
       setSelectedCardReason(null);
       setAttackState({ mode: "idle" });
       setMatch((prev) => (prev ? { ...prev, state: { ...prev.state, finished: true } } : prev));
+
+      if (payload.ratingChanges && userIdStr && payload.ratingChanges[userIdStr] !== undefined) {
+        setRatingChange(payload.ratingChanges[userIdStr]);
+      }
 
       if (payload.reason === "opponent_left") {
         const cowardMessage = "Opponent cowardly left the arena";
@@ -699,6 +706,21 @@ export default function GamePage() {
             <span className="comic-text-shadow">{matchResultLabel ?? "Match finished"}</span>
             {finishReason === "disconnect" && (
               <p style={{ marginTop: 8, textAlign: "center" }}>Opponent disconnected</p>
+            )}
+            {finishGameMode === "ranked" && ratingChange !== null && (
+              <p
+                className="comic-text-shadow"
+                style={{
+                  marginTop: 10,
+                  textAlign: "center",
+                  fontSize: "1.3rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.06em",
+                  color: ratingChange >= 0 ? "#6cca86" : "#c85040"
+                }}
+              >
+                {ratingChange >= 0 ? `+${ratingChange}` : ratingChange} Rating
+              </p>
             )}
             <div style={{ marginTop: 12, textAlign: "center" }}>
               <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>

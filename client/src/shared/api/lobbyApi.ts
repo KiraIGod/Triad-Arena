@@ -11,6 +11,7 @@ export type MatchHistoryEntry = {
   turns: number;
   hpLeft: number;
   date: string | null;
+  gameMode?: "normal" | "ranked" | "private";
 };
 
 export type PlayerStats = {

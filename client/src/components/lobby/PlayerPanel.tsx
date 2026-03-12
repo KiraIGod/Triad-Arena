@@ -30,12 +30,21 @@ export function PlayerPanel({ nickname, stats, deck, onEditDeck }: PlayerPanelPr
       </div>
 
       <div className={styles.ratingCard}>
-        <p className={styles.kicker}>Resolve</p>
+        <p className={styles.kicker}>Rating</p>
         <p className={styles.ratingNumber}>{ratingDisplay}</p>
         <div className={styles.ratingMeta}>
           <span className={styles.rankBadge}>{rankDisplay}</span>
           <span className={styles.winrate}>{winrate}% winrate</span>
         </div>
+        {stats && (
+          <div className={styles.statsRow}>
+            <span className={styles.statWins}>{stats.wins}W</span>
+            <span className={styles.statSep}>/</span>
+            <span className={styles.statLosses}>{stats.losses}L</span>
+            <span className={styles.statSep}>/</span>
+            <span className={styles.statGames}>{stats.games_played} games</span>
+          </div>
+        )}
       </div>
 
       <div className={styles.statCard}>

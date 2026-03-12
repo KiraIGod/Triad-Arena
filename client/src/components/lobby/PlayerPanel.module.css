@@ -94,6 +94,34 @@
   text-transform: uppercase;
 }
 
+.statsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.statWins {
+  color: #6cca86;
+}
+
+.statLosses {
+  color: #c85040;
+}
+
+.statGames {
+  color: var(--text-muted);
+}
+
+.statSep {
+  color: var(--text-muted);
+  opacity: 0.4;
+}
+
 /* Deck stat card */
 .statCard {
   border: 2px solid var(--ink);

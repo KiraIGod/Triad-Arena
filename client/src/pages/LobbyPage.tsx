@@ -70,7 +70,7 @@ export default function LobbyPage() {
     activeMatchId,
     searchTimeLeft,
     cancelSearch,
-  } = useLobbyArena(token);
+  } = useLobbyArena(token, gameMode);
 
   useEffect(() => {
     if (!token) return;
@@ -90,7 +90,7 @@ export default function LobbyPage() {
     setMatchesLoading(true);
     fetchMatchHistory(token)
       .then((data) => {
-        setMatches(data);
+        setMatches(data.slice(0, 15));
         setMatchesError(null);
       })
       .catch(() => setMatchesError("Failed to load match history"))

@@ -84,6 +84,8 @@ export type MatchFinishPayload = {
   winnerId: string | null;
   reason?: string;
   message?: string;
+  ratingChanges?: Record<string, number> | null;
+  gameMode?: string;
 };
 
 export type MatchTimerPayload = {

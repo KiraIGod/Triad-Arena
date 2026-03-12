@@ -11,10 +11,18 @@ function formatDate(dateStr: string | null): string {
   if (!dateStr) return "—";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  return d.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  });
 }
 
-export function MatchHistoryPanel({ matches, loading, error }: MatchHistoryPanelProps) {
+export function MatchHistoryPanel({
+  matches,
+  loading,
+  error,
+}: MatchHistoryPanelProps) {
   return (
     <section className={styles.panel}>
       <div className={styles.header}>
@@ -43,30 +51,47 @@ export function MatchHistoryPanel({ matches, loading, error }: MatchHistoryPanel
           </div>
         )}
 
-        {!loading && !error && matches.map((m, i) => (
-          <div key={m.matchId ?? i} className={styles.matchCard}>
-            <span
-              className={m.result === "Victory" ? styles.indicatorVictory : styles.indicatorDefeat}
-              aria-hidden
-            />
-            <div className={styles.matchMain}>
-              <div className={styles.matchRow}>
-                <span className={styles.opponent}>{m.opponent}</span>
-                <span className={m.result === "Victory" ? styles.resultVictory : styles.resultDefeat}>
-                  {m.result}
-                </span>
+        {!loading &&
+          !error &&
+          matches.map((m, i) => (
+            <div key={m.matchId ?? i} className={styles.matchCard}>
+              <span
+                className={
+                  m.result === "Victory"
+                    ? styles.indicatorVictory
+                    : styles.indicatorDefeat
+                }
+                aria-hidden
+              />
+              <div className={styles.matchMain}>
+                <div className={styles.matchRow}>
+                  <span className={styles.opponent}>
+                    {m.gameMode === "ranked" && (
+                      <span className={styles.rankedBadge} title="Ranked">R</span>
+                    )}
+                    {m.opponent}
+                  </span>
+                  <span
+                    className={
+                      m.result === "Victory"
+                        ? styles.resultVictory
+                        : styles.resultDefeat
+                    }
+                  >
+                    {m.result}
+                  </span>
+                </div>
+                <div className={styles.matchRow}>
+                  <span className={styles.meta}>{formatDate(m.date)}</span>
+                  <span className={styles.meta}>Turns: {m.turns}</span>
+                </div>
               </div>
-              <div className={styles.matchRow}>
-                <span className={styles.meta}>{formatDate(m.date)}</span>
-                <span className={styles.meta}>Turns: {m.turns}</span>
+              <div className={styles.hpBox}>
+                <span className={styles.hpLabel}>HP Left</span>
+                <strong className={styles.hpValue}>{m.hpLeft}</strong>
               </div>
             </div>
-            <div className={styles.hpBox}>
-              <span className={styles.hpLabel}>HP Left</span>
-              <strong className={styles.hpValue}>{m.hpLeft}</strong>
-            </div>
-          </div>
-        ))}
+          ))}
       </div>
     </section>
   );

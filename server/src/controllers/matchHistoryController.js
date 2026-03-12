@@ -40,7 +40,8 @@ async function getMatchHistory(req, res) {
         result,
         turns: m.total_turns ?? 0,
         hpLeft,
-        date: m.finished_at
+        date: m.finished_at,
+        gameMode: m.game_mode || "normal"
       };
     });
 
