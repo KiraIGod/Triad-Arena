@@ -2,6 +2,11 @@ import { useCallback, useRef, useState } from "react";
 import type { CardModel } from "../../components/Card";
 import type { MatchStatePayload } from "../../shared/socket/matchSocket";
 
+export type PlayedBoardCard = {
+  card: CardModel;
+  playerId: string | null;
+};
+
 function toCardModel(card: NonNullable<NonNullable<MatchStatePayload["events"]>[number]["payload"]["card"]>): CardModel {
   return {
     id: card.id,
@@ -18,7 +23,8 @@ function toCardModel(card: NonNullable<NonNullable<MatchStatePayload["events"]>[
 }
 
 export function useMatchBoard() {
-  const [playedCards, setPlayedCards] = useState<CardModel[]>([]);
+  const [playedCards, setPlayedCards] = useState<PlayedBoardCard[]>([]);
+  const [cardCatalog, setCardCatalog] = useState<Record<string, CardModel>>({});
   const processedKeysRef = useRef<Set<string>>(new Set());
 
   const applyEvents = useCallback((events?: MatchStatePayload["events"]) => {
@@ -42,17 +48,23 @@ export function useMatchBoard() {
       processedKeysRef.current.add(uniqueKey);
 
       const mappedCard = toCardModel(payload.card);
-      setPlayedCards((prev) => [...prev, mappedCard]);
+      setCardCatalog((prev) => ({ ...prev, [mappedCard.id]: mappedCard }));
+      setPlayedCards((prev) => [
+        ...prev,
+        { card: mappedCard, playerId: typeof payload.playerId === "string" ? payload.playerId : null }
+      ]);
     }
   }, []);
 
   const resetBoard = useCallback(() => {
     processedKeysRef.current.clear();
     setPlayedCards([]);
+    setCardCatalog({});
   }, []);
 
   return {
     playedCards,
+    cardCatalog,
     applyEvents,
     resetBoard
   };

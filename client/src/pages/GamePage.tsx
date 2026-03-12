@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
-import type { CardModel } from "../components/Card";
+import { GameCard, type CardModel } from "../components/Card";
 import HandCards from "../components/HandCards";
 import socket from "../shared/socket/socket";
 import {
@@ -31,6 +31,7 @@ import { useMatchBoard } from "../features/customHooks/useMatchBoard";
 import "./GamePage.css";
 import TurnCountdown from "../components/TurnCountdown";
 import LeaveArenaConfirmModal from "../components/LeaveArenaConfirmModal";
+import MatchBoard from "../components/MatchBoard";
 
 
 // ─── Attack flow state ────────────────────────────────────────────────────────
@@ -38,6 +39,24 @@ import LeaveArenaConfirmModal from "../components/LeaveArenaConfirmModal";
 type AttackState =
   | { mode: "idle" }
   | { mode: "selectingTarget"; attackerInstanceId: string };
+
+type StatusView = { type: string; turns?: number; amount?: number };
+
+function mapMatchErrorMessage(type?: string, fallback?: string): string {
+  const normalized = String(type || "").toUpperCase();
+
+  if (normalized === "INVALID_TURN") return "Not your turn.";
+  if (normalized === "STATE_OUTDATED") return "Game state outdated. Syncing...";
+  if (normalized === "DUPLICATE_ACTION") return "Action already processed.";
+  if (normalized === "RATE_LIMIT") return "Too many actions. Slow down.";
+  if (normalized === "MATCH_FINISHED") return "Match already finished.";
+  if (normalized === "INVALID_CARD") return "Card not found.";
+  if (normalized === "INVALID_DECK") return "Deck must contain 20 valid cards.";
+  if (normalized === "MATCH_FULL") return "Match is full.";
+  if (normalized === "INVALID_ACTION") return "Invalid action.";
+
+  return fallback || "Match action failed.";
+}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -59,7 +78,6 @@ export default function GamePage() {
   const [match, setMatch] = useState<MatchStatePayload | null>(null);
   const [matchError, setMatchError] = useState<string | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [logEntries, setLogEntries] = useState<string[]>(["Awaiting actions..."]);
   const [selectedCardReason, setSelectedCardReason] = useState<string | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [finishReason, setFinishReason] = useState<string | null>(null);
@@ -67,10 +85,45 @@ export default function GamePage() {
   const [timerRemaining, setTimerRemaining] = useState(45);
 
   const joinedMatchRef = useRef<string | null>(null);
-  const { playedCards, applyEvents, resetBoard } = useMatchBoard();
+  const { playedCards, cardCatalog, applyEvents, resetBoard } = useMatchBoard();
 
   const isSameUser = (value: string | number | null | undefined) =>
     String(value ?? "").trim().toLowerCase() === String(userIdStr ?? "").trim().toLowerCase();
+
+  const formatStatusLabel = (status: StatusView): string => {
+    const type = String(status?.type || "unknown").toUpperCase();
+    const hasTurns = Number.isFinite(status?.turns);
+    const hasAmount = Number.isFinite(status?.amount);
+
+    if (type === "SHIELD" && hasAmount && hasTurns) return `${type} +${status.amount} • ${status.turns}t`;
+    if (type === "SHIELD" && hasAmount) return `${type} +${status.amount}`;
+    if (hasTurns) return `${type} x${status.turns}`;
+    return type;
+  };
+
+  const getStatusBadgeClass = (statusType?: string): string => {
+    const type = String(statusType || "").toLowerCase();
+    if (type === "burn") return "game-status-badge game-status-badge--burn";
+    if (type === "weak") return "game-status-badge game-status-badge--weak";
+    if (type === "stun") return "game-status-badge game-status-badge--stun";
+    if (type === "shield") return "game-status-badge game-status-badge--shield";
+    return "game-status-badge";
+  };
+
+  const renderStatuses = (statuses?: StatusView[]) => {
+    if (!Array.isArray(statuses) || statuses.length === 0) {
+      return "None";
+    }
+
+    return statuses.map((status, index) => (
+      <span
+        key={`${status.type}-${status.turns ?? "na"}-${status.amount ?? "na"}-${index}`}
+        className={getStatusBadgeClass(status.type)}
+      >
+        {formatStatusLabel(status)}
+      </span>
+    ));
+  };
 
   // ── URL params sync ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -81,19 +134,6 @@ export default function GamePage() {
   }, [searchParams]);
 
   // ── Action log ───────────────────────────────────────────────────────────────
-  const appendLog = (entry: string) => {
-    setLogEntries((prev) => [entry, ...prev].slice(0, 8));
-  };
-
-  const toActionLogEntry = (event: NonNullable<MatchStatePayload["events"]>[number]): string => {
-    if (!event) return "Unknown event";
-    const p = event.payload || {};
-    if (event.type === "CARD_PLAYED") return `Card played: ${String(p.cardId ?? "unknown")}`;
-    if (event.type === "UNIT_ATTACKED") return `Attack: ${String(p.unitId ?? "?")} → ${String(p.targetType ?? "?")}`;
-    if (event.type === "TURN_ENDED") return `Turn ended by ${String(p.playerId ?? "unknown")}`;
-    if (event.type === "MATCH_FINISHED") return `Match finished`;
-    return event.type;
-  };
 
   // ── Arena socket ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -166,7 +206,6 @@ export default function GamePage() {
     };
     const onDisconnect = () => {
       setIsReconnecting(true);
-      appendLog("Reconnecting...");
     };
 
     const handleState = (payload: MatchStatePayload) => {
@@ -174,10 +213,10 @@ export default function GamePage() {
       setSelectedCardReason(null);
       setAttackState({ mode: "idle" });
       setMatch(payload);
+      if (payload.state.finished) setTimerRemaining(0);
       setArenaMatchId(payload.matchId);
       if (payload.events?.length) {
         applyEvents(payload.events);
-        payload.events.forEach((event) => appendLog(toActionLogEntry(event)));
       }
     };
 
@@ -186,21 +225,21 @@ export default function GamePage() {
       setSelectedCardReason(null);
       setAttackState({ mode: "idle" });
       setMatch(payload);
+      if (payload.state.finished) setTimerRemaining(0);
       if (payload.events?.length) {
         applyEvents(payload.events);
-        payload.events.forEach((event) => appendLog(toActionLogEntry(event)));
       }
     };
 
     const handleError = (payload: MatchErrorPayload) => {
-      setMatchError(payload.message || "Match action failed");
-      appendLog(payload.message || "Match action failed");
+      setMatchError(mapMatchErrorMessage(payload.type, payload.message));
       if (payload.type === "STATE_OUTDATED") syncMatch();
     };
 
     const handleFinish = (payload: MatchFinishPayload) => {
       setFinishReason(payload.reason ?? null);
       setWinnerId(payload.winnerId ?? null);
+      setTimerRemaining(0);
       setSelectedCardId(null);
       setSelectedCardReason(null);
       setAttackState({ mode: "idle" });
@@ -209,10 +248,8 @@ export default function GamePage() {
       if (payload.reason === "opponent_left") {
         const cowardMessage = "Opponent cowardly left the arena";
         setMatchError(cowardMessage);
-        appendLog(cowardMessage);
         return;
       }
-      appendLog(payload.reason ? `Match finished: ${payload.reason}` : "Match finished");
     };
 
     const handleTimer = (payload: MatchTimerPayload) => {
@@ -417,12 +454,18 @@ export default function GamePage() {
   const handleEnemyHeroClick = useCallback(() => {
     if (attackState.mode !== "selectingTarget" || !match) return;
 
+    const enemyHeroId = match.players.find((id) => !isSameUser(id));
+    if (!enemyHeroId) {
+      setMatchError("Enemy hero target not found");
+      return;
+    }
+
     const actionId = `atk-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     attackWithUnit({
       matchId: match.matchId,
       unitId: attackState.attackerInstanceId,
       targetType: "hero",
-      targetId: match.players.find((id) => !isSameUser(id)) ?? "",
+      targetId: enemyHeroId,
       actionId,
       version: match.state.version
     });
@@ -461,13 +504,29 @@ export default function GamePage() {
   const isSelectingTarget = attackState.mode === "selectingTarget";
   const selectedAttackerId = isSelectingTarget ? attackState.attackerInstanceId : null;
 
+  const toBoardCardModel = (unit: UnitInstance): CardModel => {
+    const base = cardCatalog[unit.cardId];
+    return {
+      id: unit.cardId,
+      name: base?.name || "Unknown Unit",
+      type: (base?.type || "UNIT") as CardModel["type"],
+      triad_type: (base?.triad_type || "ASSAULT") as CardModel["triad_type"],
+      mana_cost: base?.mana_cost ?? 0,
+      attack: unit.attack,
+      hp: unit.hp,
+      description: base?.description || "Unit on the battlefield",
+      image: base?.image || "crimson_duelist.png",
+      created_at: base?.created_at || ""
+    };
+  };
+
   const renderUnit = (unit: UnitInstance, isOwn: boolean) => {
     const isSelected = isOwn && unit.instanceId === selectedAttackerId;
     const isAttackable = isOwn && isMyTurn && unit.canAttack && !isSelectingTarget;
     const isTargetable = !isOwn && isSelectingTarget;
     const isSick = !unit.canAttack && !unit.hasAttacked;
 
-    let unitClass = "battlefield-unit";
+    let unitClass = "battlefield-unit-card";
     if (isSelected) unitClass += " battlefield-unit--selected";
     if (isAttackable) unitClass += " battlefield-unit--can-attack";
     if (isTargetable) unitClass += " battlefield-unit--targetable";
@@ -484,18 +543,11 @@ export default function GamePage() {
         onClick={handleClick}
         title={isSick ? "Summoning sickness — can attack next turn" : unit.canAttack ? "Ready to attack" : "Already attacked"}
       >
-        <span className="battlefield-unit__atk">{unit.attack}</span>
-        <span className="battlefield-unit__hp">{unit.hp}</span>
+        <GameCard card={toBoardCardModel(unit)} size="small" />
         {isSelected && <span className="battlefield-unit__badge">⚔</span>}
       </div>
     );
   };
-
-  const turnKey = match ? `${match.state.turn}:${match.state.activePlayer}` : "idle";
-
-  useEffect(() => {
-    setTimerRemaining(45);
-  }, [turnKey]);
 
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
 
@@ -542,7 +594,7 @@ export default function GamePage() {
           <p className="game-state__label">Opponent Status</p>
           <p className="game-state__value">
             {(oppStats.statuses || []).length
-              ? (oppStats.statuses || []).map((s) => s.type).join(", ")
+              ? renderStatuses(oppStats.statuses)
               : isSelectingTarget ? "← Click to attack hero" : "None"}
           </p>
         </div>
@@ -571,10 +623,12 @@ export default function GamePage() {
           </aside>
 
 
-          <div className="game-state">
-            {match ? (isMyTurn ?
-              <p className="game-hud__name game-state__value--active-turn comic-text-shadow">Your turn</p> :
-              <p className="game-hud__name game-state__value">Opponent's turn</p>) : "-"}
+          <div className="game-state game-state--turn">
+            <div className="game-state__turn-row">
+              {match ? (isMyTurn ?
+                <p className="game-hud__name game-state__value--active-turn comic-text-shadow">Your turn</p> :
+                <p className="game-hud__name game-state__value">Opponent's turn</p>) : "-"}
+            </div>
             {match && !match.state.finished ? (isMyTurn ?
               <p className="game-hud__name game-state__value--active-turn comic-text-shadow">
                 <TurnCountdown remaining={timerRemaining} />
@@ -593,19 +647,6 @@ export default function GamePage() {
 
 
 
-        {/* Attack mode banner */}
-        {isSelectingTarget && (
-          <div className="game-attack-banner">
-            <span>Select a target — enemy unit or enemy hero</span>
-            <button
-              type="button"
-              className="game-end-turn"
-              onClick={() => setAttackState({ mode: "idle" })}
-            >
-              Cancel
-            </button>
-          </div>
-        )}
 
         {matchError && (
           <div className="game-attack-banner game-attack-banner--error">
@@ -614,18 +655,32 @@ export default function GamePage() {
         )}
 
         <main className="game-battlefield">
-          {/* Enemy board */}
-          <div className="battlefield-row battlefield-row--enemy">
-            {oppStats.board.length > 0
-              ? oppStats.board.map((unit) => renderUnit(unit, false))
-              : <span className="battlefield-empty">No units</span>}
-          </div>
+          <div className="game-battlefield-layout">
+            {/* My board (left) */}
+            <div className="battlefield-row battlefield-row--self">
+              <p className="battlefield-col-title">My Units</p>
+              {selfStats.board.length > 0
+                ? selfStats.board.map((unit) => renderUnit(unit, true))
+                : <span className="battlefield-empty">No units</span>}
+            </div>
 
-          {/* My board */}
-          <div className="battlefield-row battlefield-row--self">
-            {selfStats.board.length > 0
-              ? selfStats.board.map((unit) => renderUnit(unit, true))
-              : <span className="battlefield-empty">No units</span>}
+            {/* Center board */}
+            <MatchBoard cards={playedCards} currentUserId={userIdStr} />
+
+            {/* Enemy board (right) */}
+            <div className="battlefield-enemy-col">
+              {isSelectingTarget && (
+                <div className="battlefield-target-overlay">
+                  <span className="game-state__target-hint">Select a target unit</span>
+                </div>
+              )}
+              <div className={`battlefield-row battlefield-row--enemy${isSelectingTarget ? " battlefield-row--enemy-targeting" : ""}`}>
+                <p className="battlefield-col-title">Enemy Units</p>
+                {oppStats.board.length > 0
+                  ? oppStats.board.map((unit) => renderUnit(unit, false))
+                  : <span className="battlefield-empty">No units</span>}
+              </div>
+            </div>
           </div>
         </main>
 
@@ -688,9 +743,7 @@ export default function GamePage() {
           <div className="game-state">
             <p className="game-state__label">Your Status</p>
             <p className="game-state__value">
-              {(selfStats.statuses || []).length
-                ? (selfStats.statuses || []).map((s) => s.type).join(", ")
-                : "None"}
+              {renderStatuses(selfStats.statuses)}
             </p>
           </div>
           <div className="game-energy" aria-label="Resolve">
@@ -711,4 +764,5 @@ export default function GamePage() {
     </div>
   );
 }
+
 
