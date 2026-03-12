@@ -30,6 +30,8 @@ import {
 import { useMatchBoard } from "../features/customHooks/useMatchBoard";
 import "./GamePage.css";
 import TurnCountdown from "../components/TurnCountdown";
+import LeaveArenaConfirmModal from "../components/LeaveArenaConfirmModal";
+
 
 // ─── Attack flow state ────────────────────────────────────────────────────────
 
@@ -495,6 +497,8 @@ export default function GamePage() {
     setTimerRemaining(45);
   }, [turnKey]);
 
+  const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
+
 
   // ─────────────────────────────────────────────────────────────────────────────
 
@@ -581,7 +585,7 @@ export default function GamePage() {
           </div>
 
           <div className="game-state game-state--right">
-            <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
+            <button type="button" className="game-end-turn stress-warning" onClick={() => setIsLeaveConfirmOpen(true)}>
               Leave Arena
             </button>
           </div>
@@ -650,7 +654,15 @@ export default function GamePage() {
         </div>
       )}
 
-      {/* Player footer */}
+      <LeaveArenaConfirmModal
+        open={isLeaveConfirmOpen}
+        onCancel={() => setIsLeaveConfirmOpen(false)}
+        onConfirm={() => {
+          setIsLeaveConfirmOpen(false);
+          handleLeaveArenaClick();
+        }}
+      />
+
       <footer className="game-hud game-hud--bottom parchment-panel">
         <div className="game-hud__identity">
           <div className="game-hud__accent game-hud__accent--gold" />
