@@ -247,6 +247,52 @@ function consumeCardFromHand(player, cardId) {
   return { ...player, hand, discard: [...discard, consumedCard] };
 }
 
+// ─── SPELL RESOLUTION ────────────────────────────────────────────────────────
+
+/**
+ * Resolves a spell card effect:
+ *   1. Computes final damage (base → weak penalty → triad bonus).
+ *   2. Applies damage to opponent hero via shield absorption.
+ *   3. Applies `card.statuses` to opponent.
+ *   4. Applies `card.selfStatuses` to caster.
+ *
+ * Pipeline order: validate → applySpellEffect → update state → discard card.
+ * The card is moved to discard in the caller (playCard) after this function returns.
+ *
+ * @param {object} state     - Current (immutable) game state.
+ * @param {string} playerKey - "player1" | "player2" (caster).
+ * @param {string} opponentKey
+ * @param {object} attackerState - Caster's player state after card consumption + energy deduction.
+ * @param {object} card      - Full card data (including statuses / selfStatuses arrays).
+ * @returns {{ nextPlayerState: object, nextOpponentState: object }}
+ */
+function applySpellEffect(state, playerKey, opponentKey, attackerState, card) {
+  const defender = state[opponentKey];
+
+  const baseDamage = getCardBaseDamage(card);
+  const weakAdjusted = Math.max(0, baseDamage - getWeakPenalty(state[playerKey]));
+  const finalDamage = applyTriadBonus(
+    getCardTriadType(card),
+    getDefenderTriadType(state, defender?.id, card),
+    weakAdjusted
+  );
+
+  console.log(`[Spell resolved] card=${card.id} name="${card.name}" damage=${finalDamage}`);
+
+  const defenderAfterDamage = applyDamage(defender, finalDamage);
+
+  const nextPlayerState = applyStatuses(
+    attackerState,
+    collectStatuses(card, "selfStatuses")
+  );
+  const nextOpponentState = applyStatuses(
+    defenderAfterDamage,
+    collectStatuses(card, "statuses")
+  );
+
+  return { nextPlayerState, nextOpponentState };
+}
+
 // ─── PLAY CARD ────────────────────────────────────────────────────────────────
 
 function playCard(state, playerInput, card) {
@@ -295,30 +341,16 @@ function playCard(state, playerInput, card) {
       nextPlayerState = playerWithStatuses;
       nextOpponentState = state[opponentKey];
     } else {
-      // Spell: deal damage + apply statuses instantly
-      const attacker = attackerAfterConsume;
-      const defender = state[opponentKey];
-
-      const baseDamage = getCardBaseDamage(card);
-      const weakAdjusted = Math.max(0, baseDamage - getWeakPenalty(state[playerKey]));
-      const finalDamage = applyTriadBonus(
-        getCardTriadType(card),
-        getDefenderTriadType(state, defender?.id, card),
-        weakAdjusted
+      // Spell: resolve effect instantly then go to discard.
+      const spellResult = applySpellEffect(
+        state,
+        playerKey,
+        opponentKey,
+        { ...attackerAfterConsume, energy },
+        card
       );
-
-      const defenderAfterDamage = applyDamage(defender, finalDamage);
-      const attackerWithStatuses = applyStatuses(
-        { ...attacker, energy },
-        collectStatuses(card, "selfStatuses")
-      );
-      const defenderWithStatuses = applyStatuses(
-        defenderAfterDamage,
-        collectStatuses(card, "statuses")
-      );
-
-      nextPlayerState = attackerWithStatuses;
-      nextOpponentState = defenderWithStatuses;
+      nextPlayerState = spellResult.nextPlayerState;
+      nextOpponentState = spellResult.nextOpponentState;
     }
 
     const nextState = {

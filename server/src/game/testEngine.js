@@ -580,6 +580,92 @@ function testAttackFinishesMatch() {
   assertSerializedState(state, "m-atk-fin");
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// SPELL EFFECT TESTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function testSpellDamageToHero() {
+  // Damage spells reduce the opponent hero's HP (after shield absorption).
+  let state = createInitialGameState("p1", "p2");
+  state = { ...state, player2: { ...state.player2, shield: 3 } };
+
+  state = play(state, "p1", 1, makeSpell("dmg-hero", { attack: 8 }));
+
+  // 8 damage − 3 shield = 5 HP damage; 30 − 5 = 25
+  assert(state.player2.shield === 0, "Shield fully absorbed first");
+  assert(state.player2.hp === 25, "Remaining damage hits HP");
+  assert(state.player1.hp === 30, "Caster HP unchanged");
+  assertSerializedState(state, "m-spell-damage-hero");
+}
+
+function testSpellBurnStatus() {
+  // A burn-status spell applies burn to the opponent; damage ticks on endTurn.
+  let state = createInitialGameState("p1", "p2");
+  const burnSpell = makeSpell("burn-s", { attack: 2, statuses: [{ type: "burn", turns: 2 }] });
+
+  state = play(state, "p1", 1, burnSpell);
+
+  assert(state.player2.hp === 28, "Spell deals 2 direct damage");
+  assert(
+    state.player2.statuses.some((s) => s.type === "burn"),
+    "Burn status applied to opponent"
+  );
+
+  // Burn ticks at endTurn (BURN_DAMAGE = 2 per tick)
+  state = endTurn(state, { playerId: "p1", expectedVersion: state.version });
+  assert(state.player2.hp === 26, "Burn ticks at turn end");
+  assertSerializedState(state, "m-spell-burn");
+}
+
+function testSpellWeakStatus() {
+  // A weak-status spell weakens the opponent's next attack.
+  let state = createInitialGameState("p1", "p2");
+  const weakSpell = makeSpell("weak-s", { attack: 0, statuses: [{ type: "weak", turns: 2 }] });
+
+  state = play(state, "p1", 1, weakSpell);
+
+  assert(state.player2.hp === 30, "Zero-damage spell does not change HP");
+  assert(
+    state.player2.statuses.some((s) => s.type === "weak"),
+    "Weak status applied to opponent"
+  );
+  assertSerializedState(state, "m-spell-weak");
+}
+
+function testSpellSelfShield() {
+  // A self-shield spell increases the caster's shield.
+  let state = createInitialGameState("p1", "p2");
+  const shieldSpell = makeSpell("shield-s", {
+    attack: 0,
+    selfStatuses: [{ type: "shield", turns: 2, amount: 5 }]
+  });
+
+  state = play(state, "p1", 1, shieldSpell);
+
+  assert(state.player1.shield === 5, "Self-shield granted to caster");
+  assert(state.player2.hp === 30, "No opponent damage");
+  assertSerializedState(state, "m-spell-self-shield");
+}
+
+function testSpellDiscardAfterResolution() {
+  // After a spell is played, it is moved to the discard pile, not the board.
+  let state = createInitialGameState("p1", "p2");
+  const spell = makeSpell("discard-check", { attack: 3 });
+
+  state = play(state, "p1", 1, spell);
+
+  assert(
+    !state.player1.hand.some((c) => c.id === "discard-check"),
+    "Spell removed from hand"
+  );
+  assert(
+    state.player1.discard.some((c) => c.id === "discard-check"),
+    "Spell is in discard after resolution"
+  );
+  assert(state.player1.board.length === 0, "Spell does not go to the board");
+  assertSerializedState(state, "m-spell-discard");
+}
+
 function testFullPvpScenario() {
   let state = createInitialGameState("p1", "p2");
   const log = createEventLog();
@@ -679,6 +765,14 @@ function run() {
   testMaxHandBurn();
   testStrongAttackValidation();
   testAttackFinishesMatch();
+
+  // Spell effect tests
+  testSpellDamageToHero();
+  testSpellBurnStatus();
+  testSpellWeakStatus();
+  testSpellSelfShield();
+  testSpellDiscardAfterResolution();
+
   testFullPvpScenario();
 
   console.log("ENGINE TEST RESULTS");
@@ -703,6 +797,11 @@ function run() {
   console.log("✓ MAX_HAND burn on draw");
   console.log("✓ strong attack validation (ownerId + hasAttacked)");
   console.log("✓ attack finishes match");
+  console.log("✓ spell damage to hero");
+  console.log("✓ spell burn status");
+  console.log("✓ spell weak status");
+  console.log("✓ spell self-shield");
+  console.log("✓ spell discard after resolution");
   console.log("✓ full PvP scenario");
   console.log("SERVER FINAL CHECK PASSED");
   console.log("✓ engine integrity");
