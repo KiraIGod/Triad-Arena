@@ -778,6 +778,84 @@
   border-radius: 4px;
 }
 
+/* ─── Triad combo indicator ──────────────────────────────────────────────────── */
+
+.game-triad-combo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 14, 10, 0.75);
+  animation: triad-combo-appear 0.25s ease-out;
+}
+
+@keyframes triad-combo-appear {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.game-triad-combo__label {
+  font-family: var(--font-body);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #8b7e6f;
+}
+
+.game-triad-combo__type {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.game-triad-combo__bonus {
+  font-family: var(--font-accent);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Per-type colors matching Card.css triad palette */
+.game-triad-combo--assault {
+  border-color: rgba(168, 62, 54, 0.45);
+  background: rgba(168, 62, 54, 0.12);
+}
+.game-triad-combo--assault .game-triad-combo__type {
+  color: #f2a49a;
+  text-shadow: 0 0 8px rgba(168, 62, 54, 0.55);
+}
+.game-triad-combo--assault .game-triad-combo__bonus {
+  color: #e87a70;
+}
+
+.game-triad-combo--precision {
+  border-color: rgba(201, 169, 98, 0.45);
+  background: rgba(201, 169, 98, 0.10);
+}
+.game-triad-combo--precision .game-triad-combo__type {
+  color: #eed883;
+  text-shadow: 0 0 8px rgba(201, 169, 98, 0.55);
+}
+.game-triad-combo--precision .game-triad-combo__bonus {
+  color: #d9c062;
+}
+
+.game-triad-combo--arcane {
+  border-color: rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.10);
+}
+.game-triad-combo--arcane .game-triad-combo__type {
+  color: #c4a9ff;
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.55);
+}
+.game-triad-combo--arcane .game-triad-combo__bonus {
+  color: #a78bfa;
+}
+
 
 
 

@@ -53,6 +53,7 @@ export type MatchStatePayload = {
       playerId: string | null;
       turnOwnerId: string | null;
       cardId: string | null;
+      triadType: string | null;
       timestamp: number | null;
     }>;
     finished: boolean;

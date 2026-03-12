@@ -7,7 +7,11 @@ const GAME_CONSTANTS = {
   MAX_BOARD: 5,
   MAX_HAND: 10,
   BURN_DAMAGE: 2,
-  TRIAD_BONUS: 2
+  // Type-advantage bonus (attacker type beats defender type)
+  TRIAD_BONUS: 2,
+  // Same-type combo bonus: playing N cards of the same triad_type in one turn
+  TRIAD_COMBO_BONUS_2: 2,  // 2 same-type cards → +2 damage
+  TRIAD_COMBO_BONUS_3: 4   // 3 same-type cards → +4 damage
 };
 
 const STATUS_TYPES = {
