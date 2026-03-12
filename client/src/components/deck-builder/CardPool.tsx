@@ -43,9 +43,9 @@ export default function CardPool({
 
   const manaOptions = [1, 2, 3, 4, 5];
   const triadOptions: { value: TriadType; label: string; color: string }[] = [
-    { value: "assault", label: "Assault", color: "#8a1a1a" },
-    { value: "precision", label: "Precision", color: "#1a8a3a" },
-    { value: "arcane", label: "Arcane", color: "#1a4a8a" },
+    { value: "assault", label: "Assault", color: "#a83232" },
+    { value: "precision", label: "Precision", color: "#b8962e" },
+    { value: "arcane", label: "Arcane", color: "#7b3daa" },
   ];
 
   useEffect(() => {
