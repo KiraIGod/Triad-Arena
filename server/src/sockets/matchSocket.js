@@ -27,6 +27,10 @@ const reconnectTimers = new Map();
 const runtimeMatchState = new Map();
 const turnTimers = new Map();
 
+// Tracks players that reconnected on a new socket before their old socket fired "disconnect".
+// Used to prevent the old socket's disconnect from starting the 30-second defeat timer.
+const reconnectedPlayers = new Set();
+
 // ─── Match tracking helpers ───────────────────────────────────────────────────
 
 function getOpponentId(match, userId) {
@@ -245,11 +249,17 @@ function clearTurnTimer(matchId) {
 function startTurnTimer(io, matchId, playerId) {
   clearTurnTimer(matchId);
 
-  let remaining = TURN_DURATION;
-  io.to(String(matchId)).emit("match:timer", { remaining });
+  // Use wall-clock time so the remaining value stays accurate even under server load.
+  const turnStartedAt = Date.now();
+  const getRemaining = () => {
+    const elapsed = Math.floor((Date.now() - turnStartedAt) / 1000);
+    return Math.max(0, TURN_DURATION - elapsed);
+  };
+
+  io.to(String(matchId)).emit("match:timer", { remaining: TURN_DURATION });
 
   const interval = setInterval(() => {
-    remaining -= 1;
+    const remaining = getRemaining();
     io.to(String(matchId)).emit("match:timer", { remaining });
 
     if (remaining <= 0) {
@@ -261,7 +271,7 @@ function startTurnTimer(io, matchId, playerId) {
     }
   }, 1000);
 
-  turnTimers.set(String(matchId), { interval, getRemaining: () => remaining });
+  turnTimers.set(String(matchId), { interval, getRemaining });
 }
 
 async function forceEndTurn(io, matchId, playerId) {
@@ -579,19 +589,32 @@ async function handleSync(io, socket) {
   const match = findActiveMatchByUser(userId);
   if (!match) return;
 
-  const timer = reconnectTimers.get(String(match.id));
-  if (timer) {
-    clearTimeout(timer);
+  // Cancel any existing defeat timer that was already started (normal reconnect path).
+  const pendingTimer = reconnectTimers.get(String(match.id));
+  if (pendingTimer) {
+    clearTimeout(pendingTimer);
     reconnectTimers.delete(String(match.id));
+    console.log(`[reconnect] Cancelled defeat timer for player ${userId} match ${match.id}`);
   }
 
+  // Restore socket room membership so the player receives broadcasts again.
   socket.join(String(match.id));
 
+  // Guard against the race condition where this sync fires BEFORE the old socket's
+  // "disconnect" event. Marking the player here prevents disconnect from re-starting
+  // the defeat timer. The mark auto-expires after 10 s to avoid a memory leak.
+  reconnectedPlayers.add(String(userId));
+  setTimeout(() => reconnectedPlayers.delete(String(userId)), 10_000);
+
+  console.log(`[reconnect] Player ${userId} rejoined match ${match.id}`);
+
+  // Immediately send the current timer so the client UI is in sync.
   const timerEntry = turnTimers.get(String(match.id));
   if (timerEntry) {
     socket.emit("match:timer", { remaining: timerEntry.getRemaining() });
   }
 
+  // Restore latest match state.
   const cachedState = runtimeMatchState.get(String(match.id));
   if (cachedState) {
     socket.emit("match:state", buildMatchStatePayload(match, cachedState));
@@ -721,6 +744,14 @@ module.exports = function registerMatchSocket(io) {
 
       const match = findActiveMatchByUser(userId);
       if (!match) return;
+
+      // If the player already reconnected on a new socket (race condition: sync fired before
+      // this disconnect event), skip the defeat timer entirely.
+      if (reconnectedPlayers.has(String(userId))) {
+        reconnectedPlayers.delete(String(userId));
+        console.log(`[disconnect] Player ${userId} reconnected on new socket — skipping defeat timer for match ${match.id}`);
+        return;
+      }
 
       const opponentId = getOpponentId(match, userId);
 
