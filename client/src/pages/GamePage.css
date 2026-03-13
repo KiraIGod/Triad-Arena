@@ -5,7 +5,8 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: visible;
   background: #0e0e0e;
   color: var(--foreground);
 }
@@ -258,9 +259,14 @@
   z-index: 6;
 }
 
+.battlefield-target-overlay--self {
+  left: 0;
+}
+
 .game-battlefield-layout {
+  position: relative;
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr) minmax(220px, 1fr);
+  grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: 10px;
   align-items: stretch;
   width: 100%;
@@ -268,20 +274,9 @@
   height: 100%;
 }
 
-.game-battlefield-layout > .battlefield-row--self {
-  grid-column: 1;
-  min-width: 220px;
-}
-
-.game-battlefield-layout > .game-board {
-  grid-column: 2;
-  min-width: 0;
-  width: 100%;
-}
-
-.game-battlefield-layout > .battlefield-row--enemy,
+.game-battlefield-layout > .battlefield-self-col,
+.game-battlefield-layout > .game-board__side,
 .game-battlefield-layout > .battlefield-enemy-col {
-  grid-column: 3;
   min-width: 220px;
 }
 
@@ -289,6 +284,16 @@
   position: relative;
   min-height: 0;
   display: flex;
+}
+
+.battlefield-self-col {
+  position: relative;
+  min-height: 0;
+  display: flex;
+}
+
+.battlefield-self-col > .battlefield-row--self {
+  flex: 1 1 auto;
 }
 
 .battlefield-enemy-col > .battlefield-row--enemy {
@@ -304,7 +309,7 @@
   flex-direction: column;
   align-items: stretch;
   justify-content: space-between;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .game-battlefield__divider {
@@ -332,6 +337,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .game-board__title {
@@ -346,9 +353,13 @@
 .game-board__cards {
   display: flex;
   flex-wrap: wrap;
-  row-gap: 1.28px;
-  column-gap: 1.28px;
-  /* align-content: flex-start; */
+  flex: 1 1 auto;
+  min-height: 0;
+  row-gap: 8px;
+  column-gap: 8px;
+  align-content: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .game-board__card-slot {
@@ -361,6 +372,15 @@
 .game-board__card-slot .game-card--small {
   width: 121.6px;
   height: 185.6px;
+}
+
+.game-board__side--self .game-board__card-slot {
+  position: relative;
+  cursor: pointer;
+}
+
+.game-board__side--self .game-board__card-slot:hover {
+  z-index: 1;
 }
 
 @keyframes game-board-card-appear {
@@ -408,7 +428,7 @@
 .game-log__entry {
   margin: 0 0 4px;
   font-family: var(--font-body);
-  font-size: 12px;
+  font-size: 14px;
   text-transform: uppercase;
   color: #8b7e6f;
   opacity: 0.7;
@@ -507,13 +527,13 @@
 
 .game-hand {
   position: relative;
-  z-index: 2;
+  z-index: 12;
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  gap: 10px;
+  gap: 0;
   padding: 8px 12px 10px;
-  /* overflow-x: auto; */
+  overflow: visible;
   min-height: 150px;
   box-sizing: border-box;
   flex: 0 0 auto;
@@ -534,12 +554,19 @@
 }
 
 .game-hand__slot {
+  position: relative;
   transform: rotate(var(--slot-rotation));
   transition: transform 0.2s ease;
 }
 
+.game-hand__slot:hover {
+  transform: translateY(-16px) rotate(var(--slot-rotation));
+  z-index: 999 !important;
+}
+
 .game-hand__slot.is-selected {
   transform: translateY(-20px) rotate(0deg);
+  z-index: 1000 !important;
 }
 
 .game-top-row {
@@ -564,7 +591,8 @@
   .game-screen {
     height: 100vh;
     height: 100dvh;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: visible;
   }
 
   .game-hud {
@@ -601,8 +629,7 @@
   .game-hand {
     min-height: 120px;
     padding: 6px 8px 10px;
-    overflow-x: auto;
-    overflow-y: visible;
+    overflow: visible;
   }
 
   .game-content {
@@ -627,8 +654,11 @@
   }
 
   .game-battlefield-layout > .battlefield-row--self,
+  .game-battlefield-layout > .battlefield-self-col,
+  .game-battlefield-layout > .battlefield-enemy-col,
   .game-battlefield-layout > .battlefield-row--enemy,
-  .game-battlefield-layout > .game-board {
+  .game-battlefield-layout > .game-board,
+  .game-battlefield-layout > .game-board__side {
     width: auto;
     min-width: 0;
     max-width: none;
@@ -643,6 +673,19 @@
 
   .game-top-row {
     padding: 8px 12px;
+  }
+
+  .game-spell-notice {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: calc(100% - 24px);
+    white-space: normal;
+  }
+
+  .game-triad-combo {
+    left: calc(100% + 16px);
+    top: 0;
   }
 }
 
@@ -669,12 +712,44 @@
 }
 
 .battlefield-row--enemy-targeting {
-  background: rgba(201, 169, 98, 0.35);
+  background: rgba(201, 169, 98, 0.2);
   border-color: rgba(201, 169, 98, 0.5);
 }
 
 .battlefield-row--self {
   justify-content: flex-start;
+}
+
+/* Scrollbars for battlefield and played-cards zones */
+.battlefield-row,
+.game-board__cards {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 169, 98, 0.55) rgba(18, 14, 10, 0.35);
+}
+
+.battlefield-row::-webkit-scrollbar,
+.game-board__cards::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.battlefield-row::-webkit-scrollbar-track,
+.game-board__cards::-webkit-scrollbar-track {
+  background: rgba(18, 14, 10, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 999px;
+}
+
+.battlefield-row::-webkit-scrollbar-thumb,
+.game-board__cards::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #c9a962 0%, #8f7440 100%);
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  border-radius: 999px;
+}
+
+.battlefield-row::-webkit-scrollbar-thumb:hover,
+.game-board__cards::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #d8b979 0%, #a2834b 100%);
 }
 
 .battlefield-empty {
@@ -706,6 +781,11 @@
   user-select: none;
 }
 
+.battlefield-row--self .battlefield-unit-card,
+.battlefield-row--enemy .battlefield-unit-card {
+  cursor: pointer;
+}
+
 .battlefield-unit-card > article {
   width: 121.6px;
   height: 185.6px;
@@ -713,11 +793,71 @@
   transform-origin: top left;
 }
 
+/* Smaller typography for board/played cards only */
+.battlefield-unit-card .game-card__name,
+.game-board__card-slot .game-card__name {
+  font-size: 10px;
+}
+
+.battlefield-unit-card .game-card__description,
+.game-board__card-slot .game-card__description {
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.battlefield-unit-card .game-card__type,
+.game-board__card-slot .game-card__type {
+  font-size: 10px;
+}
+
+.battlefield-unit-card .game-card__mana-value,
+.game-board__card-slot .game-card__mana-value {
+  font-size: 12px;
+}
+
 .battlefield-unit__badge {
   position: absolute;
   top: -8px;
   right: -8px;
   font-size: 14px;
+}
+
+.battlefield-unit__shield {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  padding: 2px 6px;
+  border: 1px solid rgba(32, 15, 5, 0.75);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(201, 169, 98, 0.92) 0%, rgba(143, 116, 64, 0.92) 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #1a1612;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.battlefield-unit__statuses {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.battlefield-unit__statuses .game-status-badge {
+  margin: 0;
+  padding: 1px 4px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
 }
 
 /* States */
@@ -772,10 +912,127 @@
   border-color: rgba(200, 50, 50, 0.3);
 }
 
+.game-spell-notice {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 32px;
+  background: rgba(201, 169, 98, 0.5);
+  border: 1px solid rgba(201, 169, 98, 0.3);
+  border-radius: 6px;
+  font-size: 26px;
+  color: rgba(255, 255, 255, 0.86);
+  z-index: 20;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 3s ease;
+}
+
+.game-spell-notice--warning {
+  background: linear-gradient(180deg, rgba(137, 27, 27, 0.5) 0%, rgba(94, 14, 14, 0.96) 100%);
+  border-color: rgba(58, 6, 6, 0.9);
+  color: #f8e7dc;
+  box-shadow:
+    0 14px 30px rgba(72, 8, 8, 0.45),
+    inset 0 1px 0 rgba(255, 214, 214, 0.14);
+}
+
+.game-spell-notice.is-fading {
+  opacity: 0;
+}
+
 .game-state--attackable {
   cursor: crosshair;
   outline: 1px dashed rgba(220, 60, 60, 0.5);
   border-radius: 4px;
+}
+
+/* ─── Triad combo indicator ──────────────────────────────────────────────────── */
+
+.game-triad-combo {
+  position: absolute;
+  left: calc(100% - 80px);
+  top: -5px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(18, 14, 10, 0.75);
+  animation: triad-combo-appear 0.25s ease-out;
+  z-index: 5;
+  pointer-events: none;
+  width: max-content
+}
+
+@keyframes triad-combo-appear {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.game-triad-combo__label {
+  font-family: var(--font-body);
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #8b7e6f;
+}
+
+.game-triad-combo__type {
+  font-family: var(--font-heading);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.game-triad-combo__bonus {
+  font-family: var(--font-accent);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Per-type colors matching Card.css triad palette */
+.game-triad-combo--assault {
+  border-color: rgba(168, 62, 54, 0.45);
+  background: rgba(168, 62, 54, 0.12);
+}
+.game-triad-combo--assault .game-triad-combo__type {
+  color: #f2a49a;
+  text-shadow: 0 0 8px rgba(168, 62, 54, 0.55);
+}
+.game-triad-combo--assault .game-triad-combo__bonus {
+  color: #e87a70;
+}
+
+.game-triad-combo--precision {
+  border-color: rgba(201, 169, 98, 0.45);
+  background: rgba(201, 169, 98, 0.10);
+}
+.game-triad-combo--precision .game-triad-combo__type {
+  color: #eed883;
+  text-shadow: 0 0 8px rgba(201, 169, 98, 0.55);
+}
+.game-triad-combo--precision .game-triad-combo__bonus {
+  color: #d9c062;
+}
+
+.game-triad-combo--arcane {
+  border-color: rgba(139, 92, 246, 0.45);
+  background: rgba(139, 92, 246, 0.10);
+}
+.game-triad-combo--arcane .game-triad-combo__type {
+  color: #c4a9ff;
+  text-shadow: 0 0 8px rgba(139, 92, 246, 0.55);
+}
+.game-triad-combo--arcane .game-triad-combo__bonus {
+  color: #a78bfa;
 }
 
 

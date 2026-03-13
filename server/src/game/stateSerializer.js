@@ -27,6 +27,7 @@ function normalizePlayer(player) {
     statuses: Array.isArray(source.statuses) ? cloneValue(source.statuses) : [],
     hand: Array.isArray(source.hand) ? cloneValue(source.hand) : [],
     deckCount: Array.isArray(source.deck) ? source.deck.length : 0,
+    discardCount: Array.isArray(source.discard) ? source.discard.length : 0,
     board: Array.isArray(source.board)
       ? source.board.map(normalizeUnit).filter(Boolean)
       : []
@@ -41,6 +42,7 @@ function normalizeAction(action) {
     playerId: source.playerId ?? null,
     turnOwnerId: source.turnOwnerId ?? null,
     cardId: source.cardId ?? null,
+    triadType: source.triadType ?? null,
     timestamp: source.timestamp ?? null
   };
 }

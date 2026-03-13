@@ -6,7 +6,7 @@ const {
   STATUS_TYPES
 } = require("./constants");
 const { applyDamage } = require("./damage");
-const { applyTriadBonus } = require("./triad");
+const { applyTriadBonus, getTriadComboCount, applyTriadComboBonus } = require("./triad");
 const { resolveTurn } = require("./turn");
 const {
   buildUnitIndex,
@@ -251,32 +251,44 @@ function consumeCardFromHand(player, cardId) {
 
 /**
  * Resolves a spell card effect:
- *   1. Computes final damage (base → weak penalty → triad bonus).
+ *   1. Computes final damage (base → weak penalty → triad advantage → triad combo).
  *   2. Applies damage to opponent hero via shield absorption.
  *   3. Applies `card.statuses` to opponent.
  *   4. Applies `card.selfStatuses` to caster.
  *
+ * Damage pipeline:
+ *   base → minus weak penalty → plus type-advantage bonus → plus same-type combo bonus
+ *
  * Pipeline order: validate → applySpellEffect → update state → discard card.
  * The card is moved to discard in the caller (playCard) after this function returns.
  *
- * @param {object} state     - Current (immutable) game state.
- * @param {string} playerKey - "player1" | "player2" (caster).
+ * @param {object} state        - Current (immutable) game state.
+ * @param {string} playerKey    - "player1" | "player2" (caster).
  * @param {string} opponentKey
  * @param {object} attackerState - Caster's player state after card consumption + energy deduction.
- * @param {object} card      - Full card data (including statuses / selfStatuses arrays).
+ * @param {object} card         - Full card data (including statuses / selfStatuses arrays).
  * @returns {{ nextPlayerState: object, nextOpponentState: object }}
  */
 function applySpellEffect(state, playerKey, opponentKey, attackerState, card) {
   const defender = state[opponentKey];
+  const triadType = getCardTriadType(card);
 
   const baseDamage = getCardBaseDamage(card);
   const weakAdjusted = Math.max(0, baseDamage - getWeakPenalty(state[playerKey]));
-  const finalDamage = applyTriadBonus(
-    getCardTriadType(card),
+
+  // Type-advantage bonus (attacker type beats defender's last played type)
+  const triadBoosted = applyTriadBonus(
+    triadType,
     getDefenderTriadType(state, defender?.id, card),
     weakAdjusted
   );
 
+  // Same-type combo bonus: count how many cards of this triad_type
+  // this player has already played this turn (state.playedCards is pre-play snapshot)
+  const comboCount = getTriadComboCount(state.playedCards, attackerState.id, triadType);
+  const finalDamage = applyTriadComboBonus(triadBoosted, comboCount);
+
+  console.log(`[TRIAD CHECK] cardId=${card.id} triad_type=${triadType} comboCount=${comboCount} baseDamage=${baseDamage} weakAdjusted=${weakAdjusted} triadBoosted=${triadBoosted} finalDamage=${finalDamage}`);
   console.log(`[Spell resolved] card=${card.id} name="${card.name}" damage=${finalDamage}`);
 
   const defenderAfterDamage = applyDamage(defender, finalDamage);
@@ -363,7 +375,7 @@ function playCard(state, playerInput, card) {
       ],
       turnActions: [
         ...(state.turnActions || []),
-        { actionId, actionIndex, playerId, turnOwnerId, cardId: card.id, timestamp: Date.now() }
+        { actionId, actionIndex, playerId, turnOwnerId, cardId: card.id, triadType: getCardTriadType(card), timestamp: Date.now() }
       ],
       version: (state.version || 0) + 1
     };

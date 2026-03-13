@@ -13,7 +13,7 @@ export default function LeaveArenaConfirmModal({
   if (!open) return null;
 
   return (
-     <div className="game-overlay game-overlay--confirm">
+    <div className="game-overlay game-overlay--confirm">
       <div className="game-overlay__panel parchment-panel game-state">
         <span className="comic-text-shadow">Leave arena?</span>
         <div className="game-actions" style={{ marginTop: 12, justifyContent: "center" }}>

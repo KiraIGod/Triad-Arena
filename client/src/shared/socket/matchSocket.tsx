@@ -33,6 +33,7 @@ type PlayerState = {
   statuses?: Array<{ type: string; turns?: number; amount?: number }>;
   hand?: PlayerCard[];
   deckCount?: number;
+  discardCount?: number;
   board: UnitInstance[];
 };
 
@@ -53,6 +54,7 @@ export type MatchStatePayload = {
       playerId: string | null;
       turnOwnerId: string | null;
       cardId: string | null;
+      triadType: string | null;
       timestamp: number | null;
     }>;
     finished: boolean;
