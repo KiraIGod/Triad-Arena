@@ -2,8 +2,9 @@ function cloneValue(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function normalizeUnit(unit) {
+function normalizeUnit(unit, cardMap) {
   if (!unit || typeof unit !== "object") return null;
+  const cardMeta = cardMap && unit.cardId ? cardMap[unit.cardId] : null;
   return {
     instanceId: unit.instanceId ?? null,
     cardId: unit.cardId ?? null,
@@ -13,11 +14,17 @@ function normalizeUnit(unit) {
     summonedTurn: Number.isFinite(unit.summonedTurn) ? unit.summonedTurn : 0,
     canAttack: Boolean(unit.canAttack),
     hasAttacked: Boolean(unit.hasAttacked),
-    statuses: Array.isArray(unit.statuses) ? unit.statuses : []
+    statuses: Array.isArray(unit.statuses) ? unit.statuses : [],
+    // Card metadata embedded for stable rendering after reconnect
+    ...(cardMeta && {
+      name: cardMeta.name,
+      image: cardMeta.image,
+      triad_type: cardMeta.triad_type
+    })
   };
 }
 
-function normalizePlayer(player) {
+function normalizePlayer(player, cardMap) {
   const source = player || {};
   return {
     id: source.id ?? null,
@@ -29,7 +36,7 @@ function normalizePlayer(player) {
     deckCount: Array.isArray(source.deck) ? source.deck.length : 0,
     discardCount: Array.isArray(source.discard) ? source.discard.length : 0,
     board: Array.isArray(source.board)
-      ? source.board.map(normalizeUnit).filter(Boolean)
+      ? source.board.map((u) => normalizeUnit(u, cardMap)).filter(Boolean)
       : []
   };
 }
@@ -47,7 +54,7 @@ function normalizeAction(action) {
   };
 }
 
-function serializeGameState(gameState) {
+function serializeGameState(gameState, cardMap) {
   const source = gameState || {};
   const serialized = {
     matchId: source.matchId ?? null,
@@ -55,8 +62,8 @@ function serializeGameState(gameState) {
     turn: source.turn ?? null,
     activePlayer: source.activePlayer ?? null,
     players: {
-      player1: normalizePlayer(source.player1),
-      player2: normalizePlayer(source.player2)
+      player1: normalizePlayer(source.player1, cardMap),
+      player2: normalizePlayer(source.player2, cardMap)
     },
     turnActions: Array.isArray(source.turnActions)
       ? source.turnActions.map(normalizeAction)
