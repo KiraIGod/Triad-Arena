@@ -737,10 +737,11 @@ async function handleLeave(io, socket, payload = {}) {
   validateMatchAccess(match, playerId);
   const opponentId = getOpponentId(match, playerId);
 
-  socket.leave(matchId);
-  socket.data.inMatch = false;
-
-  if (match.status === "finished") return;
+  if (match.status === "finished") {
+    socket.leave(matchId);
+    socket.data.inMatch = false;
+    return;
+  }
 
   clearTurnTimer(matchId);
   const reconnectTimer = reconnectTimers.get(String(matchId));
@@ -759,13 +760,16 @@ async function handleLeave(io, socket, payload = {}) {
   unregisterActiveMatch(match);
   clearSocketMatchRuntime(matchId);
 
-  socket.to(matchId).emit("match:finish", {
+  io.to(matchId).emit("match:finish", {
     winnerId: opponentId || null,
     reason: "opponent_left",
     message: "Opponent cowardly left the arena",
     ratingChanges: ratingChanges || null,
     gameMode: match.game_mode || "normal"
   });
+
+  socket.leave(matchId);
+  socket.data.inMatch = false;
 }
 
 // ─── Wrapper & registration ───────────────────────────────────────────────────
@@ -862,6 +866,7 @@ module.exports = function registerMatchSocket(io) {
               dcState = loaded.state;
             } catch (_) {}
 
+            clearTurnTimer(match.id);
             unregisterActiveMatch(match);
             reconnectTimers.delete(String(match.id));
             clearSocketMatchRuntime(match.id);

@@ -321,16 +321,17 @@ export default function GamePage() {
       requestArenaState();
     };
 
-    const pollId = window.setInterval(() => {
-      if (!arenaMatchId) {
+    let pollId: number | undefined;
+    if (!arenaMatchId) {
+      pollId = window.setInterval(() => {
         requestArenaState();
-      }
-    }, 1500);
+      }, 1500);
+    }
 
     socket.on("connect", onConnect);
     socket.on("arena:ready", onArenaReady);
     return () => {
-      window.clearInterval(pollId);
+      if (pollId !== undefined) window.clearInterval(pollId);
       socket.off("connect", onConnect);
       socket.off("arena:ready", onArenaReady);
     };

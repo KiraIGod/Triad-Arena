@@ -22,6 +22,7 @@ function pickWaitingArena(activeGames, gameMode = "normal", excludeUserId = null
   for (const [arenaId, arena] of activeGames.entries()) {
     if (
       arena?.status === "waiting" &&
+      !arena.matchId &&
       Array.isArray(arena.players) &&
       arena.players.length === 1 &&
       (arena.gameMode || "normal") === gameMode
@@ -148,6 +149,13 @@ module.exports = function registerArenaSocket(io, activeGames) {
         const joinerNickname = (await getNicknameFromSocket(socket)) || "UNKNOWN";
         const hostNickname = arena.players?.[0]?.nickname || "UNKNOWN";
 
+        if (arena.status !== "waiting" || arena.matchId || arena.players.length >= 2) {
+          if (typeof callback === "function") {
+            callback({ error: "Arena is no longer available" });
+          }
+          return;
+        }
+
         if (arena.hostSocketId === socket.id) {
           if (typeof callback === "function") {
             callback({ error: "Cannot join your own arena" });
@@ -208,8 +216,8 @@ module.exports = function registerArenaSocket(io, activeGames) {
 
         socket.join(arenaId);
 
-        if (typeof ack === "function") {
-          ack({ arenaId, opponentNickname: hostNickname, matchId: arena.matchId || null });
+        if (typeof callback === "function") {
+          callback({ arenaId, opponentNickname: hostNickname, matchId: arena.matchId || null });
         }
 
         io.to(arenaId).emit("arena:ready", {
@@ -227,6 +235,33 @@ module.exports = function registerArenaSocket(io, activeGames) {
 
 
     socket.on("arena:join", handleJoinRandom);
+
+    socket.on("arena:cancel-search", () => {
+      const userId = socket.data?.userId;
+      if (!userId) return;
+
+      for (const [arenaId, arena] of activeGames.entries()) {
+        if (
+          arena?.status === "waiting" &&
+          !arena.matchId &&
+          Array.isArray(arena.players) &&
+          arena.players.some(p => String(p?.userId) === String(userId))
+        ) {
+          const remaining = arena.players.filter(
+            p => String(p?.userId) !== String(userId)
+          );
+          if (remaining.length === 0) {
+            activeGames.delete(arenaId);
+          } else {
+            arena.players = remaining;
+            arena.updatedAt = Date.now();
+            activeGames.set(arenaId, arena);
+          }
+          socket.leave(arenaId);
+        }
+      }
+    });
+
     socket.on("arena:get-state", (payload, ack) => {
       try {
         const arenaId = String(payload?.arenaId || "");

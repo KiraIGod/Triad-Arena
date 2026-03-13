@@ -75,11 +75,11 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
   }, []);
 
   useEffect(() => {
-    if (token) {
-      socket.auth = { token };
-      if (socket.connected) {
-        socket.disconnect();
-      }
+    if (!token) return;
+
+    socket.auth = { token };
+    if (socket.connected) {
+      socket.disconnect();
     }
     socket.connect();
 
@@ -99,6 +99,7 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      joinCancelledRef.current = true;
       clearSearchTimers();
     };
   }, [token, checkActiveMatch, clearSearchTimers]);
@@ -114,6 +115,7 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
     setIsJoiningArena(false);
     setError(null);
     socket.emit("match:cancel");
+    socket.emit("arena:cancel-search");
   };
 
   useEffect(() => {
