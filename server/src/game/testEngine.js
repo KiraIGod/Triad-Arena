@@ -290,7 +290,6 @@ function testUnitSummon() {
   assert(unit.ownerId === "p1", "ownerId is set");
   assert(Number.isFinite(unit.summonedTurn), "summonedTurn is a number");
   assert(unit.summonedTurn === 1, "summonedTurn recorded correctly");
-  // FIX 10: unitIndex should contain the unit
   assert(state.player1.unitIndex[unit.instanceId] === 0, "unitIndex maps instanceId to board position");
   assertSerializedState(state, "m-summon");
 }
@@ -457,7 +456,6 @@ function testDuplicateAttackProtection() {
     actionId: "da-atk-1"
   });
 
-  // FIX 1: attack actionId is stored in turnActions — re-use must be rejected
   assert(
     state.turnActions.some((a) => a.actionId === "da-atk-1"),
     "Attack action should be recorded in turnActions"
@@ -476,7 +474,6 @@ function testDuplicateAttackProtection() {
 }
 
 function testMaxHandBurn() {
-  // FIX 9: drawn card is discarded when hand is already at MAX_HAND
   const { GAME_CONSTANTS: GC } = require("./constants");
   // Build a player with exactly MAX_HAND cards in hand and 2 more in deck
   const allCards = Array.from({ length: GC.MAX_HAND + 2 }, (_, i) => ({ id: `hc-${i}` }));
@@ -514,7 +511,6 @@ function testMaxHandBurn() {
 }
 
 function testStrongAttackValidation() {
-  // FIX 4: unit.ownerId, canAttack, hasAttacked checks
   let state = createInitialGameState("p1", "p2");
   state = play(state, "p1", 1, makeUnit("guard", { attack: 2, hp: 3 }));
   state = end(state, "p1", 2);
@@ -666,6 +662,103 @@ function testSpellDiscardAfterResolution() {
   assertSerializedState(state, "m-spell-discard");
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// TRIAD COMBO TESTS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function testTriadComboNoBonus() {
+  // Playing a single spell: no combo bonus applied
+  let state = createInitialGameState("p1", "p2");
+
+  state = play(state, "p1", 1, makeSpell("tc-single", { triad_type: "assault", attack: 4 }));
+
+  // comboCount=1 → no bonus, 4 damage
+  assert(state.player2.hp === 26, "No combo bonus on first assault spell");
+  assertSerializedState(state, "m-triad-no-combo");
+}
+
+function testTriadComboTwoCards() {
+  // Playing 2 assault spells in one turn: second spell gets +2 combo bonus
+  let state = createInitialGameState("p1", "p2");
+
+  state = play(state, "p1", 1, makeSpell("tc-a1", { triad_type: "assault", attack: 3, mana_cost: 1 }));
+  // First spell: comboCount=1, no bonus → 3 damage; p2.hp = 27
+  assert(state.player2.hp === 27, "First assault spell: 3 damage, no combo bonus");
+
+  state = play(state, "p1", 2, makeSpell("tc-a2", { triad_type: "assault", attack: 3, mana_cost: 1 }));
+  // Second spell: comboCount=2, +2 bonus → 5 damage; p2.hp = 27 - 5 = 22
+  assert(state.player2.hp === 22, "Second assault spell: 3+2 combo bonus = 5 damage");
+  assertSerializedState(state, "m-triad-combo-2");
+}
+
+function testTriadComboThreeCards() {
+  // Playing 3 assault spells in one turn: third spell gets +4 combo bonus
+  let state = createInitialGameState("p1", "p2");
+
+  state = play(state, "p1", 1, makeSpell("tc3-a1", { triad_type: "assault", attack: 2, mana_cost: 1 }));
+  // comboCount=1, no bonus → 2 damage; p2.hp = 28
+  assert(state.player2.hp === 28, "First assault spell: 2 damage");
+
+  state = play(state, "p1", 2, makeSpell("tc3-a2", { triad_type: "assault", attack: 2, mana_cost: 1 }));
+  // comboCount=2, +2 bonus → 4 damage; p2.hp = 24
+  assert(state.player2.hp === 24, "Second assault spell: 2+2 = 4 damage");
+
+  state = play(state, "p1", 3, makeSpell("tc3-a3", { triad_type: "assault", attack: 2, mana_cost: 1 }));
+  // comboCount=3, +4 bonus → 6 damage; p2.hp = 18
+  assert(state.player2.hp === 18, "Third assault spell: 2+4 = 6 damage");
+  assertSerializedState(state, "m-triad-combo-3");
+}
+
+function testTriadComboMixedTypesNoBonus() {
+  // Playing cards of different triad types: no combo bonus
+  let state = createInitialGameState("p1", "p2");
+
+  state = play(state, "p1", 1, makeSpell("tc-mix-1", { triad_type: "assault",   attack: 3, mana_cost: 1 }));
+  state = play(state, "p1", 2, makeSpell("tc-mix-2", { triad_type: "precision", attack: 3, mana_cost: 1 }));
+  state = play(state, "p1", 3, makeSpell("tc-mix-3", { triad_type: "arcane",    attack: 3, mana_cost: 1 }));
+
+  // All different types: comboCount=1 for each → 3+3+3 = 9 damage total
+  assert(state.player2.hp === 21, "Mixed triad types: no combo bonus applied");
+  assertSerializedState(state, "m-triad-no-bonus-mixed");
+}
+
+function testTriadComboUnitCountsTowardCombo() {
+  // A unit of the same triad_type counts toward the combo for subsequent spells
+  let state = createInitialGameState("p1", "p2");
+
+  // Play an assault unit first (units count as same-type plays)
+  state = play(state, "p1", 1, makeUnit("tc-unit", { triad_type: "assault", mana_cost: 1 }));
+  // No damage from unit summon
+  assert(state.player2.hp === 30, "Unit summon deals no direct damage");
+
+  // Now play an assault spell: comboCount=2 (unit + spell) → +2 bonus
+  state = play(state, "p1", 2, makeSpell("tc-unit-spell", { triad_type: "assault", attack: 3, mana_cost: 1 }));
+  // comboCount=2, +2 bonus → 5 damage
+  assert(state.player2.hp === 25, "Assault spell after assault unit: +2 combo bonus applied");
+  assertSerializedState(state, "m-triad-unit-combo");
+}
+
+function testTriadComboResetOnNewTurn() {
+  // Combo resets between turns (playedCards is cleared in resolveTurn)
+  let state = createInitialGameState("p1", "p2");
+
+  state = play(state, "p1", 1, makeSpell("reset-a1", { triad_type: "assault", attack: 3, mana_cost: 1 }));
+  state = play(state, "p1", 2, makeSpell("reset-a2", { triad_type: "assault", attack: 3, mana_cost: 1 }));
+  // comboCount=2 on second → 5 damage; total so far: 3+5=8; p2.hp=22
+  assert(state.player2.hp === 22, "Combo active during same turn");
+
+  state = endTurn(state, { playerId: "p1", expectedVersion: state.version });
+  // p2's turn
+  state = endTurn(state, { playerId: "p2", expectedVersion: state.version });
+  // Back to p1 — playedCards is cleared, combo resets
+
+  const hpBeforeNewTurn = state.player2.hp;
+  state = play(state, "p1", state.version, makeSpell("reset-a3", { triad_type: "assault", attack: 3, mana_cost: 1 }));
+  // comboCount=1 (first assault this turn) → no bonus → 3 damage
+  assert(state.player2.hp === hpBeforeNewTurn - 3, "Combo resets at start of new turn");
+  assertSerializedState(state, "m-triad-combo-reset");
+}
+
 function testFullPvpScenario() {
   let state = createInitialGameState("p1", "p2");
   const log = createEventLog();
@@ -773,12 +866,26 @@ function run() {
   testSpellSelfShield();
   testSpellDiscardAfterResolution();
 
+  // Triad combo tests
+  testTriadComboNoBonus();
+  testTriadComboTwoCards();
+  testTriadComboThreeCards();
+  testTriadComboMixedTypesNoBonus();
+  testTriadComboUnitCountsTowardCombo();
+  testTriadComboResetOnNewTurn();
+
   testFullPvpScenario();
 
   console.log("ENGINE TEST RESULTS");
   console.log("✓ damage pipeline (spell)");
   console.log("✓ shield system");
-  console.log("✓ triad system");
+  console.log("✓ triad system (type advantage)");
+  console.log("✓ triad combo — no bonus on first card");
+  console.log("✓ triad combo — +2 bonus on 2nd same-type card");
+  console.log("✓ triad combo — +4 bonus on 3rd same-type card");
+  console.log("✓ triad combo — no bonus for mixed types");
+  console.log("✓ triad combo — unit counts toward spell combo");
+  console.log("✓ triad combo — resets on new turn");
   console.log("✓ burn timing");
   console.log("✓ draw mechanic");
   console.log("✓ per-player turn limits");

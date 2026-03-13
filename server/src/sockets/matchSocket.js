@@ -1,6 +1,6 @@
 const db = require("../db/models");
 const { playCard, attack, endTurn } = require("../game/engine");
-const { INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
+const { GAME_CONSTANTS, INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
 const { serializeGameState } = require("../game/stateSerializer");
 const { validateGameState } = require("../game/stateValidator");
 const { enqueueMatchAction, clearMatchQueue } = require("../game/actionQueue");
@@ -21,6 +21,22 @@ const {
 const DEBUG_GAME_STATE = String(process.env.DEBUG_GAME_STATE || "").toLowerCase() === "true";
 const RATE_LIMIT_WINDOW_MS = 1000;
 const RATE_LIMIT_MAX_ACTIONS = 10;
+
+// ─── Card metadata cache (for stateSerializer unit enrichment) ────────────────
+
+let cardMapCache = {};
+
+db.Card.findAll()
+  .then((cards) => {
+    for (const card of cards) {
+      const c = card.get({ plain: true });
+      cardMapCache[c.id] = c;
+    }
+    console.log(`[cardMap] Preloaded ${Object.keys(cardMapCache).length} cards`);
+  })
+  .catch((err) => {
+    console.error("[cardMap] Failed to preload card metadata:", err?.message || err);
+  });
 
 let waitingQueueEntry = null;
 const reconnectTimers = new Map();
@@ -79,7 +95,7 @@ function enforceActionRateLimit(socket) {
 // ─── State serialization ──────────────────────────────────────────────────────
 
 function getSerializedState(matchId, gameState) {
-  const safeState = serializeGameState({ ...(gameState || {}), matchId: String(matchId) });
+  const safeState = serializeGameState({ ...(gameState || {}), matchId: String(matchId) }, cardMapCache);
   validateGameState(safeState);
   if (DEBUG_GAME_STATE) {
     console.log("GAME STATE UPDATE", safeState);
@@ -129,8 +145,9 @@ function validateCardPlayPreconditions(state, playerId, card) {
     throw createSocketError(INVALID_ACTION, "Invalid player");
   }
 
-  const actionCount = (state?.turnActions || []).filter((a) => a?.playerId === playerId).length;
-  if (actionCount >= 3) {
+  // Attacks (cardId === null) must not count toward the card-play limit.
+  const actionCount = (state?.turnActions || []).filter((a) => a?.playerId === playerId && a?.cardId != null).length;
+  if (actionCount >= GAME_CONSTANTS.MAX_CARDS_PER_TURN) {
     throw createSocketError(INVALID_ACTION, "Card limit reached for this turn");
   }
 
@@ -320,12 +337,7 @@ async function cleanupFinishedMatch(io, match, persistedState, safeState, matchI
     ...buildMatchStatePayload(match, safeState),
     events
   });
-  io.to(String(matchId)).emit("match:finish", {
-    winnerId,
-    ratingChanges: ratingChanges || null,
-    gameMode: match.game_mode || "normal"
-  });
-  clearSocketMatchRuntime(matchId);
+  io.to(String(matchId)).emit("match:finish", { winnerId });
 }
 
 // ─── Turn timer ───────────────────────────────────────────────────────────────
@@ -399,12 +411,7 @@ async function forceEndTurn(io, matchId, playerId) {
         ...buildMatchStatePayload(match, safeState),
         events: [{ type: "TURN_TIMEOUT" }]
       });
-      io.to(String(matchId)).emit("match:finish", {
-        winnerId,
-        ratingChanges: ratingChanges || null,
-        gameMode: match.game_mode || "normal"
-      });
-      clearSocketMatchRuntime(matchId);
+      io.to(String(matchId)).emit("match:finish", { winnerId });
       return;
     }
 
@@ -429,10 +436,6 @@ async function handleJoin(io, socket, payload = {}) {
   validateMatchAccess(match, playerId);
 
   const safeState = getSerializedState(matchId, state);
-  console.log(`[MATCH] Player ${playerId} joined match ${matchId}`);
-  if (match.player_one_id && match.player_two_id) {
-    console.log(`[MATCH] Match started: ${match.player_one_id} vs ${match.player_two_id}`);
-  }
 
   const matchRoom = io.sockets.adapter.rooms.get(String(matchId));
   if (matchRoom && matchRoom.size >= 2 && !matchRoom.has(socket.id)) {
@@ -441,6 +444,16 @@ async function handleJoin(io, socket, payload = {}) {
 
   socket.join(String(matchId));
   socket.emit("match:state", buildMatchStatePayload(match, safeState));
+
+  // Start the timer on first join (arena path), or sync current remaining to the joining socket.
+  if (!state.finished) {
+    const timerEntry = turnTimers.get(String(matchId));
+    if (timerEntry) {
+      socket.emit("match:timer", { remaining: timerEntry.getRemaining() });
+    } else {
+      startTurnTimer(io, matchId, safeState.activePlayer);
+    }
+  }
 }
 
 async function handleQueue(io, socket) {
@@ -514,7 +527,7 @@ async function handleQueue(io, socket) {
 }
 
 async function handlePlayCard(io, socket, payload = {}) {
-  const { matchId, cardId, version, actionId } = payload;
+  const { matchId, cardId, version, actionId, targetType, targetId } = payload;
   if (!matchId || !cardId) {
     throw createSocketError(INVALID_ACTION, "matchId and cardId are required");
   }
@@ -537,12 +550,11 @@ async function handlePlayCard(io, socket, payload = {}) {
 
   const cardData = card.get({ plain: true });
   validateCardPlayPreconditions(state, playerId, cardData);
-  console.log(`[ACTION] ${playerId} played card ${cardId}`);
 
   const nextState = playCard(
     state,
     { playerId, expectedVersion: incomingVersion },
-    { ...cardData, actionId }
+    { ...cardData, actionId, targetType: targetType || "hero", targetId: targetId || null }
   );
   const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
   const safeState = getSerializedState(matchId, persistedState);
@@ -575,11 +587,6 @@ async function handlePlayCard(io, socket, payload = {}) {
     return;
   }
 
-  const lastTurnAction = persistedState.turnActions[persistedState.turnActions.length - 1];
-  if (lastTurnAction && Number.isFinite(lastTurnAction.actionIndex)) {
-    console.log(`[ACTION] Turn action #${lastTurnAction.actionIndex}`);
-  }
-
   io.to(String(matchId)).emit("match:update", {
     ...buildMatchStatePayload(match, safeState),
     events
@@ -607,8 +614,6 @@ async function handleAttack(io, socket, payload = {}) {
   }
   if (state?.finished) throw createSocketError("MATCH_FINISHED", "Game already finished");
   if (state?.activePlayer !== playerId) throw createSocketError("INVALID_TURN", "Not your turn");
-
-  console.log(`[ATTACK] ${playerId} attacking with ${unitId} → ${targetType}:${targetId}`);
 
   const nextState = attack(
     state,
@@ -654,8 +659,6 @@ async function handleEndTurn(io, socket, payload = {}) {
   if (state?.finished) throw createSocketError("MATCH_FINISHED", "Game already finished");
   if (state?.activePlayer !== playerId) throw createSocketError("INVALID_TURN", "Not your turn");
 
-  console.log(`[TURN] ${playerId} ended turn`);
-
   const nextState = endTurn(state, { playerId, expectedVersion: incomingVersion });
   const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
   const safeState = getSerializedState(matchId, persistedState);
@@ -692,19 +695,17 @@ async function handleSync(io, socket) {
   if (pendingTimer) {
     clearTimeout(pendingTimer);
     reconnectTimers.delete(String(match.id));
-    console.log(`[reconnect] Cancelled defeat timer for player ${userId} match ${match.id}`);
   }
 
-  // Restore socket room membership so the player receives broadcasts again.
+  // Restore socket room membership and inMatch flag so the player receives broadcasts again.
   socket.join(String(match.id));
+  socket.data.inMatch = true;
 
   // Guard against the race condition where this sync fires BEFORE the old socket's
   // "disconnect" event. Marking the player here prevents disconnect from re-starting
   // the defeat timer. The mark auto-expires after 10 s to avoid a memory leak.
   reconnectedPlayers.add(String(userId));
   setTimeout(() => reconnectedPlayers.delete(String(userId)), 10_000);
-
-  console.log(`[reconnect] Player ${userId} rejoined match ${match.id}`);
 
   // Immediately send the current timer so the client UI is in sync.
   const timerEntry = turnTimers.get(String(match.id));
@@ -738,7 +739,6 @@ async function handleLeave(io, socket, payload = {}) {
 
   socket.leave(matchId);
   socket.data.inMatch = false;
-  console.log(`[MATCH] Player ${socket.data?.userId || "unknown"} left match ${matchId}`);
 
   if (match.status === "finished") return;
 
@@ -792,7 +792,6 @@ module.exports = function registerMatchSocket(io) {
         waitingQueueEntry?.userId === socket.data?.userId
       ) {
         waitingQueueEntry = null;
-        console.log(`[match:cancel] Player ${socket.data?.userId} left queue`);
       }
     });
 
@@ -849,7 +848,6 @@ module.exports = function registerMatchSocket(io) {
       // this disconnect event), skip the defeat timer entirely.
       if (reconnectedPlayers.has(String(userId))) {
         reconnectedPlayers.delete(String(userId));
-        console.log(`[disconnect] Player ${userId} reconnected on new socket — skipping defeat timer for match ${match.id}`);
         return;
       }
 
@@ -874,7 +872,6 @@ module.exports = function registerMatchSocket(io) {
               ratingChanges: ratingChanges || null,
               gameMode: match.game_mode || "normal"
             });
-            clearSocketMatchRuntime(match.id);
           } catch (err) {
             console.error("[reconnect:timeout] failed:", err?.message || err);
           }

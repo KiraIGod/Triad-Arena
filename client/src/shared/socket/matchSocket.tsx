@@ -10,6 +10,10 @@ export type UnitInstance = {
   canAttack: boolean;
   hasAttacked: boolean;
   statuses: Array<{ type: string; turns?: number; amount?: number }>;
+  // Card metadata embedded by server — survives reconnect without a cardCatalog lookup
+  name?: string;
+  image?: string;
+  triad_type?: string;
 };
 
 type PlayerCard = {
@@ -33,6 +37,7 @@ type PlayerState = {
   statuses?: Array<{ type: string; turns?: number; amount?: number }>;
   hand?: PlayerCard[];
   deckCount?: number;
+  discardCount?: number;
   board: UnitInstance[];
 };
 
@@ -53,6 +58,7 @@ export type MatchStatePayload = {
       playerId: string | null;
       turnOwnerId: string | null;
       cardId: string | null;
+      triadType: string | null;
       timestamp: number | null;
     }>;
     finished: boolean;
@@ -114,6 +120,8 @@ export function playMatchCard(payload: {
   cardId: string;
   actionId: string;
   version: number;
+  targetType?: "unit" | "hero";
+  targetId?: string;
 }): void {
   matchSocket.emit("match:playCard", payload);
 }

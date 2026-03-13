@@ -16,7 +16,7 @@ function withRefreshedEnergy(player) {
   return { ...player, energy: GAME_CONSTANTS.ENERGY_PER_TURN };
 }
 
-// FIX 9: discard drawn card if hand is at MAX_HAND capacity
+// Drawn card goes to discard when hand is at capacity (burn).
 function drawCard(player) {
   const deck = Array.isArray(player?.deck) ? [...player.deck] : [];
   const hand = Array.isArray(player?.hand) ? [...player.hand] : [];
@@ -41,7 +41,6 @@ function resolveTurn(state) {
 
   const withEffects = applyStatusEffects(state);
   const currentKey = getActivePlayerKey(withEffects) || "player1";
-  // FIX 6: nextKey is the ONLY player whose board gets refreshed
   const nextKey = currentKey === "player1" ? "player2" : "player1";
 
   const endedPlayer = removeExpiredStatuses(tickStatuses(withEffects[currentKey]));
@@ -53,7 +52,7 @@ function resolveTurn(state) {
   const baseNextPlayer = nextKey === "player1" ? player1 : player2;
   const nextActivePlayer = drawCard(withRefreshedEnergy(baseNextPlayer));
 
-  // FIX 6: refreshBoardForTurn applied ONLY to the incoming active player
+  // Only refresh the board for the incoming active player, not both players.
   const nextActivePlayerWithBoard = {
     ...nextActivePlayer,
     board: refreshBoardForTurn(nextActivePlayer.board)
@@ -67,7 +66,6 @@ function resolveTurn(state) {
     turn: (withEffects.turn || 1) + 1,
     version: (withEffects.version || 0) + 1,
     playedCards: [],
-    // FIX 1: single unified action log; no separate attackActions
     turnActions: [],
     finished: getFinished({ ...withEffects, player1, player2 })
   };

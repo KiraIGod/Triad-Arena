@@ -93,7 +93,6 @@ module.exports = function registerArenaSocket(io, activeGames) {
         });
 
         socket.join(arenaId);
-        console.log(`[arena:create] success arenaId=${arenaId} gameMode=${gameMode} socket=${socket.id}`);
 
         if (typeof callback === "function") {
           callback({ arenaId });
@@ -148,7 +147,6 @@ module.exports = function registerArenaSocket(io, activeGames) {
 
         const joinerNickname = (await getNicknameFromSocket(socket)) || "UNKNOWN";
         const hostNickname = arena.players?.[0]?.nickname || "UNKNOWN";
-
 
         if (arena.hostSocketId === socket.id) {
           if (typeof callback === "function") {
@@ -210,10 +208,8 @@ module.exports = function registerArenaSocket(io, activeGames) {
 
         socket.join(arenaId);
 
-        console.log(`[arena:join] success arenaId=${arenaId} socket=${socket.id}`);
-
-        if (typeof callback === "function") {
-          callback({ arenaId, opponentNickname: hostNickname, matchId: arena.matchId || null });
+        if (typeof ack === "function") {
+          ack({ arenaId, opponentNickname: hostNickname, matchId: arena.matchId || null });
         }
 
         io.to(arenaId).emit("arena:ready", {
@@ -231,7 +227,6 @@ module.exports = function registerArenaSocket(io, activeGames) {
 
 
     socket.on("arena:join", handleJoinRandom);
-
     socket.on("arena:get-state", (payload, ack) => {
       try {
         const arenaId = String(payload?.arenaId || "");
@@ -260,7 +255,5 @@ module.exports = function registerArenaSocket(io, activeGames) {
         }
       }
     });
-
-
   });
 };

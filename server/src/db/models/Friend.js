@@ -1,40 +1,39 @@
 const { DataTypes, Model } = require("sequelize");
 
-function initUserModel(sequelize) {
-  class User extends Model {}
+function initFriendModel(sequelize) {
+  class Friend extends Model {}
 
-  User.init(
+  Friend.init(
     {
       id: {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true
       },
-      email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-      },
-      password_hash: {
-        type: DataTypes.STRING,
+      userId: {
+        type: DataTypes.UUID,
         allowNull: false
       },
-      nickname: {
+      friendId: {
+        type: DataTypes.UUID,
+        allowNull: false
+      },
+      status: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true
+        defaultValue: 'pending'
       }
     },
     {
       sequelize,
-      modelName: "User",
-      tableName: "users",
+      modelName: "Friend",
+      tableName: "friends",
       createdAt: "created_at",
       updatedAt: "updated_at"
     }
-  );
+  )
 
-  return User;
+  return Friend
 }
 
-module.exports = initUserModel
+module.exports = initFriendModel
