@@ -33,6 +33,7 @@ type PlayerState = {
   statuses?: Array<{ type: string; turns?: number; amount?: number }>;
   hand?: PlayerCard[];
   deckCount?: number;
+  discardCount?: number;
   board: UnitInstance[];
 };
 

@@ -10,6 +10,9 @@ type MatchBoardProps = {
   selfHint?: ReactNode;
   enemyHint?: ReactNode;
   enemyTargeting?: boolean;
+  spellNotice?: string | null;
+  spellNoticeFading?: boolean;
+  spellNoticeTone?: "default" | "warning";
 };
 
 export default function MatchBoard({
@@ -19,7 +22,10 @@ export default function MatchBoard({
   enemyUnits,
   selfHint = null,
   enemyHint = null,
-  enemyTargeting = false
+  enemyTargeting = false,
+  spellNotice = null,
+  spellNoticeFading = false,
+  spellNoticeTone = "default"
 }: MatchBoardProps) {
   const normalize = (value: string | null | undefined) => String(value ?? "").trim().toLowerCase();
   const selfCards = cards.filter((entry) => normalize(entry.playerId) === normalize(currentUserId));
@@ -27,6 +33,11 @@ export default function MatchBoard({
 
   return (
     <section className="game-battlefield-layout" aria-label="Match board">
+      {spellNotice && (
+        <div className={`game-spell-notice game-spell-notice--board game-spell-notice--${spellNoticeTone}${spellNoticeFading ? " is-fading" : ""}`}>
+          <span>{spellNotice}</span>
+        </div>
+      )}
 
 
       <div className="game-board__side game-board__side--self">

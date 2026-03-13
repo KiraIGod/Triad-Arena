@@ -264,6 +264,7 @@
 }
 
 .game-battlefield-layout {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(220px, 1fr));
   gap: 10px;
@@ -336,6 +337,8 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: 100%;
+  overflow: hidden;
 }
 
 .game-board__title {
@@ -350,9 +353,13 @@
 .game-board__cards {
   display: flex;
   flex-wrap: wrap;
+  flex: 1 1 auto;
+  min-height: 0;
   row-gap: 8px;
   column-gap: 8px;
-  /* align-content: flex-start; */
+  align-content: flex-start;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .game-board__card-slot {
@@ -667,6 +674,19 @@
   .game-top-row {
     padding: 8px 12px;
   }
+
+  .game-spell-notice {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    max-width: calc(100% - 24px);
+    white-space: normal;
+  }
+
+  .game-triad-combo {
+    left: calc(100% + 16px);
+    top: 0;
+  }
 }
 
 /* ─── Battlefield board rows ─────────────────────────────────────────────────── */
@@ -802,6 +822,44 @@
   font-size: 14px;
 }
 
+.battlefield-unit__shield {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  padding: 2px 6px;
+  border: 1px solid rgba(32, 15, 5, 0.75);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(201, 169, 98, 0.92) 0%, rgba(143, 116, 64, 0.92) 100%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-heading);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  color: #1a1612;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.battlefield-unit__statuses {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.battlefield-unit__statuses .game-status-badge {
+  margin: 0;
+  padding: 1px 4px;
+  font-size: 9px;
+  letter-spacing: 0.04em;
+}
+
 /* States */
 
 .battlefield-unit--can-attack {
@@ -854,6 +912,40 @@
   border-color: rgba(200, 50, 50, 0.3);
 }
 
+.game-spell-notice {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 32px;
+  background: rgba(201, 169, 98, 0.5);
+  border: 1px solid rgba(201, 169, 98, 0.3);
+  border-radius: 6px;
+  font-size: 26px;
+  color: rgba(255, 255, 255, 0.86);
+  z-index: 20;
+  pointer-events: none;
+  white-space: nowrap;
+  opacity: 1;
+  transition: opacity 3s ease;
+}
+
+.game-spell-notice--warning {
+  background: linear-gradient(180deg, rgba(137, 27, 27, 0.5) 0%, rgba(94, 14, 14, 0.96) 100%);
+  border-color: rgba(58, 6, 6, 0.9);
+  color: #f8e7dc;
+  box-shadow:
+    0 14px 30px rgba(72, 8, 8, 0.45),
+    inset 0 1px 0 rgba(255, 214, 214, 0.14);
+}
+
+.game-spell-notice.is-fading {
+  opacity: 0;
+}
+
 .game-state--attackable {
   cursor: crosshair;
   outline: 1px dashed rgba(220, 60, 60, 0.5);
@@ -863,14 +955,19 @@
 /* ─── Triad combo indicator ──────────────────────────────────────────────────── */
 
 .game-triad-combo {
+  position: absolute;
+  left: calc(100% - 80px);
+  top: -5px;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-top: 8px;
   padding: 6px 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(18, 14, 10, 0.75);
   animation: triad-combo-appear 0.25s ease-out;
+  z-index: 5;
+  pointer-events: none;
+  width: max-content
 }
 
 @keyframes triad-combo-appear {

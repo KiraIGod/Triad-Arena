@@ -68,7 +68,12 @@ export default function HandCards({
               } as CSSProperties
             }
           >
-            <GameCard card={card} size={cardSize} onClick={onCardClick} disabled={isDisabled} />
+            <GameCard
+              card={card}
+              size={cardSize}
+              onClick={onCardClick}
+              className={isDisabled ? "is-disabled" : undefined}
+            />
           </div>
         );
       })}

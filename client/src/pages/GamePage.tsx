@@ -77,18 +77,30 @@ export default function GamePage() {
 
   const [match, setMatch] = useState<MatchStatePayload | null>(null);
   const [matchError, setMatchError] = useState<string | null>(null);
+  const [battlefieldHint, setBattlefieldHint] = useState<string | null>(null);
+  const [battlefieldHintFading, setBattlefieldHintFading] = useState(false);
+  const [handHint, setHandHint] = useState<string | null>(null);
+  const [handHintFading, setHandHintFading] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
-  const [selectedCardReason, setSelectedCardReason] = useState<string | null>(null);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [finishReason, setFinishReason] = useState<string | null>(null);
   const [attackState, setAttackState] = useState<AttackState>({ mode: "idle" });
   const [timerRemaining, setTimerRemaining] = useState(45);
+  const [spellNotice, setSpellNotice] = useState<string | null>(null);
+  const [spellNoticeFading, setSpellNoticeFading] = useState(false);
 
   const joinedMatchRef = useRef<string | null>(null);
+  const spellNoticeFadeTimeoutRef = useRef<number | null>(null);
+  const spellNoticeHideTimeoutRef = useRef<number | null>(null);
+  const battlefieldHintFadeTimeoutRef = useRef<number | null>(null);
+  const battlefieldHintHideTimeoutRef = useRef<number | null>(null);
+  const handHintFadeTimeoutRef = useRef<number | null>(null);
+  const handHintHideTimeoutRef = useRef<number | null>(null);
+  const lastSpellNoticeEventIdRef = useRef<number | null>(null);
   const { playedCards, cardCatalog, applyEvents, resetBoard } = useMatchBoard();
 
-  const isSameUser = (value: string | number | null | undefined) =>
-    String(value ?? "").trim().toLowerCase() === String(userIdStr ?? "").trim().toLowerCase();
+  const isSameUser = useCallback((value: string | number | null | undefined) =>
+    String(value ?? "").trim().toLowerCase() === String(userIdStr ?? "").trim().toLowerCase(), [userIdStr]);
 
   const formatStatusLabel = (status: StatusView): string => {
     const type = String(status?.type || "unknown").toUpperCase();
@@ -124,6 +136,129 @@ export default function GamePage() {
       </span>
     ));
   };
+
+  const showSpellNotice = useCallback((events?: MatchStatePayload["events"]) => {
+    if (!Array.isArray(events) || events.length === 0) return;
+
+    const latestSpellEvent = [...events]
+      .reverse()
+      .find((event) => String(event?.type || "") === "CARD_PLAYED" && String(event?.payload?.card?.type || "").toLowerCase() === "spell");
+
+    if (!latestSpellEvent?.payload?.card?.name) return;
+    if (lastSpellNoticeEventIdRef.current === latestSpellEvent.eventId) return;
+    lastSpellNoticeEventIdRef.current = latestSpellEvent.eventId;
+
+    const ownerLabel = isSameUser(latestSpellEvent.payload.playerId) ? "Your" : "Opponent";
+    setSpellNotice(`${ownerLabel} spell resolved: ${latestSpellEvent.payload.card.name}`);
+    setSpellNoticeFading(false);
+
+    if (spellNoticeFadeTimeoutRef.current) {
+      window.clearTimeout(spellNoticeFadeTimeoutRef.current);
+    }
+    if (spellNoticeHideTimeoutRef.current) {
+      window.clearTimeout(spellNoticeHideTimeoutRef.current);
+    }
+
+    spellNoticeFadeTimeoutRef.current = window.setTimeout(() => {
+      setSpellNoticeFading(true);
+      spellNoticeFadeTimeoutRef.current = null;
+    }, 2000);
+
+    spellNoticeHideTimeoutRef.current = window.setTimeout(() => {
+      setSpellNotice(null);
+      setSpellNoticeFading(false);
+      spellNoticeHideTimeoutRef.current = null;
+    }, 5000);
+  }, [isSameUser]);
+
+  const clearHandHintTimers = useCallback(() => {
+    if (handHintFadeTimeoutRef.current) {
+      window.clearTimeout(handHintFadeTimeoutRef.current);
+      handHintFadeTimeoutRef.current = null;
+    }
+    if (handHintHideTimeoutRef.current) {
+      window.clearTimeout(handHintHideTimeoutRef.current);
+      handHintHideTimeoutRef.current = null;
+    }
+  }, []);
+
+  const hideHandHint = useCallback(() => {
+    clearHandHintTimers();
+    setHandHint(null);
+    setHandHintFading(false);
+  }, [clearHandHintTimers]);
+
+  const showHandHint = useCallback((message: string | null) => {
+    hideHandHint();
+    if (!message) return;
+    setHandHint(message);
+    setHandHintFading(false);
+    handHintFadeTimeoutRef.current = window.setTimeout(() => {
+      setHandHintFading(true);
+      handHintFadeTimeoutRef.current = null;
+    }, 2000);
+    handHintHideTimeoutRef.current = window.setTimeout(() => {
+      setHandHint(null);
+      setHandHintFading(false);
+      handHintHideTimeoutRef.current = null;
+    }, 5000);
+  }, [hideHandHint]);
+
+  const clearBattlefieldHintTimers = useCallback(() => {
+    if (battlefieldHintFadeTimeoutRef.current) {
+      window.clearTimeout(battlefieldHintFadeTimeoutRef.current);
+      battlefieldHintFadeTimeoutRef.current = null;
+    }
+    if (battlefieldHintHideTimeoutRef.current) {
+      window.clearTimeout(battlefieldHintHideTimeoutRef.current);
+      battlefieldHintHideTimeoutRef.current = null;
+    }
+  }, []);
+
+  const hideBattlefieldHint = useCallback(() => {
+    clearBattlefieldHintTimers();
+    setBattlefieldHint(null);
+    setBattlefieldHintFading(false);
+  }, [clearBattlefieldHintTimers]);
+
+  const showBattlefieldHint = useCallback((message: string | null) => {
+    hideBattlefieldHint();
+    if (!message) return;
+    setBattlefieldHint(message);
+    setBattlefieldHintFading(false);
+    battlefieldHintFadeTimeoutRef.current = window.setTimeout(() => {
+      setBattlefieldHintFading(true);
+      battlefieldHintFadeTimeoutRef.current = null;
+    }, 2000);
+    battlefieldHintHideTimeoutRef.current = window.setTimeout(() => {
+      setBattlefieldHint(null);
+      setBattlefieldHintFading(false);
+      battlefieldHintHideTimeoutRef.current = null;
+    }, 5000);
+  }, [hideBattlefieldHint]);
+
+  useEffect(() => {
+    return () => {
+      if (spellNoticeFadeTimeoutRef.current) {
+        window.clearTimeout(spellNoticeFadeTimeoutRef.current);
+      }
+      if (spellNoticeHideTimeoutRef.current) {
+        window.clearTimeout(spellNoticeHideTimeoutRef.current);
+      }
+      if (battlefieldHintFadeTimeoutRef.current) {
+        window.clearTimeout(battlefieldHintFadeTimeoutRef.current);
+      }
+      if (battlefieldHintHideTimeoutRef.current) {
+        window.clearTimeout(battlefieldHintHideTimeoutRef.current);
+      }
+      if (handHintFadeTimeoutRef.current) {
+        window.clearTimeout(handHintFadeTimeoutRef.current);
+      }
+      if (handHintHideTimeoutRef.current) {
+        window.clearTimeout(handHintHideTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // ── URL params sync ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -210,28 +345,33 @@ export default function GamePage() {
 
     const handleState = (payload: MatchStatePayload) => {
       setMatchError(null);
-      setSelectedCardReason(null);
+      hideBattlefieldHint();
+      hideHandHint();
       setAttackState({ mode: "idle" });
       setMatch(payload);
       if (payload.state.finished) setTimerRemaining(0);
       setArenaMatchId(payload.matchId);
       if (payload.events?.length) {
+        showSpellNotice(payload.events);
         applyEvents(payload.events);
       }
     };
 
     const handleUpdate = (payload: MatchStatePayload) => {
       setMatchError(null);
-      setSelectedCardReason(null);
+      hideBattlefieldHint();
+      hideHandHint();
       setAttackState({ mode: "idle" });
       setMatch(payload);
       if (payload.state.finished) setTimerRemaining(0);
       if (payload.events?.length) {
+        showSpellNotice(payload.events);
         applyEvents(payload.events);
       }
     };
 
     const handleError = (payload: MatchErrorPayload) => {
+      hideBattlefieldHint();
       setMatchError(mapMatchErrorMessage(payload.type, payload.message));
       if (payload.type === "STATE_OUTDATED") syncMatch();
     };
@@ -241,8 +381,9 @@ export default function GamePage() {
       setWinnerId(payload.winnerId ?? null);
       setTimerRemaining(0);
       setSelectedCardId(null);
-      setSelectedCardReason(null);
+      hideHandHint();
       setAttackState({ mode: "idle" });
+      hideBattlefieldHint();
       setMatch((prev) => (prev ? { ...prev, state: { ...prev.state, finished: true } } : prev));
 
       if (payload.reason === "opponent_left") {
@@ -273,7 +414,7 @@ export default function GamePage() {
       offMatchFinish(handleFinish);
       offMatchTimer(handleTimer);
     };
-  }, [applyEvents, token, userIdStr]);
+  }, [applyEvents, hideBattlefieldHint, hideHandHint, showSpellNotice, token, userIdStr]);
 
   // ── Join match ───────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -286,6 +427,8 @@ export default function GamePage() {
       resetBoard();
       joinedMatchRef.current = arenaMatchId;
       setMatchError(null);
+      hideBattlefieldHint();
+      hideHandHint();
     }
 
     if (match?.matchId !== arenaMatchId) joinMatch(arenaMatchId);
@@ -298,7 +441,7 @@ export default function GamePage() {
     }, 1200);
 
     return () => { window.clearTimeout(retryId); };
-  }, [arenaMatchId, resetBoard, token, userIdStr, match?.matchId]);
+  }, [arenaMatchId, hideBattlefieldHint, hideHandHint, resetBoard, token, userIdStr, match?.matchId]);
 
   // ── Derived state ─────────────────────────────────────────────────────────────
 
@@ -370,6 +513,11 @@ export default function GamePage() {
     return match.state.players[selfKey].deckCount ?? 0;
   }, [match, selfKey, selfIndex]);
 
+  const selfDiscardCount = useMemo(() => {
+    if (!match || selfIndex < 0) return 0;
+    return match.state.players[selfKey].discardCount ?? 0;
+  }, [match, selfKey, selfIndex]);
+
   const matchResultLabel = useMemo(() => {
     if (finishReason === "opponent_left") return "Opponent cowardly left the arena";
     if (!winnerId || !userIdStr) return null;
@@ -377,6 +525,15 @@ export default function GamePage() {
   }, [finishReason, winnerId, userIdStr]);
 
   const isMatchFinished = Boolean(match?.state.finished || finishReason || winnerId);
+  const boardNotice = spellNotice ?? battlefieldHint ?? handHint;
+  const isBoardNoticeFading = spellNotice
+    ? spellNoticeFading
+    : battlefieldHint
+      ? battlefieldHintFading
+      : handHint
+        ? handHintFading
+        : false;
+  const boardNoticeTone = spellNotice ? "default" : "warning";
 
   const playedCardIdsThisTurn = useMemo(() => {
     if (!match || !userIdStr) return new Set<string>();
@@ -386,35 +543,43 @@ export default function GamePage() {
     return new Set(ids);
   }, [match, userIdStr]);
 
-  // Triad combo: count same-type cards played by the local player this turn.
-  // Uses turnActions (authoritative server state) so it survives reconnects.
+  // Triad combo notice should reflect the last card play that could actually
+  // receive the backend combo bonus, not the "best type so far" in the turn.
   const triadComboInfo = useMemo((): { type: string; count: number; bonus: number } | null => {
     if (!match || !userIdStr) return null;
 
-    const myActions = match.state.turnActions.filter(
-      (a) => a.triadType != null && a.playerId != null && isSameUser(a.playerId)
-    );
-    if (myActions.length < 2) return null;
+    const myCardActions = match.state.turnActions
+      .filter((action) =>
+        action.cardId != null &&
+        action.triadType != null &&
+        action.playerId != null &&
+        isSameUser(action.playerId)
+      )
+      .sort((left, right) => (left.actionIndex ?? 0) - (right.actionIndex ?? 0));
 
-    const counts: Record<string, number> = {};
-    for (const action of myActions) {
-      const t = String(action.triadType).toLowerCase();
-      counts[t] = (counts[t] ?? 0) + 1;
-    }
+    if (myCardActions.length === 0) return null;
 
-    let bestType = "";
-    let bestCount = 0;
-    for (const [type, count] of Object.entries(counts)) {
-      if (count > bestCount) {
-        bestType = type;
-        bestCount = count;
-      }
-    }
+    const latestCardAction = myCardActions[myCardActions.length - 1];
+    const latestCardId = String(latestCardAction.cardId ?? "");
+    const latestCard =
+      cardCatalog[latestCardId] ||
+      [...playedCards]
+        .reverse()
+        .find((entry) => isSameUser(entry.playerId) && entry.card.id === latestCardId)?.card;
 
-    if (bestCount < 2) return null;
-    const bonus = bestCount >= 3 ? 4 : 2;
-    return { type: bestType, count: bestCount, bonus };
-  }, [match, userIdStr]);
+    if (!latestCard || latestCard.type !== "SPELL") return null;
+
+    const triadType = String(latestCardAction.triadType || "").toLowerCase();
+    const comboCount = myCardActions.filter(
+      (action) =>
+        (action.actionIndex ?? 0) <= (latestCardAction.actionIndex ?? 0) &&
+        String(action.triadType || "").toLowerCase() === triadType
+    ).length;
+
+    if (comboCount < 2) return null;
+    const bonus = comboCount >= 3 ? 4 : 2;
+    return { type: triadType, count: comboCount, bonus };
+  }, [cardCatalog, isSameUser, match, playedCards, userIdStr]);
 
   // ── Card play ─────────────────────────────────────────────────────────────────
 
@@ -434,9 +599,11 @@ export default function GamePage() {
 
   const handleCardClick = (card: CardModel) => {
     setAttackState({ mode: "idle" });
+    hideBattlefieldHint();
+    hideHandHint();
     setSelectedCardId((prev) => (prev === card.id ? null : card.id));
     const reason = getCardDisabledReason(card);
-    setSelectedCardReason(reason);
+    showHandHint(reason);
     if (reason || !match) return;
 
     const actionId = `${Date.now()}-${card.id}-${Math.random().toString(36).slice(2)}`;
@@ -451,17 +618,21 @@ export default function GamePage() {
 
     if (attackState.mode === "selectingTarget" && attackState.attackerInstanceId === unit.instanceId) {
       setAttackState({ mode: "idle" });
+      hideBattlefieldHint();
+      hideHandHint();
       return;
     }
 
     if (!unit.canAttack) {
-      setMatchError("This unit cannot attack yet");
+      showBattlefieldHint("This unit cannot attack yet");
       return;
     }
 
     setSelectedCardId(null);
+    hideBattlefieldHint();
+    hideHandHint();
     setAttackState({ mode: "selectingTarget", attackerInstanceId: unit.instanceId });
-  }, [isMyTurn, match, attackState]);
+  }, [attackState, hideBattlefieldHint, hideHandHint, isMyTurn, match, showBattlefieldHint]);
 
   const handleEnemyUnitClick = useCallback((unit: UnitInstance) => {
     if (attackState.mode !== "selectingTarget" || !match) return;
@@ -477,9 +648,11 @@ export default function GamePage() {
     });
     // FIX 7: reset all attack UI state immediately after sending
     setAttackState({ mode: "idle" });
+    hideBattlefieldHint();
+    hideHandHint();
     setSelectedCardId(null);
     setMatchError(null);
-  }, [attackState, match]);
+  }, [attackState, hideBattlefieldHint, hideHandHint, match]);
 
   const handleEnemyHeroClick = useCallback(() => {
     if (attackState.mode !== "selectingTarget" || !match) return;
@@ -501,16 +674,19 @@ export default function GamePage() {
     });
     // FIX 7: reset all attack UI state immediately after sending
     setAttackState({ mode: "idle" });
+    hideBattlefieldHint();
+    hideHandHint();
     setSelectedCardId(null);
     setMatchError(null);
-  }, [attackState, match, userIdStr]);
+  }, [attackState, hideBattlefieldHint, hideHandHint, match, userIdStr]);
 
   // ── Turn / leave ──────────────────────────────────────────────────────────────
 
   const handleEndTurnClick = () => {
     setSelectedCardId(null);
-    setSelectedCardReason(null);
+    hideHandHint();
     setAttackState({ mode: "idle" });
+    hideBattlefieldHint();
     if (!match || !userIdStr) return;
     if (match.state.finished || !isSameUser(match.state.activePlayer)) return;
     endMatchTurn({ matchId: match.matchId, version: match.state.version });
@@ -525,6 +701,8 @@ export default function GamePage() {
     setWinnerId(null);
     setFinishReason(null);
     setAttackState({ mode: "idle" });
+    hideBattlefieldHint();
+    hideHandHint();
     resetBoard();
     navigate("/lobby");
   };
@@ -555,6 +733,11 @@ export default function GamePage() {
     const isAttackable = isOwn && isMyTurn && unit.canAttack && !isSelectingTarget;
     const isTargetable = !isOwn && isSelectingTarget;
     const isSick = !unit.canAttack && !unit.hasAttacked;
+    const unitShield = Array.isArray(unit.statuses)
+      ? unit.statuses
+        .filter((status) => String(status?.type || "").toLowerCase() === "shield")
+        .reduce((total, status) => total + (Number(status?.amount) || 0), 0)
+      : 0;
 
     let unitClass = "battlefield-unit-card";
     if (isSelected) unitClass += " battlefield-unit--selected";
@@ -574,6 +757,12 @@ export default function GamePage() {
         title={isSick ? "Summoning sickness — can attack next turn" : unit.canAttack ? "Ready to attack" : "Already attacked"}
       >
         <GameCard card={toBoardCardModel(unit)} size="small" />
+        {unitShield > 0 && <span className="battlefield-unit__shield">SH {unitShield}</span>}
+        {Array.isArray(unit.statuses) && unit.statuses.length > 0 && (
+          <div className="battlefield-unit__statuses">
+            {renderStatuses(unit.statuses)}
+          </div>
+        )}
         {isSelected && <span className="battlefield-unit__badge">⚔</span>}
       </div>
     );
@@ -648,7 +837,9 @@ export default function GamePage() {
         <div className="game-top-row">
           <aside className="game-deck-panel">
             <p className="game-log__entry">Deck: {selfDeckCount}</p>
+            <p className="game-log__entry">Discard: {selfDiscardCount}</p>
             <p className="game-log__entry">Hand: {handCards.length}</p>
+            
             {triadComboInfo && (
               <div className={`game-triad-combo game-triad-combo--${triadComboInfo.type}`}>
                 <span className="game-triad-combo__label">Triad Combo</span>
@@ -659,7 +850,6 @@ export default function GamePage() {
               </div>
             )}
           </aside>
-
 
           <div className="game-state game-state--turn">
             <div className="game-state__turn-row">
@@ -684,7 +874,7 @@ export default function GamePage() {
         </div>
 
 
-        {matchError && matchError !== "This unit cannot attack yet" && (
+        {matchError && (
           <div className="game-attack-banner game-attack-banner--error">
             <span>{matchError}</span>
           </div>
@@ -694,17 +884,15 @@ export default function GamePage() {
           <MatchBoard
             cards={playedCards}
             currentUserId={userIdStr}
-            selfHint={matchError === "This unit cannot attack yet" ? (
-              <div className="battlefield-target-overlay battlefield-target-overlay--self">
-                <span className="game-state__target-hint">This unit cannot attack yet</span>
-              </div>
-            ) : null}
             enemyHint={isSelectingTarget ? (
               <div className="battlefield-target-overlay">
                 <span className="game-state__target-hint">Select a target unit</span>
               </div>
             ) : null}
             enemyTargeting={isSelectingTarget}
+            spellNotice={boardNotice}
+            spellNoticeFading={isBoardNoticeFading}
+            spellNoticeTone={boardNoticeTone}
             selfUnits={
               selfStats.board.length > 0
                 ? selfStats.board.map((unit) => renderUnit(unit, true))
