@@ -1,14 +1,14 @@
-﻿import React from "react";
-import ReactDOM from "react-dom/client";
-import { BrowserRouter } from "react-router-dom";
-import { Provider } from "react-redux";
-import App from "./App";
-import { store } from "./store";
-
-import "antd/dist/reset.css";
+﻿import React from "react"
+import ReactDOM from "react-dom/client"
+import { BrowserRouter } from "react-router-dom"
+import { Provider } from "react-redux"
+import App from "./App"
+import { store } from "./store"
+import "./i18n"
+import "antd/dist/reset.css"
 import "./styles/index.css"
 import { themeConfig } from "./theme/themeConfig"
-import { ConfigProvider, theme as antdTheme } from "antd";
+import { ConfigProvider, theme as antdTheme } from "antd"
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
@@ -24,4 +24,4 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
       </ConfigProvider>
     </Provider>
   </React.StrictMode>
-);
+)

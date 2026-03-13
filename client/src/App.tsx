@@ -11,7 +11,7 @@ import LandingPage from "./pages/LandingPage"
 export default function App() {
   return (
     <AppLayout>
-      <Routes>
+ъ      <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -20,5 +20,5 @@ export default function App() {
         <Route path="/game" element={<ProtectedRoute><GamePage /></ProtectedRoute>} />
       </Routes>
     </AppLayout>
-  );
+  )
 }

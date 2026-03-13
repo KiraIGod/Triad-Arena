@@ -1,25 +1,26 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAppSelector, useAppDispatch } from "../store";
-import { clearCredentials } from "../features/auth/authSlice";
-import { fetchUserDeck } from "../shared/api/deckBuilderApi";
-import { fetchMatchHistory, fetchPlayerStats } from "../shared/api/lobbyApi";
-import { useLobbyArena } from "../features/customHooks/useLobbyArena";
-import { PlayerPanel } from "../components/lobby/PlayerPanel";
-import { MatchmakingPanel } from "../components/lobby/MatchmakingPanel";
-import { MatchHistoryPanel } from "../components/lobby/MatchHistoryPanel";
-import { OnlineCounter } from "../components/lobby/OnlineCounter";
-import type { DeckSummary } from "../types/lobby";
-import type { MatchHistoryEntry, PlayerStats } from "../shared/api/lobbyApi";
-import styles from "./LobbyPage.module.css";
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { useAppSelector, useAppDispatch } from "../store"
+import { clearCredentials } from "../features/auth/authSlice"
+import { fetchUserDeck } from "../shared/api/deckBuilderApi"
+import { fetchMatchHistory, fetchPlayerStats } from "../shared/api/lobbyApi"
+import { useLobbyArena } from "../features/customHooks/useLobbyArena"
+import { PlayerPanel } from "../components/lobby/PlayerPanel"
+import { MatchmakingPanel } from "../components/lobby/MatchmakingPanel"
+import { MatchHistoryPanel } from "../components/lobby/MatchHistoryPanel"
+import { OnlineCounter } from "../components/lobby/OnlineCounter"
+import type { DeckSummary } from "../types/lobby"
+import type { MatchHistoryEntry, PlayerStats } from "../shared/api/lobbyApi"
+import { FriendList } from "../components/lobby/FriendList"
+import styles from "./LobbyPage.module.css"
 
-type GameMode = "normal" | "ranked" | "private";
+type GameMode = "normal" | "ranked" | "private"
 
 const MODE_LABELS: Record<GameMode, { label: string; icon: string }> = {
   normal: { label: "Normal", icon: "⚔" },
   ranked: { label: "Ranked", icon: "🏆" },
   private: { label: "Private", icon: "🔒" },
-};
+}
 
 function summarizeDeck(
   name: string,
@@ -28,36 +29,36 @@ function summarizeDeck(
   cards: Array<{
     cardId: string;
     quantity: number;
-    card: { triad_type: string };
+    card: { triad_type: string }
   }>,
 ): DeckSummary {
-  const triadCounts = { assault: 0, precision: 0, arcane: 0 };
+  const triadCounts = { assault: 0, precision: 0, arcane: 0 }
   for (const item of cards) {
     const t = (item.card?.triad_type || "").toLowerCase();
     if (t in triadCounts) {
-      (triadCounts as Record<string, number>)[t] += item.quantity;
+      (triadCounts as Record<string, number>)[t] += item.quantity
     }
   }
-  return { name, cardsTotal: totalCards, cardsMax: maxCards, ...triadCounts };
+  return { name, cardsTotal: totalCards, cardsMax: maxCards, ...triadCounts }
 }
 
 export default function LobbyPage() {
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
-  const token = useAppSelector((s) => s.auth.token);
-  const nickname = useAppSelector((s) => s.auth.nickname) ?? "PILOT";
+  const navigate = useNavigate()
+  const dispatch = useAppDispatch()
+  const token = useAppSelector((s) => s.auth.token)
+  const nickname = useAppSelector((s) => s.auth.nickname) ?? "PILOT"
 
   const handleLogout = () => {
-    dispatch(clearCredentials());
-    navigate("/login");
-  };
+    dispatch(clearCredentials())
+    navigate("/login")
+  }
 
-  const [gameMode, setGameMode] = useState<GameMode>("normal");
-  const [deck, setDeck] = useState<DeckSummary | null>(null);
-  const [stats, setStats] = useState<PlayerStats | null>(null);
-  const [matches, setMatches] = useState<MatchHistoryEntry[]>([]);
-  const [matchesLoading, setMatchesLoading] = useState(true);
-  const [matchesError, setMatchesError] = useState<string | null>(null);
+  const [gameMode, setGameMode] = useState<GameMode>("normal")
+  const [deck, setDeck] = useState<DeckSummary | null>(null)
+  const [stats, setStats] = useState<PlayerStats | null>(null)
+  const [matches, setMatches] = useState<MatchHistoryEntry[]>([])
+  const [matchesLoading, setMatchesLoading] = useState(true)
+  const [matchesError, setMatchesError] = useState<string | null>(null)
 
   const {
     isCreatingArena,
@@ -70,10 +71,10 @@ export default function LobbyPage() {
     activeMatchId,
     searchTimeLeft,
     cancelSearch,
-  } = useLobbyArena(token);
+  } = useLobbyArena(token)
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) return
 
     fetchUserDeck(token)
       .then((res) =>
@@ -81,23 +82,23 @@ export default function LobbyPage() {
           summarizeDeck(res.name, res.totalCards, res.maxCards, res.cards),
         ),
       )
-      .catch(() => setDeck(null));
+      .catch(() => setDeck(null))
 
     fetchPlayerStats(token)
       .then(setStats)
-      .catch(() => setStats(null));
+      .catch(() => setStats(null))
 
-    setMatchesLoading(true);
+    setMatchesLoading(true)
     fetchMatchHistory(token)
       .then((data) => {
         setMatches(data);
-        setMatchesError(null);
+        setMatchesError(null)
       })
       .catch(() => setMatchesError("Failed to load match history"))
       .finally(() => setMatchesLoading(false));
-  }, [token]);
+  }, [token])
 
-  const handleOpenDeckBuilder = () => navigate("/deck-builder");
+  const handleOpenDeckBuilder = () => navigate("/deck-builder")
 
   return (
     <div className={styles.page}>
@@ -134,6 +135,7 @@ export default function LobbyPage() {
       </header>
 
       <div className={styles.layout}>
+
         <PlayerPanel
           nickname={nickname}
           stats={stats}
@@ -180,7 +182,8 @@ export default function LobbyPage() {
           loading={matchesLoading}
           error={matchesError}
         />
+
       </div>
     </div>
-  );
+  )
 }
