@@ -9,6 +9,7 @@ const deckBuilderRoutes = require("./routes/deckBuilder")
 const matchesRoutes = require("./routes/matches")
 const playersRoutes = require("./routes/players")
 const { initSocket } = require("./sockets/index")
+const friendsRouter = require('./routes/friendsRouter')
 
 dotenv.config()
 
@@ -29,6 +30,7 @@ app.use("/api/deck-builder", deckBuilderRoutes)
 app.use("/api/matches", matchesRoutes)
 app.use("/api/players", playersRoutes)
 app.use('/static', express.static(path.join(__dirname, 'public')))
+app.use('/api/friends', friendsRouter)
 
 initSocket(server)
 

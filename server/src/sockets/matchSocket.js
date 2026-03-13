@@ -22,6 +22,22 @@ const DEBUG_GAME_STATE = String(process.env.DEBUG_GAME_STATE || "").toLowerCase(
 const RATE_LIMIT_WINDOW_MS = 1000;
 const RATE_LIMIT_MAX_ACTIONS = 10;
 
+// ─── Card metadata cache (for stateSerializer unit enrichment) ────────────────
+
+let cardMapCache = {};
+
+db.Card.findAll()
+  .then((cards) => {
+    for (const card of cards) {
+      const c = card.get({ plain: true });
+      cardMapCache[c.id] = c;
+    }
+    console.log(`[cardMap] Preloaded ${Object.keys(cardMapCache).length} cards`);
+  })
+  .catch((err) => {
+    console.error("[cardMap] Failed to preload card metadata:", err?.message || err);
+  });
+
 let waitingQueueEntry = null;
 const reconnectTimers = new Map();
 const runtimeMatchState = new Map();
@@ -79,7 +95,7 @@ function enforceActionRateLimit(socket) {
 // ─── State serialization ──────────────────────────────────────────────────────
 
 function getSerializedState(matchId, gameState) {
-  const safeState = serializeGameState({ ...(gameState || {}), matchId: String(matchId) });
+  const safeState = serializeGameState({ ...(gameState || {}), matchId: String(matchId) }, cardMapCache);
   validateGameState(safeState);
   if (DEBUG_GAME_STATE) {
     console.log("GAME STATE UPDATE", safeState);
@@ -416,7 +432,7 @@ async function handleQueue(io, socket) {
 }
 
 async function handlePlayCard(io, socket, payload = {}) {
-  const { matchId, cardId, version, actionId } = payload;
+  const { matchId, cardId, version, actionId, targetType, targetId } = payload;
   if (!matchId || !cardId) {
     throw createSocketError(INVALID_ACTION, "matchId and cardId are required");
   }
@@ -444,7 +460,7 @@ async function handlePlayCard(io, socket, payload = {}) {
   const nextState = playCard(
     state,
     { playerId, expectedVersion: incomingVersion },
-    { ...cardData, actionId }
+    { ...cardData, actionId, targetType: targetType || "hero", targetId: targetId || null }
   );
   const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
   const safeState = getSerializedState(matchId, persistedState);

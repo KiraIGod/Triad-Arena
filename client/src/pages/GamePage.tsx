@@ -38,7 +38,8 @@ import MatchBoard from "../components/MatchBoard";
 
 type AttackState =
   | { mode: "idle" }
-  | { mode: "selectingTarget"; attackerInstanceId: string };
+  | { mode: "selectingTarget"; attackerInstanceId: string }
+  | { mode: "selectingSpellTarget"; spellCardId: string; originalCardId: string; actionId: string };
 
 type StatusView = { type: string; turns?: number; amount?: number };
 
@@ -598,6 +599,15 @@ export default function GamePage() {
   const canPlayCard = (card: CardModel): boolean => getCardDisabledReason(card) === null;
 
   const handleCardClick = (card: CardModel) => {
+    // Clicking the already-selected spell card cancels targeting mode.
+    if (attackState.mode === "selectingSpellTarget" && attackState.spellCardId === card.id) {
+      setAttackState({ mode: "idle" });
+      setSelectedCardId(null);
+      hideBattlefieldHint();
+      hideHandHint();
+      return;
+    }
+
     setAttackState({ mode: "idle" });
     hideBattlefieldHint();
     hideHandHint();
@@ -606,8 +616,15 @@ export default function GamePage() {
     showHandHint(reason);
     if (reason || !match) return;
 
-    const actionId = `${Date.now()}-${card.id}-${Math.random().toString(36).slice(2)}`;
     const originalCardId = card.id.split(":")[0];
+    const actionId = `${Date.now()}-${originalCardId}-${Math.random().toString(36).slice(2)}`;
+
+    if (card.type === "SPELL") {
+      setAttackState({ mode: "selectingSpellTarget", spellCardId: card.id, originalCardId, actionId });
+      showBattlefieldHint("Select a target: enemy unit or enemy hero");
+      return;
+    }
+
     playMatchCard({ matchId: match.matchId, cardId: originalCardId, actionId, version: match.state.version });
   };
 
@@ -615,6 +632,15 @@ export default function GamePage() {
 
   const handleMyUnitClick = useCallback((unit: UnitInstance) => {
     if (!isMyTurn || !match) return;
+
+    // Clicking any own unit while selecting a spell target cancels spell mode.
+    if (attackState.mode === "selectingSpellTarget") {
+      setAttackState({ mode: "idle" });
+      setSelectedCardId(null);
+      hideBattlefieldHint();
+      hideHandHint();
+      return;
+    }
 
     if (attackState.mode === "selectingTarget" && attackState.attackerInstanceId === unit.instanceId) {
       setAttackState({ mode: "idle" });
@@ -635,7 +661,26 @@ export default function GamePage() {
   }, [attackState, hideBattlefieldHint, hideHandHint, isMyTurn, match, showBattlefieldHint]);
 
   const handleEnemyUnitClick = useCallback((unit: UnitInstance) => {
-    if (attackState.mode !== "selectingTarget" || !match) return;
+    if (!match) return;
+
+    if (attackState.mode === "selectingSpellTarget") {
+      playMatchCard({
+        matchId: match.matchId,
+        cardId: attackState.originalCardId,
+        actionId: attackState.actionId,
+        version: match.state.version,
+        targetType: "unit",
+        targetId: unit.instanceId
+      });
+      setAttackState({ mode: "idle" });
+      hideBattlefieldHint();
+      hideHandHint();
+      setSelectedCardId(null);
+      setMatchError(null);
+      return;
+    }
+
+    if (attackState.mode !== "selectingTarget") return;
 
     const actionId = `atk-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     attackWithUnit({
@@ -646,7 +691,6 @@ export default function GamePage() {
       actionId,
       version: match.state.version
     });
-    // FIX 7: reset all attack UI state immediately after sending
     setAttackState({ mode: "idle" });
     hideBattlefieldHint();
     hideHandHint();
@@ -655,9 +699,33 @@ export default function GamePage() {
   }, [attackState, hideBattlefieldHint, hideHandHint, match]);
 
   const handleEnemyHeroClick = useCallback(() => {
-    if (attackState.mode !== "selectingTarget" || !match) return;
+    if (!match) return;
 
     const enemyHeroId = match.players.find((id) => !isSameUser(id));
+
+    if (attackState.mode === "selectingSpellTarget") {
+      if (!enemyHeroId) {
+        setMatchError("Enemy hero target not found");
+        return;
+      }
+      playMatchCard({
+        matchId: match.matchId,
+        cardId: attackState.originalCardId,
+        actionId: attackState.actionId,
+        version: match.state.version,
+        targetType: "hero",
+        targetId: enemyHeroId
+      });
+      setAttackState({ mode: "idle" });
+      hideBattlefieldHint();
+      hideHandHint();
+      setSelectedCardId(null);
+      setMatchError(null);
+      return;
+    }
+
+    if (attackState.mode !== "selectingTarget") return;
+
     if (!enemyHeroId) {
       setMatchError("Enemy hero target not found");
       return;
@@ -672,13 +740,12 @@ export default function GamePage() {
       actionId,
       version: match.state.version
     });
-    // FIX 7: reset all attack UI state immediately after sending
     setAttackState({ mode: "idle" });
     hideBattlefieldHint();
     hideHandHint();
     setSelectedCardId(null);
     setMatchError(null);
-  }, [attackState, hideBattlefieldHint, hideHandHint, match, userIdStr]);
+  }, [attackState, hideBattlefieldHint, hideHandHint, isSameUser, match]);
 
   // ── Turn / leave ──────────────────────────────────────────────────────────────
 
@@ -710,28 +777,31 @@ export default function GamePage() {
   // ── Board rendering helpers ───────────────────────────────────────────────────
 
   const isSelectingTarget = attackState.mode === "selectingTarget";
+  const isSelectingSpellTarget = attackState.mode === "selectingSpellTarget";
+  const isAnyTargetingMode = isSelectingTarget || isSelectingSpellTarget;
   const selectedAttackerId = isSelectingTarget ? attackState.attackerInstanceId : null;
 
+  // Prefer metadata embedded by the server (survives reconnect); fall back to cardCatalog.
   const toBoardCardModel = (unit: UnitInstance): CardModel => {
     const base = cardCatalog[unit.cardId];
     return {
       id: unit.cardId,
-      name: base?.name || "Unknown Unit",
+      name: unit.name || base?.name || "Unknown Unit",
       type: (base?.type || "UNIT") as CardModel["type"],
-      triad_type: (base?.triad_type || "ASSAULT") as CardModel["triad_type"],
+      triad_type: (unit.triad_type || base?.triad_type || "ASSAULT") as CardModel["triad_type"],
       mana_cost: base?.mana_cost ?? 0,
       attack: unit.attack,
       hp: unit.hp,
       description: base?.description || "Unit on the battlefield",
-      image: base?.image || "crimson_duelist.png",
+      image: unit.image || base?.image || "crimson_duelist.png",
       created_at: base?.created_at || ""
     };
   };
 
   const renderUnit = (unit: UnitInstance, isOwn: boolean) => {
     const isSelected = isOwn && unit.instanceId === selectedAttackerId;
-    const isAttackable = isOwn && isMyTurn && unit.canAttack && !isSelectingTarget;
-    const isTargetable = !isOwn && isSelectingTarget;
+    const isAttackable = isOwn && isMyTurn && unit.canAttack && !isAnyTargetingMode;
+    const isTargetable = !isOwn && isAnyTargetingMode;
     const isSick = !unit.canAttack && !unit.hasAttacked;
     const unitShield = Array.isArray(unit.statuses)
       ? unit.statuses
@@ -805,16 +875,18 @@ export default function GamePage() {
         </div>
 
         <div
-          className={`game-state${isSelectingTarget ? " game-state--attackable" : ""}`}
+          className={`game-state${isAnyTargetingMode ? " game-state--attackable" : ""}`}
           onClick={handleEnemyHeroClick}
-          title={isSelectingTarget ? "Attack enemy hero" : undefined}
-          style={{ cursor: isSelectingTarget ? "crosshair" : undefined }}
+          title={isSelectingSpellTarget ? "Cast spell on enemy hero" : isSelectingTarget ? "Attack enemy hero" : undefined}
+          style={{ cursor: isAnyTargetingMode ? "crosshair" : undefined }}
         >
           <p className="game-state__label">Opponent Status</p>
           <p className="game-state__value">
             {(oppStats.statuses || []).length
               ? renderStatuses(oppStats.statuses)
-              : isSelectingTarget ? "← Click to attack hero" : "None"}
+              : isSelectingSpellTarget ? "← Click to target hero"
+              : isSelectingTarget ? "← Click to attack hero"
+              : "None"}
           </p>
         </div>
       </header>
@@ -884,12 +956,14 @@ export default function GamePage() {
           <MatchBoard
             cards={playedCards}
             currentUserId={userIdStr}
-            enemyHint={isSelectingTarget ? (
+            enemyHint={isAnyTargetingMode ? (
               <div className="battlefield-target-overlay">
-                <span className="game-state__target-hint">Select a target unit</span>
+                <span className="game-state__target-hint">
+                  {isSelectingSpellTarget ? "Select a spell target" : "Select a target unit"}
+                </span>
               </div>
             ) : null}
-            enemyTargeting={isSelectingTarget}
+            enemyTargeting={isAnyTargetingMode}
             spellNotice={boardNotice}
             spellNoticeFading={isBoardNoticeFading}
             spellNoticeTone={boardNoticeTone}
