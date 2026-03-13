@@ -12,7 +12,7 @@ import LandingPage from "./pages/LandingPage"
 export default function App() {
   return (
     <AppLayout>
-ъ      <Routes>
+      <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
