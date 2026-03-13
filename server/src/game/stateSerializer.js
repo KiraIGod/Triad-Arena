@@ -41,6 +41,7 @@ function normalizeAction(action) {
     playerId: source.playerId ?? null,
     turnOwnerId: source.turnOwnerId ?? null,
     cardId: source.cardId ?? null,
+    triadType: source.triadType ?? null,
     timestamp: source.timestamp ?? null
   };
 }

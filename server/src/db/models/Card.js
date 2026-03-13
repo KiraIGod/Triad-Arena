@@ -42,6 +42,18 @@ function initCardModel(sequelize) {
         type: DataTypes.STRING,
         allowNull: false,
       },
+      // Spell effects applied to the opponent on resolution (e.g. burn, weak, stun).
+      statuses: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: [],
+      },
+      // Spell effects applied to the caster on resolution (e.g. shield).
+      self_statuses: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: [],
+      },
       created_at: {
         type: DataTypes.DATE,
         allowNull: false,

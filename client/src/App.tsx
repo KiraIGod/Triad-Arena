@@ -7,12 +7,13 @@ import LobbyPage from "./pages/LobbyPage"
 import GamePage from "./pages/GamePage"
 import DeckBuilderPage from "./pages/DeckBuilderPage"
 import HomeRedirect from "./app/HomeRedirect"
+import LandingPage from "./pages/LandingPage"
 
 export default function App() {
   return (
     <AppLayout>
       <Routes>
-        <Route path="/" element={<HomeRedirect />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/lobby" element={<ProtectedRoute><LobbyPage /></ProtectedRoute>} />

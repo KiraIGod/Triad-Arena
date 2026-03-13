@@ -386,6 +386,36 @@ export default function GamePage() {
     return new Set(ids);
   }, [match, userIdStr]);
 
+  // Triad combo: count same-type cards played by the local player this turn.
+  // Uses turnActions (authoritative server state) so it survives reconnects.
+  const triadComboInfo = useMemo((): { type: string; count: number; bonus: number } | null => {
+    if (!match || !userIdStr) return null;
+
+    const myActions = match.state.turnActions.filter(
+      (a) => a.triadType != null && a.playerId != null && isSameUser(a.playerId)
+    );
+    if (myActions.length < 2) return null;
+
+    const counts: Record<string, number> = {};
+    for (const action of myActions) {
+      const t = String(action.triadType).toLowerCase();
+      counts[t] = (counts[t] ?? 0) + 1;
+    }
+
+    let bestType = "";
+    let bestCount = 0;
+    for (const [type, count] of Object.entries(counts)) {
+      if (count > bestCount) {
+        bestType = type;
+        bestCount = count;
+      }
+    }
+
+    if (bestCount < 2) return null;
+    const bonus = bestCount >= 3 ? 4 : 2;
+    return { type: bestType, count: bestCount, bonus };
+  }, [match, userIdStr]);
+
   // ── Card play ─────────────────────────────────────────────────────────────────
 
   const getCardDisabledReason = (card: CardModel): string | null => {
@@ -619,6 +649,15 @@ export default function GamePage() {
           <aside className="game-deck-panel">
             <p className="game-log__entry">Deck: {selfDeckCount}</p>
             <p className="game-log__entry">Hand: {handCards.length}</p>
+            {triadComboInfo && (
+              <div className={`game-triad-combo game-triad-combo--${triadComboInfo.type}`}>
+                <span className="game-triad-combo__label">Triad Combo</span>
+                <span className="game-triad-combo__type">
+                  {triadComboInfo.type.toUpperCase()} ×{triadComboInfo.count}
+                </span>
+                <span className="game-triad-combo__bonus">+{triadComboInfo.bonus} DMG</span>
+              </div>
+            )}
           </aside>
 
 

@@ -63,6 +63,9 @@ function mapCardForMatchState(card) {
     hp: card.hp,
     description: card.description,
     image: card.image,
+    // Spell effects — mapped to the field names the engine reads via collectStatuses().
+    statuses: Array.isArray(card.statuses) ? card.statuses : [],
+    selfStatuses: Array.isArray(card.self_statuses) ? card.self_statuses : [],
     created_at: card.created_at
   };
 }
