@@ -27,6 +27,7 @@ const LandingPage = () => {
 
       <section className="lp-hero">
         <div className="lp-hero-overlay" />
+        <div className="lp-hero-texture parchment-texture" />
 
         <div className="lp-hero-content">
           <div className="lp-divider">
