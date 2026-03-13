@@ -42,7 +42,7 @@ export default function MatchBoard({
 
       <div className="game-board__side game-board__side--self">
         <p className="game-board__title">My Played Cards</p>
-        <div className="game-board__cards">
+        <div className="game-board__cards app-scrollbar">
           {selfCards.map((entry, index) => (
             <div
               key={`${entry.card.id}-self-board-${index}`}
@@ -57,7 +57,7 @@ export default function MatchBoard({
 
       <div className="battlefield-self-col">
         {selfHint}
-        <div className="battlefield-row battlefield-row--self">
+        <div className="battlefield-row battlefield-row--self app-scrollbar">
           <p className="battlefield-col-title">My Units</p>
           {selfUnits}
         </div>
@@ -65,7 +65,7 @@ export default function MatchBoard({
 
       <div className="battlefield-enemy-col">
         {enemyHint}
-        <div className={`battlefield-row battlefield-row--enemy${enemyTargeting ? " battlefield-row--enemy-targeting" : ""}`}>
+        <div className={`battlefield-row battlefield-row--enemy app-scrollbar${enemyTargeting ? " battlefield-row--enemy-targeting" : ""}`}>
           <p className="battlefield-col-title">Enemy Units</p>
           {enemyUnits}
         </div>
@@ -73,7 +73,7 @@ export default function MatchBoard({
 
       <div className="game-board__side game-board__side--opponent">
         <p className="game-board__title">Opponent Played Cards</p>
-        <div className="game-board__cards">
+        <div className="game-board__cards app-scrollbar">
           {opponentCards.map((entry, index) => (
             <div
               key={`${entry.card.id}-opp-board-${index}`}

@@ -176,10 +176,13 @@
   align-items: center;
   justify-content: center;
   padding: 80px 24px 60px;
-  background-image: url('/assets/lobby-bg.png');
-  background-size: cover;
-  background-position: center top;
-  background-repeat: no-repeat;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(168, 62, 54, 0.1), rgba(14, 14, 14, 0.20) 80%),
+    linear-gradient(180deg, rgba(26, 22, 18, 0.1) 0%, rgba(14, 14, 14, 0.1) 100%),
+    url('/assets/landing-bg1.png') center top / cover no-repeat;
+  filter: brightness(0.9) contrast(1.05);
+  background-position: center bottom
+
 }
 
 .lp-hero-overlay {
@@ -187,14 +190,23 @@
   inset: 0;
   background: radial-gradient(
     ellipse at center,
-    rgba(10, 8, 5, 0.45) 0%,
-    rgba(5, 3, 1, 0.88) 100%
+    rgba(10, 8, 5, 0.72) 0%,
+    rgba(5, 3, 1, 0.48) 100%
   );
+  z-index: 0;
+}
+
+.lp-hero-texture {
+  position: absolute;
+  inset: 0;
+  opacity: 0.25;
+  pointer-events: none;
   z-index: 0;
 }
 
 .lp-hero-content {
   position: relative;
+  padding: 10px;
   z-index: 1;
   display: flex;
   flex-direction: column;
@@ -203,6 +215,8 @@
   gap: 20px;
   max-width: 700px;
   width: 100%;
+  border-radius: 100px;
+  background: radial-gradient(circle, #0a0a0a3d 50%, #241b1200 70%);
 }
 
 .lp-title {
