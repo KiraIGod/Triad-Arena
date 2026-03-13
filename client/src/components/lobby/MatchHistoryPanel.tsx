@@ -23,7 +23,7 @@ export function MatchHistoryPanel({ matches, loading, error }: MatchHistoryPanel
         <span className={styles.line} />
       </div>
 
-      <div className={styles.listWrap}>
+      <div className={`${styles.listWrap} app-scrollbar`}>
         {loading && (
           <div className={styles.stateBox}>
             <span className={styles.loader} aria-hidden />

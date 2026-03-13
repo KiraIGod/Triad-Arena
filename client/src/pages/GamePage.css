@@ -720,38 +720,6 @@
   justify-content: flex-start;
 }
 
-/* Scrollbars for battlefield and played-cards zones */
-.battlefield-row,
-.game-board__cards {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(201, 169, 98, 0.55) rgba(18, 14, 10, 0.35);
-}
-
-.battlefield-row::-webkit-scrollbar,
-.game-board__cards::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.battlefield-row::-webkit-scrollbar-track,
-.game-board__cards::-webkit-scrollbar-track {
-  background: rgba(18, 14, 10, 0.35);
-  border: 1px solid rgba(0, 0, 0, 0.35);
-  border-radius: 999px;
-}
-
-.battlefield-row::-webkit-scrollbar-thumb,
-.game-board__cards::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #c9a962 0%, #8f7440 100%);
-  border: 1px solid rgba(0, 0, 0, 0.55);
-  border-radius: 999px;
-}
-
-.battlefield-row::-webkit-scrollbar-thumb:hover,
-.game-board__cards::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #d8b979 0%, #a2834b 100%);
-}
-
 .battlefield-empty {
   font-size: 11px;
   color: rgba(255, 255, 255, 0.25);
