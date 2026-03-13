@@ -13,7 +13,6 @@
   overflow: hidden;
 }
 
-/* Background layers */
 .bgImage,
 .bgTexture,
 .bgVignette {
@@ -52,7 +51,6 @@
   pointer-events: none;
 }
 
-/* Header */
 .header {
   position: relative;
   z-index: 1;
@@ -154,9 +152,9 @@
   gap: 1.5rem;
   height: calc(100vh - 110px);
   padding: 1.5rem 2rem 2rem;
+  align-items: stretch
 }
 
-/* Mode tabs */
 .modeTabs {
   display: flex;
   gap: 0;
@@ -206,7 +204,6 @@
   line-height: 1;
 }
 
-/* Center column */
 .centerColumn {
   display: flex;
   flex-direction: column;

@@ -1,0 +1,234 @@
+.friend-list-container {
+  background: rgba(17, 13, 11, 0.88);
+  border: 1px solid rgba(100, 70, 40, 0.4);
+  display: flex;
+  flex-direction: column;
+  margin-top: 15px;
+  font-family: 'Cinzel', serif;
+  color: #ede0c8;
+}
+
+.friend-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 15px;
+  border-bottom: 1px solid rgba(100, 70, 40, 0.4);
+  background: rgba(17, 13, 11, 0.95);
+}
+
+.friend-list-title {
+  margin: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.15em;
+  color: #c8a96e;
+}
+
+.friend-add-btn {
+  background: transparent;
+  border: 1px solid #c8a96e;
+  color: #c8a96e;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  transition: all 0.2s;
+}
+
+.friend-add-btn:hover {
+  background: #c8a96e;
+  color: #0a0805;
+}
+
+.friend-add-form {
+  display: flex;
+  padding: 10px;
+  background: rgba(10, 8, 5, 0.9);
+  border-bottom: 1px solid rgba(100, 70, 40, 0.4);
+}
+
+.friend-input {
+  flex: 1;
+  background: transparent;
+  border: 1px solid rgba(139, 90, 40, 0.5);
+  color: #ede0c8;
+  padding: 5px;
+  font-family: Georgia, serif;
+  font-size: 0.8rem;
+}
+
+.friend-submit-btn {
+  background: #c0392b;
+  border: none;
+  color: #ede0c8;
+  padding: 0 10px;
+  cursor: pointer;
+  font-family: 'Cinzel', serif;
+  font-size: 0.7rem;
+}
+
+.friend-list-content {
+  padding: 10px 15px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.friend-group {
+  margin-bottom: 15px;
+}
+
+.friend-group-title {
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  color: #8a7a6a;
+  margin-bottom: 8px;
+  border-bottom: 1px dashed rgba(139, 90, 40, 0.3);
+  padding-bottom: 3px;
+}
+
+.friend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.friend-item:hover {
+  background: rgba(200, 169, 110, 0.1);
+}
+
+.offline-item {
+  opacity: 0.6;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.online {
+  background-color: #2ecc71;
+  box-shadow: 0 0 5px #2ecc71;
+}
+
+.status-dot.offline {
+  background-color: #7f8c8d;
+}
+
+.friend-requests-btn {
+  background: rgba(17, 13, 11, 0.95);
+  border: none;
+  border-top: 1px solid rgba(100, 70, 40, 0.4);
+  color: #c8a96e;
+  padding: 12px;
+  font-family: 'Cinzel', serif;
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.friend-requests-btn:hover {
+  background: rgba(40, 28, 16, 0.95);
+}
+
+.request-badge {
+  background: #c0392b;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.65rem;
+  font-weight: bold;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+}
+
+.modal-content {
+  background: #0a0805;
+  border: 1px solid #c8a96e;
+  width: 350px;
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  border-bottom: 1px solid rgba(100, 70, 40, 0.4);
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: #c8a96e;
+  letter-spacing: 0.1em;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: #ede0c8;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.modal-body {
+  padding: 15px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.request-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  background: rgba(20, 14, 8, 0.8);
+  border: 1px solid rgba(100, 70, 40, 0.3);
+  margin-bottom: 10px;
+}
+
+.req-btn {
+  background: none;
+  border: 1px solid;
+  border-radius: 3px;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.req-btn.accept {
+  color: #2ecc71;
+  border-color: #2ecc71;
+}
+
+.req-btn.decline {
+  color: #c0392b;
+  border-color: #c0392b;
+}
+
+.req-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}

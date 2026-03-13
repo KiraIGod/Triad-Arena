@@ -1,0 +1,77 @@
+{
+  "nav": {
+    "login": "LOGIN",
+    "join": "JOIN NOW"
+  },
+
+   "brand": {
+    "name": "TRIAD ARENA",
+    "titleTop": "TRIAD",
+    "titleBottom": "ARENA"
+  },
+
+  "hero": {
+    "tagline": "RETURN TO DARKNESS",
+    "desc1": "Three factions. Infinite strategies.",
+    "desc2": "Build a deck. Enter the arena. Prove your supremacy.",
+    "enterBattle": "ENTER BATTLE",
+    "createAccount": "CREATE ACCOUNT",
+    "stats": {
+      "factions": "FACTIONS",
+      "cards": "CARDS",
+      "strategies": "STRATEGIES"
+    }
+  },
+  "factions": {
+    "title": "CHOOSE YOUR FACTION",
+    "assault": {
+      "label": "ASSAULT",
+      "name": "Assault",
+      "desc": "Power and aggression. Crush the enemy before they can respond.",
+      "tag1": "Aggression",
+      "tag2": "Units"
+    },
+    "precision": {
+      "badge": "FEATURED",
+      "label": "PRECISION",
+      "name": "Precision",
+      "desc": "Control and calculation. Every move is a surgically precise strike.",
+      "tag1": "Control",
+      "tag2": "Spells"
+    },
+    "arcane": {
+      "label": "ARCANE",
+      "name": "Arcane",
+      "desc": "Dark magic. Manipulate the board and fates from the shadows.",
+      "tag1": "Magic",
+      "tag2": "Combos"
+    }
+  },
+  "howToPlay": {
+    "title": "HOW TO PLAY",
+    "step1": {
+      "title": "REGISTER",
+      "desc": "Create an account and get a starter deck for each faction"
+    },
+    "step2": {
+      "title": "BUILD A DECK",
+      "desc": "Use the Deck Builder to create the perfect 20-card deck"
+    },
+    "step3": {
+      "title": "FIND MATCH",
+      "desc": "Enter the lobby and find an opponent in Normal or Ranked mode"
+    },
+    "step4": {
+      "title": "WIN",
+      "desc": "Play cards, manage mana, and crush your opponent"
+    }
+  },
+  "final": {
+    "title": "READY FOR BATTLE?",
+    "sub": "The arena awaits its champion",
+    "btn": "START NOW"
+  },
+  "footer": {
+    "copy": "© 2026 Triad Arena. All rights reserved."
+  }
+}

@@ -1,25 +1,26 @@
-import type { DeckSummary } from "../../types/lobby";
-import type { PlayerStats } from "../../shared/api/lobbyApi";
-import styles from "./PlayerPanel.module.css";
+import type { DeckSummary } from "../../types/lobby"
+import type { PlayerStats } from "../../shared/api/lobbyApi"
+import styles from "./PlayerPanel.module.css"
+import { FriendList } from "./FriendList"
 
 type PlayerPanelProps = {
-  nickname: string;
-  stats: PlayerStats | null;
-  deck: DeckSummary | null;
-  onEditDeck: () => void;
-};
+  nickname: string
+  stats: PlayerStats | null
+  deck: DeckSummary | null
+  onEditDeck: () => void
+}
 
 export function PlayerPanel({ nickname, stats, deck, onEditDeck }: PlayerPanelProps) {
-  const d = deck ?? { name: "—", cardsTotal: 0, cardsMax: 20, assault: 0, precision: 0, arcane: 0 };
-  const isDeckReady = d.cardsTotal >= d.cardsMax;
+  const d = deck ?? { name: "—", cardsTotal: 0, cardsMax: 20, assault: 0, precision: 0, arcane: 0 }
+  const isDeckReady = d.cardsTotal >= d.cardsMax
 
   const winrate =
     stats && stats.games_played > 0
       ? ((stats.wins / stats.games_played) * 100).toFixed(1)
-      : "0.0";
+      : "0.0"
 
-  const ratingDisplay = stats ? stats.rating.toLocaleString() : "—";
-  const rankDisplay = stats?.rank != null ? `#${stats.rank}` : "—";
+  const ratingDisplay = stats ? stats.rating.toLocaleString() : "—"
+  const rankDisplay = stats?.rank != null ? `#${stats.rank}` : "—"
 
   return (
     <section className={styles.panel}>
@@ -69,6 +70,10 @@ export function PlayerPanel({ nickname, stats, deck, onEditDeck }: PlayerPanelPr
         {d.cardsTotal === 0 ? "Create Deck" : "Edit Deck"}
       </button>
 
+      <div style={{ marginTop: '20px' }}>
+        <FriendList />
+      </div>
+
     </section>
-  );
+  )
 }
