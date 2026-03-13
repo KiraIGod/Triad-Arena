@@ -289,17 +289,42 @@ function applySpellEffect(state, playerKey, opponentKey, attackerState, card) {
   const finalDamage = applyTriadComboBonus(triadBoosted, comboCount);
 
   console.log(`[TRIAD CHECK] cardId=${card.id} triad_type=${triadType} comboCount=${comboCount} baseDamage=${baseDamage} weakAdjusted=${weakAdjusted} triadBoosted=${triadBoosted} finalDamage=${finalDamage}`);
-  console.log(`[Spell resolved] card=${card.id} name="${card.name}" damage=${finalDamage}`);
+  console.log(`[Spell resolved] card=${card.id} name="${card.name}" damage=${finalDamage} target=${card?.targetType || "hero"}:${card?.targetId || "n/a"}`);
 
-  const defenderAfterDamage = applyDamage(defender, finalDamage);
+  const targetType = card?.targetType ?? "hero";
+  const targetId = card?.targetId ?? null;
+
+  let nextOpponentState;
+
+  if (targetType === "unit" && targetId) {
+    // Route spell damage to a specific unit on the opponent's board.
+    const opponentBoard = defender?.board || [];
+    const opponentUnitIndex = defender?.unitIndex || buildUnitIndex(opponentBoard);
+    const unitIdx = opponentUnitIndex[targetId] ?? -1;
+    if (unitIdx < 0) failInvalid("Target unit not found on opponent board");
+
+    const newBoard = [...opponentBoard];
+    if (finalDamage > 0) {
+      newBoard[unitIdx] = applyDamageToUnit(newBoard[unitIdx], finalDamage);
+    }
+
+    // Status effects (weak, burn, etc.) always apply to the opponent hero, not the unit.
+    nextOpponentState = applyStatuses(
+      { ...defender, board: removeDeadUnits(newBoard) },
+      collectStatuses(card, "statuses")
+    );
+  } else {
+    // Default: damage and statuses both go to the opponent hero.
+    const defenderAfterDamage = applyDamage(defender, finalDamage);
+    nextOpponentState = applyStatuses(
+      defenderAfterDamage,
+      collectStatuses(card, "statuses")
+    );
+  }
 
   const nextPlayerState = applyStatuses(
     attackerState,
     collectStatuses(card, "selfStatuses")
-  );
-  const nextOpponentState = applyStatuses(
-    defenderAfterDamage,
-    collectStatuses(card, "statuses")
   );
 
   return { nextPlayerState, nextOpponentState };
