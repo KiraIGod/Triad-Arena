@@ -10,6 +10,10 @@ export type UnitInstance = {
   canAttack: boolean;
   hasAttacked: boolean;
   statuses: Array<{ type: string; turns?: number; amount?: number }>;
+  // Card metadata embedded by server — survives reconnect without a cardCatalog lookup
+  name?: string;
+  image?: string;
+  triad_type?: string;
 };
 
 type PlayerCard = {
@@ -114,6 +118,8 @@ export function playMatchCard(payload: {
   cardId: string;
   actionId: string;
   version: number;
+  targetType?: "unit" | "hero";
+  targetId?: string;
 }): void {
   matchSocket.emit("match:playCard", payload);
 }
