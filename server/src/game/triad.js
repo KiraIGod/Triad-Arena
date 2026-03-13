@@ -33,12 +33,6 @@ function applyTriadBonus(attackerType, defenderType, damage) {
   return safeDamage + GAME_CONSTANTS.TRIAD_BONUS;
 }
 
-function applyTriadAction(state, action) {
-  const baseDamage = action?.damage ?? 0;
-  const damage = applyTriadBonus(action?.attackerType, action?.defenderType, baseDamage);
-  return { state, action: { ...action, damage } };
-}
-
 // ─── Same-type turn combo ─────────────────────────────────────────────────────
 
 /**
@@ -82,7 +76,6 @@ function applyTriadComboBonus(baseDamage, comboCount) {
 
 module.exports = {
   applyTriadBonus,
-  applyTriadAction,
   getTriadComboCount,
   applyTriadComboBonus
 };

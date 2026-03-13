@@ -1,6 +1,6 @@
 const db = require("../db/models");
 const { playCard, attack, endTurn } = require("../game/engine");
-const { INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
+const { GAME_CONSTANTS, INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
 const { serializeGameState } = require("../game/stateSerializer");
 const { validateGameState } = require("../game/stateValidator");
 const { enqueueMatchAction, clearMatchQueue } = require("../game/actionQueue");
@@ -147,7 +147,7 @@ function validateCardPlayPreconditions(state, playerId, card) {
 
   // Attacks (cardId === null) must not count toward the card-play limit.
   const actionCount = (state?.turnActions || []).filter((a) => a?.playerId === playerId && a?.cardId != null).length;
-  if (actionCount >= 3) {
+  if (actionCount >= GAME_CONSTANTS.MAX_CARDS_PER_TURN) {
     throw createSocketError(INVALID_ACTION, "Card limit reached for this turn");
   }
 
@@ -248,7 +248,6 @@ async function cleanupFinishedMatch(io, match, persistedState, safeState, matchI
     events
   });
   io.to(String(matchId)).emit("match:finish", { winnerId });
-  clearSocketMatchRuntime(matchId);
 }
 
 // ─── Turn timer ───────────────────────────────────────────────────────────────
@@ -323,7 +322,6 @@ async function forceEndTurn(io, matchId, playerId) {
         events: [{ type: "TURN_TIMEOUT" }]
       });
       io.to(String(matchId)).emit("match:finish", { winnerId });
-      clearSocketMatchRuntime(matchId);
       return;
     }
 
@@ -348,10 +346,6 @@ async function handleJoin(io, socket, payload = {}) {
   validateMatchAccess(match, playerId);
 
   const safeState = getSerializedState(matchId, state);
-  console.log(`[MATCH] Player ${playerId} joined match ${matchId}`);
-  if (match.player_one_id && match.player_two_id) {
-    console.log(`[MATCH] Match started: ${match.player_one_id} vs ${match.player_two_id}`);
-  }
 
   const matchRoom = io.sockets.adapter.rooms.get(String(matchId));
   if (matchRoom && matchRoom.size >= 2 && !matchRoom.has(socket.id)) {
@@ -466,7 +460,6 @@ async function handlePlayCard(io, socket, payload = {}) {
 
   const cardData = card.get({ plain: true });
   validateCardPlayPreconditions(state, playerId, cardData);
-  console.log(`[ACTION] ${playerId} played card ${cardId}`);
 
   const nextState = playCard(
     state,
@@ -504,11 +497,6 @@ async function handlePlayCard(io, socket, payload = {}) {
     return;
   }
 
-  const lastTurnAction = persistedState.turnActions[persistedState.turnActions.length - 1];
-  if (lastTurnAction && Number.isFinite(lastTurnAction.actionIndex)) {
-    console.log(`[ACTION] Turn action #${lastTurnAction.actionIndex}`);
-  }
-
   io.to(String(matchId)).emit("match:update", {
     ...buildMatchStatePayload(match, safeState),
     events
@@ -536,8 +524,6 @@ async function handleAttack(io, socket, payload = {}) {
   }
   if (state?.finished) throw createSocketError("MATCH_FINISHED", "Game already finished");
   if (state?.activePlayer !== playerId) throw createSocketError("INVALID_TURN", "Not your turn");
-
-  console.log(`[ATTACK] ${playerId} attacking with ${unitId} → ${targetType}:${targetId}`);
 
   const nextState = attack(
     state,
@@ -583,8 +569,6 @@ async function handleEndTurn(io, socket, payload = {}) {
   if (state?.finished) throw createSocketError("MATCH_FINISHED", "Game already finished");
   if (state?.activePlayer !== playerId) throw createSocketError("INVALID_TURN", "Not your turn");
 
-  console.log(`[TURN] ${playerId} ended turn`);
-
   const nextState = endTurn(state, { playerId, expectedVersion: incomingVersion });
   const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
   const safeState = getSerializedState(matchId, persistedState);
@@ -621,19 +605,17 @@ async function handleSync(io, socket) {
   if (pendingTimer) {
     clearTimeout(pendingTimer);
     reconnectTimers.delete(String(match.id));
-    console.log(`[reconnect] Cancelled defeat timer for player ${userId} match ${match.id}`);
   }
 
-  // Restore socket room membership so the player receives broadcasts again.
+  // Restore socket room membership and inMatch flag so the player receives broadcasts again.
   socket.join(String(match.id));
+  socket.data.inMatch = true;
 
   // Guard against the race condition where this sync fires BEFORE the old socket's
   // "disconnect" event. Marking the player here prevents disconnect from re-starting
   // the defeat timer. The mark auto-expires after 10 s to avoid a memory leak.
   reconnectedPlayers.add(String(userId));
   setTimeout(() => reconnectedPlayers.delete(String(userId)), 10_000);
-
-  console.log(`[reconnect] Player ${userId} rejoined match ${match.id}`);
 
   // Immediately send the current timer so the client UI is in sync.
   const timerEntry = turnTimers.get(String(match.id));
@@ -667,7 +649,6 @@ async function handleLeave(io, socket, payload = {}) {
 
   socket.leave(matchId);
   socket.data.inMatch = false;
-  console.log(`[MATCH] Player ${socket.data?.userId || "unknown"} left match ${matchId}`);
 
   if (match.status === "finished") return;
 
@@ -719,7 +700,6 @@ module.exports = function registerMatchSocket(io) {
         waitingQueueEntry?.userId === socket.data?.userId
       ) {
         waitingQueueEntry = null;
-        console.log(`[match:cancel] Player ${socket.data?.userId} left queue`);
       }
     });
 
@@ -776,7 +756,6 @@ module.exports = function registerMatchSocket(io) {
       // this disconnect event), skip the defeat timer entirely.
       if (reconnectedPlayers.has(String(userId))) {
         reconnectedPlayers.delete(String(userId));
-        console.log(`[disconnect] Player ${userId} reconnected on new socket — skipping defeat timer for match ${match.id}`);
         return;
       }
 
@@ -799,7 +778,6 @@ module.exports = function registerMatchSocket(io) {
               winnerId: opponentId,
               reason: "disconnect"
             });
-            clearSocketMatchRuntime(match.id);
           } catch (err) {
             console.error("[reconnect:timeout] failed:", err?.message || err);
           }

@@ -90,6 +90,7 @@ export default function GamePage() {
   const [spellNotice, setSpellNotice] = useState<string | null>(null);
   const [spellNoticeFading, setSpellNoticeFading] = useState(false);
 
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 768);
   const joinedMatchRef = useRef<string | null>(null);
   const spellNoticeFadeTimeoutRef = useRef<number | null>(null);
   const spellNoticeHideTimeoutRef = useRef<number | null>(null);
@@ -239,6 +240,12 @@ export default function GamePage() {
   }, [hideBattlefieldHint]);
 
   useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (spellNoticeFadeTimeoutRef.current) {
         window.clearTimeout(spellNoticeFadeTimeoutRef.current);
@@ -268,8 +275,6 @@ export default function GamePage() {
     if (fromQueryOpponent) setOpponentNickname(fromQueryOpponent);
     if (fromQueryMatchId) setArenaMatchId(fromQueryMatchId);
   }, [searchParams]);
-
-  // ── Action log ───────────────────────────────────────────────────────────────
 
   // ── Arena socket ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -987,7 +992,7 @@ export default function GamePage() {
           selectedCardId={selectedCardId}
           canPlayCard={canPlayCard}
           onCardClick={handleCardClick}
-          cardSize={window.innerWidth <= 768 ? "small" : "normal"}
+          cardSize={isMobileView ? "small" : "normal"}
         />
       </section>
 
@@ -1062,5 +1067,3 @@ export default function GamePage() {
     </div>
   );
 }
-
-
