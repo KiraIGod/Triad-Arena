@@ -347,7 +347,8 @@ function playCard(state, playerInput, card) {
     }
 
     const manaCost = getCardManaCost(card);
-    const actions = (state.turnActions || []).filter((a) => a?.playerId === playerId).length;
+    // Count only card plays (cardId != null); attacks must not reduce the card budget.
+    const actions = (state.turnActions || []).filter((a) => a?.playerId === playerId && a?.cardId != null).length;
     if (actions >= GAME_CONSTANTS.MAX_CARDS_PER_TURN) failInvalid("Card limit reached for this turn");
     if ((state[playerKey]?.energy || 0) < manaCost) failInvalid("Not enough energy");
 

@@ -538,9 +538,10 @@ export default function GamePage() {
 
   const playedCardIdsThisTurn = useMemo(() => {
     if (!match || !userIdStr) return new Set<string>();
+    // Exclude attack entries (cardId === null) so the Set only contains actual card plays.
     const ids = match.state.turnActions
-      .filter((action) => isSameUser(action.playerId))
-      .map((action) => action.cardId);
+      .filter((action) => isSameUser(action.playerId) && action.cardId != null)
+      .map((action) => action.cardId as string);
     return new Set(ids);
   }, [match, userIdStr]);
 
@@ -589,6 +590,7 @@ export default function GamePage() {
     if (selfIndex < 0) return "You are not part of this match";
     if (match.state.finished) return "Match already finished";
     if (!isMyTurn) return "Wait for your turn";
+    if (playedCardIdsThisTurn.size >= 3) return "Card limit reached (3 cards per turn)";
     if (playedCardIdsThisTurn.has(card.id.split(":")[0])) return "Card already played this turn";
     if (currentEnergy < card.mana_cost) return "Not enough energy";
     const statuses = selfStats.statuses || [];

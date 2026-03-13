@@ -145,7 +145,8 @@ function validateCardPlayPreconditions(state, playerId, card) {
     throw createSocketError(INVALID_ACTION, "Invalid player");
   }
 
-  const actionCount = (state?.turnActions || []).filter((a) => a?.playerId === playerId).length;
+  // Attacks (cardId === null) must not count toward the card-play limit.
+  const actionCount = (state?.turnActions || []).filter((a) => a?.playerId === playerId && a?.cardId != null).length;
   if (actionCount >= 3) {
     throw createSocketError(INVALID_ACTION, "Card limit reached for this turn");
   }
@@ -359,6 +360,16 @@ async function handleJoin(io, socket, payload = {}) {
 
   socket.join(String(matchId));
   socket.emit("match:state", buildMatchStatePayload(match, safeState));
+
+  // Start the timer on first join (arena path), or sync current remaining to the joining socket.
+  if (!state.finished) {
+    const timerEntry = turnTimers.get(String(matchId));
+    if (timerEntry) {
+      socket.emit("match:timer", { remaining: timerEntry.getRemaining() });
+    } else {
+      startTurnTimer(io, matchId, safeState.activePlayer);
+    }
+  }
 }
 
 async function handleQueue(io, socket) {
