@@ -617,9 +617,8 @@ export default function GamePage() {
       <section className="game-content">
         <div className="game-top-row">
           <aside className="game-deck-panel">
-            <p>My Deck</p>
-            <p className="game-log__entry">Cards left: {selfDeckCount}</p>
-            <p className="game-log__entry">Cards in hand: {handCards.length}</p>
+            <p className="game-log__entry">Deck: {selfDeckCount}</p>
+            <p className="game-log__entry">Hand: {handCards.length}</p>
           </aside>
 
 
@@ -627,13 +626,13 @@ export default function GamePage() {
             <div className="game-state__turn-row">
               {match ? (isMyTurn ?
                 <p className="game-hud__name game-state__value--active-turn comic-text-shadow">Your turn</p> :
-                <p className="game-hud__name game-state__value">Opponent's turn</p>) : "-"}
+                <p className="game-hud__name game-state__value comic-text-shadow">Opponent's turn</p>) : "-"}
             </div>
             {match && !match.state.finished ? (isMyTurn ?
               <p className="game-hud__name game-state__value--active-turn comic-text-shadow">
                 <TurnCountdown remaining={timerRemaining} />
               </p> :
-              <p className="game-hud__name game-state__value">
+              <p className="game-hud__name game-state__value comic-text-shadow">
                 <TurnCountdown remaining={timerRemaining} />
               </p>) : null}
           </div>
@@ -646,8 +645,6 @@ export default function GamePage() {
         </div>
 
 
-
-
         {matchError && matchError !== "This unit cannot attack yet" && (
           <div className="game-attack-banner game-attack-banner--error">
             <span>{matchError}</span>
@@ -655,40 +652,31 @@ export default function GamePage() {
         )}
 
         <main className="game-battlefield">
-          <div className="game-battlefield-layout">
-            {/* My board (left) */}
-            <div className="battlefield-self-col">
-              {matchError === "This unit cannot attack yet" && (
-                <div className="battlefield-target-overlay battlefield-target-overlay--self">
-                  <span className="game-state__target-hint">This unit cannot attack yet</span>
-                </div>
-              )}
-              <div className="battlefield-row battlefield-row--self">
-                <p className="battlefield-col-title">My Units</p>
-                {selfStats.board.length > 0
-                  ? selfStats.board.map((unit) => renderUnit(unit, true))
-                  : <span className="battlefield-empty">No units</span>}
+          <MatchBoard
+            cards={playedCards}
+            currentUserId={userIdStr}
+            selfHint={matchError === "This unit cannot attack yet" ? (
+              <div className="battlefield-target-overlay battlefield-target-overlay--self">
+                <span className="game-state__target-hint">This unit cannot attack yet</span>
               </div>
-            </div>
-
-            {/* Center board */}
-            <MatchBoard cards={playedCards} currentUserId={userIdStr} />
-
-            {/* Enemy board (right) */}
-            <div className="battlefield-enemy-col">
-              {isSelectingTarget && (
-                <div className="battlefield-target-overlay">
-                  <span className="game-state__target-hint">Select a target unit</span>
-                </div>
-              )}
-              <div className={`battlefield-row battlefield-row--enemy${isSelectingTarget ? " battlefield-row--enemy-targeting" : ""}`}>
-                <p className="battlefield-col-title">Enemy Units</p>
-                {oppStats.board.length > 0
-                  ? oppStats.board.map((unit) => renderUnit(unit, false))
-                  : <span className="battlefield-empty">No units</span>}
+            ) : null}
+            enemyHint={isSelectingTarget ? (
+              <div className="battlefield-target-overlay">
+                <span className="game-state__target-hint">Select a target unit</span>
               </div>
-            </div>
-          </div>
+            ) : null}
+            enemyTargeting={isSelectingTarget}
+            selfUnits={
+              selfStats.board.length > 0
+                ? selfStats.board.map((unit) => renderUnit(unit, true))
+                : <span className="battlefield-empty">No units</span>
+            }
+            enemyUnits={
+              oppStats.board.length > 0
+                ? oppStats.board.map((unit) => renderUnit(unit, false))
+                : <span className="battlefield-empty">No units</span>
+            }
+          />
         </main>
 
         <HandCards
