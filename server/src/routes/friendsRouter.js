@@ -1,20 +1,23 @@
 const express = require('express')
 const { Op } = require('sequelize')
-const { User, Friend } = require('../db/models');
+const db = require('../db/models')
+console.log('=== ЗАГРУЖЕННЫЕ МОДЕЛИ ===', Object.keys(db))
+const User = db.User
+const Friend = db.Friend
+const ChatMessage = db.ChatMessage || db.chatMessage
 const { jwtMiddleware } = require('../middlewares/jwt')
 const { isUserOnline } = require('../sockets')
 
 const router = express.Router()
-
-const getUserId = (req) => req.user.id || req.user.userId || req.user.user_id;
+const getUserId = (req) => req.user.id || req.user.userId || req.user.user_id
 
 router.get('/', jwtMiddleware, async (req, res) => {
   try {
-    const userId = getUserId(req);
+    const userId = getUserId(req)
 
     if (!userId) {
-      console.log("ОШИБКА GET: В токене нет ID. Вот что там есть:", req.user);
-      return res.status(401).json({ message: 'Invalid token payload' });
+      console.log("ОШИБКА GET: В токене нет ID. Вот что там есть:", req.user)
+      return res.status(401).json({ message: 'Invalid token payload' })
     }
 
     const friendships = await Friend.findAll({
@@ -77,6 +80,7 @@ router.post('/request', jwtMiddleware, async (req, res) => {
     if (!targetUser) {
       return res.status(404).json({ message: 'User not found' })
     }
+
     if (targetUser.id === userId) {
       return res.status(400).json({ message: 'Cannot add yourself' })
     }
@@ -101,7 +105,8 @@ router.post('/request', jwtMiddleware, async (req, res) => {
     })
 
     res.status(201).json({ message: 'Friend request sent successfully' })
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error sending friend request:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
@@ -126,15 +131,44 @@ router.put('/respond', jwtMiddleware, async (req, res) => {
     if (action === 'accept') {
       await request.update({ status: 'accepted' })
       res.json({ message: 'Friend request accepted' })
-    } else if (action === 'decline') {
+    }
+    else if (action === 'decline') {
       await request.destroy()
       res.json({ message: 'Friend request declined' })
-    } else {
+    }
+    else {
       res.status(400).json({ message: 'Invalid action' })
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error responding to request:', error)
     res.status(500).json({ message: 'Internal server error' })
+  }
+})
+
+router.get('/:friendId/messages', jwtMiddleware, async (req, res) => {
+  try {
+    const myId = getUserId(req);
+    const friendId = req.params.friendId;
+
+    if (!myId) {
+      return res.status(401).json({ message: 'Не авторизован' })
+    }
+
+    const messages = await ChatMessage.findAll({
+      where: {
+        [Op.or]: [
+          { senderId: myId, receiverId: friendId },
+          { senderId: friendId, receiverId: myId }
+        ]
+      },
+      order: [['createdAt', 'ASC']]
+    })
+
+    return res.status(200).json(messages)
+  } catch (error) {
+    console.error('[Friends API] Ошибка загрузки истории чата:', error)
+    return res.status(500).json({ message: 'Внутренняя ошибка сервера' })
   }
 })
 

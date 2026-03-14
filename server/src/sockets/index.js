@@ -1,20 +1,21 @@
-const jwt = require("jsonwebtoken");
-const { Server } = require("socket.io");
-const registerArenaSocket = require("./arenaSocket");
-const registerMatchSocket = require("./matchSocket");
-const { cleanupArena } = require("../services/matchService");
+const jwt = require("jsonwebtoken")
+const { Server } = require("socket.io")
+const registerArenaSocket = require("./arenaSocket")
+const registerMatchSocket = require("./matchSocket")
+const { cleanupArena } = require("../services/matchService")
+const registerChatSocket = require("./chatSocket")
 
-const activeGames = new Map();
-const connectedUsers = new Map();
+const activeGames = new Map()
+const connectedUsers = new Map()
 
 function isUserOnline(userId) {
-  return connectedUsers.has(String(userId));
+  return connectedUsers.has(String(userId))
 }
 
 function getSocketByUserId(io, userId) {
-  const socketId = connectedUsers.get(String(userId));
-  if (!socketId) return null;
-  return io.sockets.sockets.get(socketId) || null;
+  const socketId = connectedUsers.get(String(userId))
+  if (!socketId) return null
+  return io.sockets.sockets.get(socketId) || null
 }
 
 function initSocket(httpServer) {
@@ -22,70 +23,82 @@ function initSocket(httpServer) {
     cors: {
       origin: "*"
     }
-  });
+  })
 
   io.use((socket, next) => {
     try {
-      const token = socket.handshake?.auth?.token;
+      const token = socket.handshake?.auth?.token
+
       if (!token) {
-        return next(new Error("UNAUTHORIZED"));
+        console.error("[Socket Auth] ОШИБКА: Фронтенд не передал токен!")
+        return next(new Error("UNAUTHORIZED"))
       }
-      const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev_secret");
-      socket.data.userId = decoded.userId;
-      return next();
-    } catch (err) {
-      return next(new Error("UNAUTHORIZED"));
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev_secret")
+
+      const userId = decoded.id || decoded.userId || decoded.user_id
+
+      if (!userId) {
+        console.error("[Socket Auth] ОШИБКА: В токене нет ID юзера. Расшифровка:", decoded)
+        return next(new Error("UNAUTHORIZED"))
+      }
+
+      socket.data.userId = userId;
+      console.log(`[Socket Auth] Успешное подключение юзера ID: ${userId}`)
+      return next()
     }
-  });
+    catch (err) {
+      console.error("[Socket Auth] ОШИБКА проверки токена:", err.message)
+      return next(new Error("UNAUTHORIZED"))
+    }
+  })
 
   io.on("connection", (socket) => {
-    const userId = socket.data?.userId;
-    if (userId) connectedUsers.set(String(userId), socket.id);
-    io.emit("arena:online", io.sockets.sockets.size);
+    const userId = socket.data?.userId
+    if (userId) connectedUsers.set(String(userId), socket.id)
+    console.log(`🔥 [Sockets] Главный коннект! ID: ${socket.id}`)
+    io.emit("arena:online", io.sockets.sockets.size)
 
     socket.on("join_game", (gameId) => {
-      const normalizedGameId = String(gameId || "");
-      if (!normalizedGameId) return;
-
-      const userId = socket.data?.userId;
-      const arena = activeGames.get(normalizedGameId);
-
-      // Only allow joining arena rooms that exist and include this user.
-      // This prevents authenticated-but-unauthorized users from joining
-      // match rooms or foreign arena rooms to spectate hand/state data.
-      if (!arena || !Array.isArray(arena.players)) return;
-      const isParticipant = arena.players.some(
-        (p) => p?.userId != null && String(p.userId) === String(userId)
-      );
-      if (!isParticipant) return;
-
-      socket.join(normalizedGameId);
-      activeGames.set(normalizedGameId, { ...arena, updatedAt: Date.now() });
-    });
+      const normalizedGameId = String(gameId)
+      socket.join(normalizedGameId)
+      const current = activeGames.get(normalizedGameId)
+      if (current && typeof current === "object") {
+        activeGames.set(normalizedGameId, {
+          ...current,
+          updatedAt: Date.now()
+        })
+      }
+      else {
+        activeGames.set(normalizedGameId, { updatedAt: Date.now() })
+      }
+    })
 
     socket.on("leave_game", (gameId) => {
-      const normalizedGameId = String(gameId || "");
-      if (!normalizedGameId) return;
+      const normalizedGameId = String(gameId || "")
+      if (!normalizedGameId) return
 
-      socket.leave(normalizedGameId);
-      const userId = socket.data?.userId;
-      cleanupArena(activeGames, userId, socket.id);
-    });
+      socket.leave(normalizedGameId)
+      const userId = socket.data?.userId
+      cleanupArena(activeGames, userId, socket.id)
+    })
 
     socket.on("disconnect", () => {
-      const uid = socket.data?.userId;
+      const uid = socket.data?.userId
       if (uid && connectedUsers.get(String(uid)) === socket.id) {
-        connectedUsers.delete(String(uid));
+        connectedUsers.delete(String(uid))
       }
-      cleanupArena(activeGames, uid, socket.id);
-      io.emit("arena:online", io.sockets.sockets.size);
-    });
-  });
+      cleanupArena(activeGames, uid, socket.id)
+      io.emit("arena:online", io.sockets.sockets.size)
+    })
 
-  registerArenaSocket(io, activeGames);
-  registerMatchSocket(io);
+    registerChatSocket(io, socket)
+  })
 
-  return io;
+  registerArenaSocket(io, activeGames)
+  registerMatchSocket(io)
+
+  return io
 }
 
-module.exports = { activeGames, connectedUsers, isUserOnline, getSocketByUserId, initSocket };
+module.exports = { activeGames, connectedUsers, isUserOnline, getSocketByUserId, initSocket }
