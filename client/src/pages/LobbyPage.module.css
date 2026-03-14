@@ -223,3 +223,66 @@
     padding: 0.4rem 0;
   }
 }
+
+/* ─── Game invite banner ───────────────────────────────────────────────── */
+
+.inviteBanner {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 16px 24px;
+  border: 2px solid var(--gold);
+  background: rgba(14, 14, 14, 0.95);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  animation: inviteSlideUp 0.3s ease-out;
+}
+
+@keyframes inviteSlideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.inviteContent {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.inviteText {
+  margin: 0;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.inviteActions {
+  display: flex;
+  gap: 8px;
+}
+
+.btnInviteAccept {
+  padding: 6px 18px;
+  border: 2px solid var(--ink);
+  background: linear-gradient(180deg, #c9a962 0%, #8f7440 100%);
+  color: #1a1612;
+  font-weight: 900;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.btnInviteDecline {
+  padding: 6px 18px;
+  border: 2px solid var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--foreground);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}

@@ -6,6 +6,17 @@ const { cleanupArena } = require("../services/matchService")
 const registerChatSocket = require("./chatSocket")
 
 const activeGames = new Map()
+const connectedUsers = new Map()
+
+function isUserOnline(userId) {
+  return connectedUsers.has(String(userId))
+}
+
+function getSocketByUserId(io, userId) {
+  const socketId = connectedUsers.get(String(userId))
+  if (!socketId) return null
+  return io.sockets.sockets.get(socketId) || null
+}
 
 function initSocket(httpServer) {
   const io = new Server(httpServer, {
@@ -43,6 +54,8 @@ function initSocket(httpServer) {
   })
 
   io.on("connection", (socket) => {
+    const userId = socket.data?.userId
+    if (userId) connectedUsers.set(String(userId), socket.id)
     console.log(`🔥 [Sockets] Главный коннект! ID: ${socket.id}`)
     io.emit("arena:online", io.sockets.sockets.size)
 
@@ -71,13 +84,15 @@ function initSocket(httpServer) {
     })
 
     socket.on("disconnect", () => {
-      const userId = socket.data?.userId
-      cleanupArena(activeGames, userId, socket.id)
+      const uid = socket.data?.userId
+      if (uid && connectedUsers.get(String(uid)) === socket.id) {
+        connectedUsers.delete(String(uid))
+      }
+      cleanupArena(activeGames, uid, socket.id)
       io.emit("arena:online", io.sockets.sockets.size)
     })
 
     registerChatSocket(io, socket)
-
   })
 
   registerArenaSocket(io, activeGames)
@@ -86,4 +101,4 @@ function initSocket(httpServer) {
   return io
 }
 
-module.exports = { activeGames, initSocket }
+module.exports = { activeGames, connectedUsers, isUserOnline, getSocketByUserId, initSocket }

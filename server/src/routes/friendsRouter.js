@@ -6,6 +6,8 @@ const User = db.User
 const Friend = db.Friend
 const ChatMessage = db.ChatMessage || db.chatMessage
 const { jwtMiddleware } = require('../middlewares/jwt')
+const { isUserOnline } = require('../sockets')
+
 const router = express.Router()
 const getUserId = (req) => req.user.id || req.user.userId || req.user.user_id
 
@@ -38,7 +40,7 @@ router.get('/', jwtMiddleware, async (req, res) => {
         friends.push({
           id: otherUser.id,
           username: otherUser.nickname,
-          status: 'offline'
+          status: isUserOnline(otherUser.id) ? 'online' : 'offline'
         })
       } else if (f.status === 'pending') {
         if (f.friendId === userId) {

@@ -5,7 +5,13 @@ import { fetchFriendsList, sendFriendRequest, Friend, FriendRequest } from '../.
 import { useAppSelector } from '../../store'
 import ChatModal from './ChatModal'
 
-export const FriendList: React.FC = () => {
+type FriendListProps = {
+  privateArenaId?: string | null;
+  onSendInvite?: (arenaId: string, targetUserId: string) => Promise<{ error?: string }>;
+  onInviteResult?: (res: { error?: string }) => void;
+};
+
+export const FriendList: React.FC<FriendListProps> = ({ privateArenaId, onSendInvite, onInviteResult }) => {
   const token = useAppSelector((s) => s.auth.token)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [addUsername, setAddUsername] = useState("")
@@ -116,6 +122,17 @@ export const FriendList: React.FC = () => {
             >
               <span className="status-dot online"></span>
               <span className="friend-name">{friend.username}</span>
+              {privateArenaId && onSendInvite && (
+                <button
+                  className="friend-invite-btn"
+                  onClick={() => {
+                    onSendInvite(privateArenaId, friend.id).then((res) => onInviteResult?.(res));
+                  }}
+                  title={`Invite ${friend.username}`}
+                >
+                  Invite
+                </button>
+              )}
             </div>
           ))}
         </div>

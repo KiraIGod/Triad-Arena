@@ -5,6 +5,7 @@ import { clearCredentials } from "../features/auth/authSlice"
 import { fetchUserDeck } from "../shared/api/deckBuilderApi"
 import { fetchMatchHistory, fetchPlayerStats } from "../shared/api/lobbyApi"
 import { useLobbyArena } from "../features/customHooks/useLobbyArena"
+import { useGameInvites } from "../features/customHooks/useGameInvites"
 import { PlayerPanel } from "../components/lobby/PlayerPanel"
 import { MatchmakingPanel } from "../components/lobby/MatchmakingPanel"
 import { MatchHistoryPanel } from "../components/lobby/MatchHistoryPanel"
@@ -65,13 +66,23 @@ export default function LobbyPage() {
     isJoiningArena,
     handleCreateArena,
     handleJoinArena,
+    handleJoinByCode,
     handleReconnect,
     isOnline,
     error,
     activeMatchId,
     searchTimeLeft,
     cancelSearch,
+    roomCode,
+    privateArenaId,
+    isWaitingPrivate,
+    cancelRoom,
+    setError: setLobbyError,
   } = useLobbyArena(token, gameMode)
+
+  const { invite, acceptInvite, declineInvite, sendInvite } = useGameInvites((code) => {
+    handleJoinByCode(code)
+  })
 
   useEffect(() => {
     if (!token) return
@@ -141,6 +152,9 @@ export default function LobbyPage() {
           stats={stats}
           deck={deck}
           onEditDeck={handleOpenDeckBuilder}
+          privateArenaId={privateArenaId}
+          onSendInvite={sendInvite}
+          onInviteResult={(res) => { if (res?.error) setLobbyError(res.error); }}
         />
 
         <section className={styles.centerColumn}>
@@ -170,10 +184,14 @@ export default function LobbyPage() {
             error={error}
             activeMatchId={activeMatchId}
             searchTimeLeft={searchTimeLeft}
+            roomCode={roomCode}
+            isWaitingPrivate={isWaitingPrivate}
             onFindMatch={handleJoinArena}
             onCreateArena={handleCreateArena}
             onCancelSearch={cancelSearch}
             onReconnect={handleReconnect}
+            onJoinByCode={handleJoinByCode}
+            onCancelRoom={cancelRoom}
           />
         </section>
 
@@ -184,6 +202,24 @@ export default function LobbyPage() {
         />
 
       </div>
+
+      {invite && (
+        <div className={styles.inviteBanner}>
+          <div className={styles.inviteContent}>
+            <p className={styles.inviteText}>
+              <strong>{invite.hostNickname}</strong> invites you to a private match
+            </p>
+            <div className={styles.inviteActions}>
+              <button type="button" className={styles.btnInviteAccept} onClick={acceptInvite}>
+                Accept
+              </button>
+              <button type="button" className={styles.btnInviteDecline} onClick={declineInvite}>
+                Decline
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

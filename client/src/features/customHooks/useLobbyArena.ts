@@ -4,6 +4,7 @@ import socket from "../../shared/socket/socket";
 
 type CreateArenaResponse = {
   arenaId?: string;
+  roomCode?: string | null;
   error?: string;
 };
 
@@ -31,10 +32,16 @@ type UseLobbyArenaResult = {
   error: string | null;
   activeMatchId: string | null;
   searchTimeLeft: number;
+  roomCode: string | null;
+  privateArenaId: string | null;
+  isWaitingPrivate: boolean;
   handleCreateArena: () => void;
   handleJoinArena: () => void;
+  handleJoinByCode: (code: string) => void;
   handleReconnect: () => void;
   cancelSearch: () => void;
+  cancelRoom: () => void;
+  setError: (msg: string | null) => void;
 };
 
 export function useLobbyArena(token: string | null, gameMode: GameMode = "normal"): UseLobbyArenaResult {
@@ -45,6 +52,9 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
   const [error, setError] = useState<string | null>(null);
   const [activeMatchId, setActiveMatchId] = useState<string | null>(null);
   const [searchTimeLeft, setSearchTimeLeft] = useState(0);
+  const [roomCode, setRoomCode] = useState<string | null>(null);
+  const [privateArenaId, setPrivateArenaId] = useState<string | null>(null);
+  const [isWaitingPrivate, setIsWaitingPrivate] = useState(false);
 
   const joinCancelledRef = useRef(false);
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -218,6 +228,43 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
     attemptJoin();
   };
 
+  const cancelRoom = useCallback(() => {
+    if (privateArenaId) {
+      socket.emit("arena:cancel-search");
+    }
+    setRoomCode(null);
+    setPrivateArenaId(null);
+    setIsWaitingPrivate(false);
+    setIsCreatingArena(false);
+    setError(null);
+  }, [privateArenaId]);
+
+  useEffect(() => {
+    if (!isWaitingPrivate || !privateArenaId) return;
+
+    const onArenaReady = (payload?: {
+      arenaId?: string;
+      matchId?: string;
+      players?: Array<{ userId?: string; nickname?: string }>;
+    }) => {
+      if (!payload?.matchId) return;
+      if (payload.arenaId && payload.arenaId !== privateArenaId) return;
+
+      setRoomCode(null);
+      setPrivateArenaId(null);
+      setIsWaitingPrivate(false);
+      setIsCreatingArena(false);
+
+      const params = new URLSearchParams();
+      if (payload.arenaId) params.set("arenaId", payload.arenaId);
+      params.set("matchId", payload.matchId);
+      navigate(`/game?${params.toString()}`);
+    };
+
+    socket.on("arena:ready", onArenaReady);
+    return () => { socket.off("arena:ready", onArenaReady); };
+  }, [isWaitingPrivate, privateArenaId, navigate]);
+
   const handleCreateArena = () => {
     if (isCreatingArena || activeMatchId) return;
 
@@ -239,8 +286,39 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
         return;
       }
 
+      if (gameMode === "private" && res.roomCode) {
+        setRoomCode(res.roomCode);
+        setPrivateArenaId(res.arenaId);
+        setIsWaitingPrivate(true);
+        setIsCreatingArena(false);
+        return;
+      }
+
       setIsCreatingArena(false);
       navigate(`/game?arenaId=${res.arenaId}`);
+    });
+  };
+
+  const handleJoinByCode = (code: string) => {
+    if (!code.trim() || isJoiningArena || activeMatchId) return;
+
+    joinCancelledRef.current = false;
+    setError(null);
+    setIsJoiningArena(true);
+
+    socket.emit("arena:join-by-code", { roomCode: code.trim() }, (res?: JoinArenaResponse) => {
+      setIsJoiningArena(false);
+
+      if (res?.error) {
+        setError(res.error);
+        return;
+      }
+
+      if (res?.arenaId) {
+        const opponent = encodeURIComponent(res.opponentNickname ?? "UNKNOWN");
+        const matchIdPart = res.matchId ? `&matchId=${encodeURIComponent(res.matchId)}` : "";
+        navigate(`/game?arenaId=${res.arenaId}&opponent=${opponent}${matchIdPart}`);
+      }
     });
   };
 
@@ -251,9 +329,15 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
     error,
     activeMatchId,
     searchTimeLeft,
+    roomCode,
+    privateArenaId,
+    isWaitingPrivate,
     handleCreateArena,
     handleJoinArena,
+    handleJoinByCode,
     handleReconnect,
-    cancelSearch
+    cancelSearch,
+    cancelRoom,
+    setError
   };
 }

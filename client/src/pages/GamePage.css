@@ -21,8 +21,16 @@
 
 .game-screen__bg {
   background:
-    radial-gradient(circle at 50% 50%, rgba(168, 62, 54, 0.18), rgba(14, 14, 14, 0.74) 60%),
-    linear-gradient(180deg, rgba(26, 22, 18, 0.55) 0%, rgba(14, 14, 14, 0.7) 100%),
+    radial-gradient(
+      circle at 50% 50%,
+      rgba(168, 62, 54, 0.18),
+      rgba(14, 14, 14, 0.74) 60%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(26, 22, 18, 0.55) 0%,
+      rgba(14, 14, 14, 0.7) 100%
+    ),
     url("/assets/game-bg.png") center / cover no-repeat;
 }
 
@@ -35,7 +43,6 @@
 }
 
 .game-hud {
-
   display: grid;
   grid-template-columns: 1fr 60% 1fr;
   justify-content: space-between;
@@ -236,8 +243,6 @@
     0 0 6px rgba(201, 169, 98, 0.55),
     0 0 12px rgba(201, 169, 98, 0.35);
 }
-
-
 
 .game-battlefield {
   position: relative;
@@ -585,7 +590,6 @@
   text-align: right;
 }
 
-
 @media (max-width: 768px) {
   .game-screen {
     height: 100vh;
@@ -620,7 +624,7 @@
     margin: 0;
     z-index: 2;
   }
-  
+
   .game-end-turn {
     min-height: 36px;
   }
@@ -652,11 +656,21 @@
     grid-template-rows: auto;
   }
 
-  .game-battlefield-layout > .battlefield-enemy-col { order: 1; }
-  .game-battlefield-layout > .game-board__side--opponent { order: 2; }
-  .game-battlefield-layout > .game-battlefield__divider { order: 3; }
-  .game-battlefield-layout > .battlefield-self-col { order: 4; }
-  .game-battlefield-layout > .game-board__side--self { order: 5; }
+  .game-battlefield-layout > .battlefield-enemy-col {
+    order: 1;
+  }
+  .game-battlefield-layout > .game-board__side--opponent {
+    order: 2;
+  }
+  .game-battlefield-layout > .game-battlefield__divider {
+    order: 3;
+  }
+  .game-battlefield-layout > .battlefield-self-col {
+    order: 4;
+  }
+  .game-battlefield-layout > .game-board__side--self {
+    order: 5;
+  }
 
   .game-battlefield-layout > .battlefield-self-col,
   .game-battlefield-layout > .battlefield-enemy-col,
@@ -739,10 +753,12 @@
   width: 121.6px;
   height: 185.6px;
   cursor: default;
-  transition: box-shadow 0.15s, transform 0.1s, filter 0.15s;
+  transition:
+    box-shadow 0.15s,
+    transform 0.1s,
+    filter 0.15s;
   user-select: none;
 }
-
 
 .battlefield-row--self .battlefield-unit-card,
 .battlefield-row--enemy .battlefield-unit-card {
@@ -793,7 +809,11 @@
   padding: 2px 6px;
   border: 1px solid rgba(32, 15, 5, 0.75);
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(201, 169, 98, 0.92) 0%, rgba(143, 116, 64, 0.92) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(201, 169, 98, 0.92) 0%,
+    rgba(143, 116, 64, 0.92) 100%
+  );
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
   font-family: var(--font-heading);
   font-size: 9px;
@@ -894,14 +914,19 @@
   animation: triad-combo-appear 0.25s ease-out;
   z-index: 5;
   pointer-events: none;
-  width: max-content
+  width: max-content;
 }
 
 @keyframes triad-combo-appear {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
-
 
 .game-triad-combo__label {
   font-family: var(--font-body);
@@ -941,7 +966,7 @@
 
 .game-triad-combo--precision {
   border-color: rgba(201, 169, 98, 0.45);
-  background: rgba(201, 169, 98, 0.10);
+  background: rgba(201, 169, 98, 0.1);
 }
 .game-triad-combo--precision .game-triad-combo__type {
   color: #eed883;
@@ -953,7 +978,7 @@
 
 .game-triad-combo--arcane {
   border-color: rgba(139, 92, 246, 0.45);
-  background: rgba(139, 92, 246, 0.10);
+  background: rgba(139, 92, 246, 0.1);
 }
 .game-triad-combo--arcane .game-triad-combo__type {
   color: #c4a9ff;
@@ -985,24 +1010,31 @@
 }
 
 .battle-effects-layer__burst--assault {
-  background:
-    radial-gradient(circle, rgba(244, 146, 102, 0.95) 0%, rgba(191, 58, 42, 0.72) 45%, rgba(191, 58, 42, 0) 72%);
+  background: radial-gradient(
+    circle,
+    rgba(244, 146, 102, 0.95) 0%,
+    rgba(191, 58, 42, 0.72) 45%,
+    rgba(191, 58, 42, 0) 72%
+  );
   box-shadow: 0 0 34px rgba(191, 58, 42, 0.55);
 }
 
 .battle-effects-layer__burst--precision {
-  background:
-    radial-gradient(circle, rgba(255, 236, 155, 0.95) 0%, rgba(201, 169, 98, 0.72) 45%, rgba(201, 169, 98, 0) 72%);
+  background: radial-gradient(
+    circle,
+    rgba(255, 236, 155, 0.95) 0%,
+    rgba(201, 169, 98, 0.72) 45%,
+    rgba(201, 169, 98, 0) 72%
+  );
   box-shadow: 0 0 34px rgba(201, 169, 98, 0.55);
 }
 
 .battle-effects-layer__burst--arcane {
-  background:
-    radial-gradient(circle, rgba(214, 194, 255, 0.95) 0%, rgba(139, 92, 246, 0.72) 45%, rgba(139, 92, 246, 0) 72%);
+  background: radial-gradient(
+    circle,
+    rgba(214, 194, 255, 0.95) 0%,
+    rgba(139, 92, 246, 0.72) 45%,
+    rgba(139, 92, 246, 0) 72%
+  );
   box-shadow: 0 0 34px rgba(139, 92, 246, 0.55);
 }
-
-
-
-
-
