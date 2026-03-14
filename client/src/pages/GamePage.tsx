@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
 import { GameCard, type CardModel } from "../components/Card";
@@ -7,18 +7,7 @@ import socket from "../shared/socket/socket";
 import {
   attackWithUnit,
   endMatchTurn,
-  joinMatch,
   leaveMatch,
-  offMatchError,
-  offMatchFinish,
-  offMatchState,
-  offMatchTimer,
-  offMatchUpdate,
-  onMatchError,
-  onMatchFinish,
-  onMatchState,
-  onMatchTimer,
-  onMatchUpdate,
   playMatchCard,
   syncMatch,
   type MatchErrorPayload,
@@ -28,6 +17,9 @@ import {
   type UnitInstance
 } from "../shared/socket/matchSocket";
 import { useMatchBoard } from "../features/customHooks/useMatchBoard";
+import { useGameMatchSession } from "../features/customHooks/useGameMatchSession";
+import { useTimedNotice } from "../features/customHooks/useTimedNotice";
+import { useGameViewModel } from "../features/customHooks/useGameViewModel";
 import "./GamePage.css";
 import TurnCountdown from "../components/TurnCountdown";
 import LeaveArenaConfirmModal from "../components/LeaveArenaConfirmModal";
@@ -78,28 +70,32 @@ export default function GamePage() {
 
   const [match, setMatch] = useState<MatchStatePayload | null>(null);
   const [matchError, setMatchError] = useState<string | null>(null);
-  const [battlefieldHint, setBattlefieldHint] = useState<string | null>(null);
-  const [battlefieldHintFading, setBattlefieldHintFading] = useState(false);
-  const [handHint, setHandHint] = useState<string | null>(null);
-  const [handHintFading, setHandHintFading] = useState(false);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [finishReason, setFinishReason] = useState<string | null>(null);
   const [attackState, setAttackState] = useState<AttackState>({ mode: "idle" });
   const [timerRemaining, setTimerRemaining] = useState(45);
-  const [spellNotice, setSpellNotice] = useState<string | null>(null);
-  const [spellNoticeFading, setSpellNoticeFading] = useState(false);
 
   const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 768);
-  const joinedMatchRef = useRef<string | null>(null);
-  const spellNoticeFadeTimeoutRef = useRef<number | null>(null);
-  const spellNoticeHideTimeoutRef = useRef<number | null>(null);
-  const battlefieldHintFadeTimeoutRef = useRef<number | null>(null);
-  const battlefieldHintHideTimeoutRef = useRef<number | null>(null);
-  const handHintFadeTimeoutRef = useRef<number | null>(null);
-  const handHintHideTimeoutRef = useRef<number | null>(null);
   const lastSpellNoticeEventIdRef = useRef<number | null>(null);
   const { playedCards, cardCatalog, applyEvents, resetBoard } = useMatchBoard();
+  const {
+    value: spellNotice,
+    isFading: spellNoticeFading,
+    show: showSpellNoticeMessage,
+  } = useTimedNotice();
+  const {
+    value: battlefieldHint,
+    isFading: battlefieldHintFading,
+    show: showBattlefieldHint,
+    hide: hideBattlefieldHint,
+  } = useTimedNotice();
+  const {
+    value: handHint,
+    isFading: handHintFading,
+    show: showHandHint,
+    hide: hideHandHint,
+  } = useTimedNotice();
 
   const isSameUser = useCallback((value: string | number | null | undefined) =>
     String(value ?? "").trim().toLowerCase() === String(userIdStr ?? "").trim().toLowerCase(), [userIdStr]);
@@ -151,121 +147,13 @@ export default function GamePage() {
     lastSpellNoticeEventIdRef.current = latestSpellEvent.eventId;
 
     const ownerLabel = isSameUser(latestSpellEvent.payload.playerId) ? "Your" : "Opponent";
-    setSpellNotice(`${ownerLabel} spell resolved: ${latestSpellEvent.payload.card.name}`);
-    setSpellNoticeFading(false);
-
-    if (spellNoticeFadeTimeoutRef.current) {
-      window.clearTimeout(spellNoticeFadeTimeoutRef.current);
-    }
-    if (spellNoticeHideTimeoutRef.current) {
-      window.clearTimeout(spellNoticeHideTimeoutRef.current);
-    }
-
-    spellNoticeFadeTimeoutRef.current = window.setTimeout(() => {
-      setSpellNoticeFading(true);
-      spellNoticeFadeTimeoutRef.current = null;
-    }, 2000);
-
-    spellNoticeHideTimeoutRef.current = window.setTimeout(() => {
-      setSpellNotice(null);
-      setSpellNoticeFading(false);
-      spellNoticeHideTimeoutRef.current = null;
-    }, 5000);
-  }, [isSameUser]);
-
-  const clearHandHintTimers = useCallback(() => {
-    if (handHintFadeTimeoutRef.current) {
-      window.clearTimeout(handHintFadeTimeoutRef.current);
-      handHintFadeTimeoutRef.current = null;
-    }
-    if (handHintHideTimeoutRef.current) {
-      window.clearTimeout(handHintHideTimeoutRef.current);
-      handHintHideTimeoutRef.current = null;
-    }
-  }, []);
-
-  const hideHandHint = useCallback(() => {
-    clearHandHintTimers();
-    setHandHint(null);
-    setHandHintFading(false);
-  }, [clearHandHintTimers]);
-
-  const showHandHint = useCallback((message: string | null) => {
-    hideHandHint();
-    if (!message) return;
-    setHandHint(message);
-    setHandHintFading(false);
-    handHintFadeTimeoutRef.current = window.setTimeout(() => {
-      setHandHintFading(true);
-      handHintFadeTimeoutRef.current = null;
-    }, 2000);
-    handHintHideTimeoutRef.current = window.setTimeout(() => {
-      setHandHint(null);
-      setHandHintFading(false);
-      handHintHideTimeoutRef.current = null;
-    }, 5000);
-  }, [hideHandHint]);
-
-  const clearBattlefieldHintTimers = useCallback(() => {
-    if (battlefieldHintFadeTimeoutRef.current) {
-      window.clearTimeout(battlefieldHintFadeTimeoutRef.current);
-      battlefieldHintFadeTimeoutRef.current = null;
-    }
-    if (battlefieldHintHideTimeoutRef.current) {
-      window.clearTimeout(battlefieldHintHideTimeoutRef.current);
-      battlefieldHintHideTimeoutRef.current = null;
-    }
-  }, []);
-
-  const hideBattlefieldHint = useCallback(() => {
-    clearBattlefieldHintTimers();
-    setBattlefieldHint(null);
-    setBattlefieldHintFading(false);
-  }, [clearBattlefieldHintTimers]);
-
-  const showBattlefieldHint = useCallback((message: string | null) => {
-    hideBattlefieldHint();
-    if (!message) return;
-    setBattlefieldHint(message);
-    setBattlefieldHintFading(false);
-    battlefieldHintFadeTimeoutRef.current = window.setTimeout(() => {
-      setBattlefieldHintFading(true);
-      battlefieldHintFadeTimeoutRef.current = null;
-    }, 2000);
-    battlefieldHintHideTimeoutRef.current = window.setTimeout(() => {
-      setBattlefieldHint(null);
-      setBattlefieldHintFading(false);
-      battlefieldHintHideTimeoutRef.current = null;
-    }, 5000);
-  }, [hideBattlefieldHint]);
+    showSpellNoticeMessage(`${ownerLabel} spell resolved: ${latestSpellEvent.payload.card.name}`);
+  }, [isSameUser, showSpellNoticeMessage]);
 
   useEffect(() => {
     const handleResize = () => setIsMobileView(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (spellNoticeFadeTimeoutRef.current) {
-        window.clearTimeout(spellNoticeFadeTimeoutRef.current);
-      }
-      if (spellNoticeHideTimeoutRef.current) {
-        window.clearTimeout(spellNoticeHideTimeoutRef.current);
-      }
-      if (battlefieldHintFadeTimeoutRef.current) {
-        window.clearTimeout(battlefieldHintFadeTimeoutRef.current);
-      }
-      if (battlefieldHintHideTimeoutRef.current) {
-        window.clearTimeout(battlefieldHintHideTimeoutRef.current);
-      }
-      if (handHintFadeTimeoutRef.current) {
-        window.clearTimeout(handHintFadeTimeoutRef.current);
-      }
-      if (handHintHideTimeoutRef.current) {
-        window.clearTimeout(handHintHideTimeoutRef.current);
-      }
-    };
   }, []);
 
   // ── URL params sync ──────────────────────────────────────────────────────────
@@ -276,317 +164,119 @@ export default function GamePage() {
     if (fromQueryMatchId) setArenaMatchId(fromQueryMatchId);
   }, [searchParams]);
 
-  // ── Arena socket ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!arenaId || arenaId === "unknown") return;
-    if (!token) return;
-
-    socket.auth = { token };
-    if (!socket.connected) socket.connect();
-    socket.emit("join_game", arenaId);
-
-    const updateOpponentFromPlayers = (
-      players?: Array<{ userId?: string | number; nickname?: string }>
-    ) => {
-      if (!Array.isArray(players)) return;
-      const opponent = players.find((player) => !isSameUser(player?.userId));
-      setOpponentNickname(opponent?.nickname || "UNKNOWN");
-    };
-
-    const requestArenaState = () => {
-      socket.emit(
-        "arena:get-state",
-        { arenaId },
-        (res?: { matchId?: string; players?: Array<{ userId?: string | number; nickname?: string }> }) => {
-          updateOpponentFromPlayers(res?.players);
-          if (res?.matchId) setArenaMatchId(res.matchId);
-        }
-      );
-    };
-
-    requestArenaState();
-
-    const onArenaReady = (
-      payload?: { arenaId?: string; matchId?: string; players?: Array<{ userId?: string | number; nickname?: string }> }
-    ) => {
-      if (!payload?.arenaId || payload.arenaId !== arenaId) return;
-      updateOpponentFromPlayers(payload.players);
-      if (payload.matchId) setArenaMatchId(payload.matchId);
-    };
-
-    const onConnect = () => {
-      socket.emit("join_game", arenaId);
-      requestArenaState();
-    };
-
-    const pollId = window.setInterval(() => {
-      if (!arenaMatchId) {
-        requestArenaState();
-      }
-    }, 1500);
-
-    socket.on("connect", onConnect);
-    socket.on("arena:ready", onArenaReady);
-    return () => {
-      window.clearInterval(pollId);
-      socket.off("connect", onConnect);
-      socket.off("arena:ready", onArenaReady);
-    };
-  }, [arenaId, token, userIdStr, arenaMatchId]);
-
-  // ── Match socket ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!token || !userIdStr) return;
-
-    socket.auth = { token };
-    if (!socket.connected) socket.connect();
-
-    const onConnect = () => {
-      setIsReconnecting(false);
-      syncMatch();
-    };
-    const onDisconnect = () => {
-      setIsReconnecting(true);
-    };
-
-    const handleState = (payload: MatchStatePayload) => {
-      setMatchError(null);
-      hideBattlefieldHint();
-      hideHandHint();
-      setAttackState({ mode: "idle" });
-      setMatch(payload);
-      if (payload.state.finished) setTimerRemaining(0);
-      setArenaMatchId(payload.matchId);
-      if (payload.events?.length) {
-        showSpellNotice(payload.events);
-        applyEvents(payload.events);
-      }
-    };
-
-    const handleUpdate = (payload: MatchStatePayload) => {
-      setMatchError(null);
-      hideBattlefieldHint();
-      hideHandHint();
-      setAttackState({ mode: "idle" });
-      setMatch(payload);
-      if (payload.state.finished) setTimerRemaining(0);
-      if (payload.events?.length) {
-        showSpellNotice(payload.events);
-        applyEvents(payload.events);
-      }
-    };
-
-    const handleError = (payload: MatchErrorPayload) => {
-      hideBattlefieldHint();
-      setMatchError(mapMatchErrorMessage(payload.type, payload.message));
-      if (payload.type === "STATE_OUTDATED") syncMatch();
-    };
-
-    const handleFinish = (payload: MatchFinishPayload) => {
-      setFinishReason(payload.reason ?? null);
-      setWinnerId(payload.winnerId ?? null);
-      setTimerRemaining(0);
-      setSelectedCardId(null);
-      hideHandHint();
-      setAttackState({ mode: "idle" });
-      hideBattlefieldHint();
-      setMatch((prev) => (prev ? { ...prev, state: { ...prev.state, finished: true } } : prev));
-
-      if (payload.reason === "opponent_left") {
-        const cowardMessage = "Opponent cowardly left the arena";
-        setMatchError(cowardMessage);
-        return;
-      }
-    };
-
-    const handleTimer = (payload: MatchTimerPayload) => {
-      setTimerRemaining(payload.remaining);
-    };
-
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
-    onMatchState(handleState);
-    onMatchUpdate(handleUpdate);
-    onMatchError(handleError);
-    onMatchFinish(handleFinish);
-    onMatchTimer(handleTimer);
-
-    return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
-      offMatchState(handleState);
-      offMatchUpdate(handleUpdate);
-      offMatchError(handleError);
-      offMatchFinish(handleFinish);
-      offMatchTimer(handleTimer);
-    };
-  }, [applyEvents, hideBattlefieldHint, hideHandHint, showSpellNotice, token, userIdStr]);
-
-  // ── Join match ───────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!arenaMatchId || !token || !userIdStr) return;
-
-    socket.auth = { token };
-    if (!socket.connected) socket.connect();
-
-    if (joinedMatchRef.current !== arenaMatchId) {
-      resetBoard();
-      joinedMatchRef.current = arenaMatchId;
-      setMatchError(null);
-      hideBattlefieldHint();
-      hideHandHint();
+  const handleMatchStatePayload = useCallback((payload: MatchStatePayload) => {
+    setMatchError(null);
+    hideBattlefieldHint();
+    hideHandHint();
+    setAttackState({ mode: "idle" });
+    setMatch(payload);
+    if (payload.state.finished) setTimerRemaining(0);
+    setArenaMatchId(payload.matchId);
+    if (payload.events?.length) {
+      showSpellNotice(payload.events);
+      applyEvents(payload.events);
     }
+  }, [applyEvents, hideBattlefieldHint, hideHandHint, showSpellNotice]);
 
-    if (match?.matchId !== arenaMatchId) joinMatch(arenaMatchId);
+  const handleMatchUpdatePayload = useCallback((payload: MatchStatePayload) => {
+    setMatchError(null);
+    hideBattlefieldHint();
+    hideHandHint();
+    setAttackState({ mode: "idle" });
+    setMatch(payload);
+    if (payload.state.finished) setTimerRemaining(0);
+    if (payload.events?.length) {
+      showSpellNotice(payload.events);
+      applyEvents(payload.events);
+    }
+  }, [applyEvents, hideBattlefieldHint, hideHandHint, showSpellNotice]);
 
-    const retryId = window.setTimeout(() => {
-      if (match?.matchId !== arenaMatchId) {
-        syncMatch();
-        joinMatch(arenaMatchId);
-      }
-    }, 1200);
+  const handleMatchErrorPayload = useCallback((payload: MatchErrorPayload) => {
+    hideBattlefieldHint();
+    setMatchError(mapMatchErrorMessage(payload.type, payload.message));
+    if (payload.type === "STATE_OUTDATED") syncMatch();
+  }, [hideBattlefieldHint]);
 
-    return () => { window.clearTimeout(retryId); };
-  }, [arenaMatchId, hideBattlefieldHint, hideHandHint, resetBoard, token, userIdStr, match?.matchId]);
+  const handleMatchFinishPayload = useCallback((payload: MatchFinishPayload) => {
+    setFinishReason(payload.reason ?? null);
+    setWinnerId(payload.winnerId ?? null);
+    setTimerRemaining(0);
+    setSelectedCardId(null);
+    hideHandHint();
+    setAttackState({ mode: "idle" });
+    hideBattlefieldHint();
+    setMatch((prev) => (prev ? { ...prev, state: { ...prev.state, finished: true } } : prev));
+
+    if (payload.reason === "opponent_left") {
+      setMatchError("Opponent cowardly left the arena");
+    }
+  }, [hideBattlefieldHint, hideHandHint]);
+
+  const handleMatchTimerPayload = useCallback((payload: MatchTimerPayload) => {
+    setTimerRemaining(payload.remaining);
+  }, []);
+
+  const resetJoinState = useCallback(() => {
+    resetBoard();
+    setMatchError(null);
+    hideBattlefieldHint();
+    hideHandHint();
+  }, [hideBattlefieldHint, hideHandHint, resetBoard]);
+
+  useGameMatchSession({
+    arenaId,
+    token,
+    userIdStr,
+    arenaMatchId,
+    currentMatchId: match?.matchId ?? null,
+    isSameUser,
+    setArenaMatchId,
+    setOpponentNickname,
+    onSetReconnecting: setIsReconnecting,
+    onResetJoinState: resetJoinState,
+    onMatchStatePayload: handleMatchStatePayload,
+    onMatchUpdatePayload: handleMatchUpdatePayload,
+    onMatchErrorPayload: handleMatchErrorPayload,
+    onMatchFinishPayload: handleMatchFinishPayload,
+    onMatchTimerPayload: handleMatchTimerPayload,
+  });
+
 
   // ── Derived state ─────────────────────────────────────────────────────────────
 
   const {
-    playerHPPercent, opponentHPPercent, currentEnergy, isMyTurn,
-    selfIndex, selfStats, oppStats, selfKey, oppKey
-  } = useMemo(() => {
-    const defaultResult = {
-      playerHPPercent: 100, opponentHPPercent: 100, currentEnergy: 0,
-      isMyTurn: false, selfIndex: -1, selfKey: "player1" as "player1" | "player2",
-      oppKey: "player2" as "player1" | "player2",
-      selfStats: { hp: 0, shield: 0, energy: 0, statuses: [] as Array<{ type: string }>, board: [] as UnitInstance[] },
-      oppStats: { hp: 0, shield: 0, energy: 0, statuses: [] as Array<{ type: string }>, board: [] as UnitInstance[] }
-    };
-
-    if (!match || !userIdStr) return defaultResult;
-
-    const idxFromState = (() => {
-      const p1Id = match.state.players.player1?.id;
-      const p2Id = match.state.players.player2?.id;
-      if (isSameUser(p1Id)) return 0;
-      if (isSameUser(p2Id)) return 1;
-      return -1;
-    })();
-    const idx = idxFromState >= 0 ? idxFromState : match.players.findIndex((id) => isSameUser(id));
-    if (idx < 0) return defaultResult;
-
-    const sk = idx === 0 ? "player1" : "player2" as "player1" | "player2";
-    const ok = sk === "player1" ? "player2" : "player1" as "player1" | "player2";
-
-    const self = match.state.players[sk];
-    const opp = match.state.players[ok];
-
-    const maxHp = 30;
-    const clampPercent = (v: number | null) => v == null ? 0 : Math.max(0, Math.min(100, (v / maxHp) * 100));
-
-    return {
-      playerHPPercent: clampPercent(self.hp),
-      opponentHPPercent: clampPercent(opp.hp),
-      currentEnergy: self.energy ?? 0,
-      isMyTurn: isSameUser(match.state.activePlayer) && !match.state.finished,
-      selfIndex: idx,
-      selfKey: sk,
-      oppKey: ok,
-      selfStats: { ...self, board: self.board ?? [] },
-      oppStats: { ...opp, board: opp.board ?? [] }
-    };
-  }, [match, userIdStr]);
-
-  const handCards: CardModel[] = useMemo(() => {
-    if (!match || !userIdStr || selfIndex < 0) return [];
-    const playerHand = match.state.players[selfKey].hand || [];
-    return playerHand.map<CardModel>((card, index) => ({
-      id: `${card.id}:${index}`,
-      name: card.name,
-      image: card.image || "crimson_duelist.png",
-      type: String(card.type).toUpperCase() as CardModel["type"],
-      triad_type: String(card.triad_type).toUpperCase() as CardModel["triad_type"],
-      mana_cost: card.mana_cost,
-      attack: card.attack,
-      hp: card.hp,
-      description: card.description,
-      created_at: card.created_at
-    }));
-  }, [match, userIdStr, selfKey, selfIndex]);
-
-  const selfDeckCount = useMemo(() => {
-    if (!match || selfIndex < 0) return 0;
-    return match.state.players[selfKey].deckCount ?? 0;
-  }, [match, selfKey, selfIndex]);
-
-  const selfDiscardCount = useMemo(() => {
-    if (!match || selfIndex < 0) return 0;
-    return match.state.players[selfKey].discardCount ?? 0;
-  }, [match, selfKey, selfIndex]);
-
-  const matchResultLabel = useMemo(() => {
-    if (finishReason === "opponent_left") return "Opponent cowardly left the arena";
-    if (!winnerId || !userIdStr) return null;
-    return isSameUser(winnerId) ? "Victory" : "Defeat";
-  }, [finishReason, winnerId, userIdStr]);
-
-  const isMatchFinished = Boolean(match?.state.finished || finishReason || winnerId);
-  const boardNotice = spellNotice ?? battlefieldHint ?? handHint;
-  const isBoardNoticeFading = spellNotice
-    ? spellNoticeFading
-    : battlefieldHint
-      ? battlefieldHintFading
-      : handHint
-        ? handHintFading
-        : false;
-  const boardNoticeTone = spellNotice ? "default" : "warning";
-
-  const playedCardIdsThisTurn = useMemo(() => {
-    if (!match || !userIdStr) return new Set<string>();
-    // Exclude attack entries (cardId === null) so the Set only contains actual card plays.
-    const ids = match.state.turnActions
-      .filter((action) => isSameUser(action.playerId) && action.cardId != null)
-      .map((action) => action.cardId as string);
-    return new Set(ids);
-  }, [match, userIdStr]);
-
-  // Triad combo notice should reflect the last card play that could actually
-  // receive the backend combo bonus, not the "best type so far" in the turn.
-  const triadComboInfo = useMemo((): { type: string; count: number; bonus: number } | null => {
-    if (!match || !userIdStr) return null;
-
-    const myCardActions = match.state.turnActions
-      .filter((action) =>
-        action.cardId != null &&
-        action.triadType != null &&
-        action.playerId != null &&
-        isSameUser(action.playerId)
-      )
-      .sort((left, right) => (left.actionIndex ?? 0) - (right.actionIndex ?? 0));
-
-    if (myCardActions.length === 0) return null;
-
-    const latestCardAction = myCardActions[myCardActions.length - 1];
-    const latestCardId = String(latestCardAction.cardId ?? "");
-    const latestCard =
-      cardCatalog[latestCardId] ||
-      [...playedCards]
-        .reverse()
-        .find((entry) => isSameUser(entry.playerId) && entry.card.id === latestCardId)?.card;
-
-    if (!latestCard || latestCard.type !== "SPELL") return null;
-
-    const triadType = String(latestCardAction.triadType || "").toLowerCase();
-    const comboCount = myCardActions.filter(
-      (action) =>
-        (action.actionIndex ?? 0) <= (latestCardAction.actionIndex ?? 0) &&
-        String(action.triadType || "").toLowerCase() === triadType
-    ).length;
-
-    if (comboCount < 2) return null;
-    const bonus = comboCount >= 3 ? 4 : 2;
-    return { type: triadType, count: comboCount, bonus };
-  }, [cardCatalog, isSameUser, match, playedCards, userIdStr]);
+    playerHPPercent,
+    opponentHPPercent,
+    currentEnergy,
+    isMyTurn,
+    selfIndex,
+    selfStats,
+    oppStats,
+    handCards,
+    selfDeckCount,
+    selfDiscardCount,
+    matchResultLabel,
+    isMatchFinished,
+    boardNotice,
+    isBoardNoticeFading,
+    boardNoticeTone,
+    playedCardIdsThisTurn,
+    triadComboInfo,
+  } = useGameViewModel({
+    match,
+    userIdStr,
+    finishReason,
+    winnerId,
+    spellNotice,
+    spellNoticeFading,
+    battlefieldHint,
+    battlefieldHintFading,
+    handHint,
+    handHintFading,
+    playedCards,
+    cardCatalog,
+    isSameUser,
+  });
 
   // ── Card play ─────────────────────────────────────────────────────────────────
 
@@ -770,7 +460,6 @@ export default function GamePage() {
     const leavingMatchId = match?.matchId || arenaMatchId;
     if (leavingMatchId) leaveMatch(leavingMatchId);
     if (arenaId && arenaId !== "unknown") socket.emit("leave_game", arenaId);
-    joinedMatchRef.current = null;
     setMatch(null);
     setWinnerId(null);
     setFinishReason(null);
@@ -1067,3 +756,4 @@ export default function GamePage() {
     </div>
   );
 }
+
