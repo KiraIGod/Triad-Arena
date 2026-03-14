@@ -11,6 +11,8 @@ export const FriendList: React.FC = () => {
   const [addUsername, setAddUsername] = useState('')
   const [isAdding, setIsAdding] = useState(false)
 
+  const [activeChatFriend, setActiveChatFriend] = useState<Friend | null>(null)
+
   const [friends, setFriends] = useState<Friend[]>([])
   const [requests, setRequests] = useState<FriendRequest[]>([])
   const [loading, setLoading] = useState(true)
@@ -101,7 +103,12 @@ export const FriendList: React.FC = () => {
             ONLINE ({onlineFriends.length})
           </div>
           {onlineFriends.map(friend => (
-            <div key={friend.id} className="friend-item">
+            <div
+              key={friend.id}
+              className="friend-item"
+              onDoubleClick={() => setActiveChatFriend(friend)}
+              style={{ cursor: 'pointer' }}
+            >
               <span className="status-dot online"></span>
               <span className="friend-name">{friend.username}</span>
             </div>
@@ -113,7 +120,12 @@ export const FriendList: React.FC = () => {
             OFFLINE ({offlineFriends.length})
           </div>
           {offlineFriends.map(friend => (
-            <div key={friend.id} className="friend-item offline-item">
+            <div
+              key={friend.id}
+              className="friend-item offline-item"
+              onDoubleClick={() => setActiveChatFriend(friend)}
+              style={{ cursor: 'pointer' }}
+            >
               <span className="status-dot offline"></span>
               <span className="friend-name">{friend.username}</span>
             </div>
@@ -135,6 +147,13 @@ export const FriendList: React.FC = () => {
           requests={requests}
           onRespond={refreshData}
           token={token}
+        />
+      )}
+
+      {activeChatFriend && (
+        <ChatModal
+          friend={activeChatFriend}
+          onClose={() => setActiveChatFriend(null)}
         />
       )}
     </div>

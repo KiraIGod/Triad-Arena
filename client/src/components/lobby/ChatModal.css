@@ -1,0 +1,111 @@
+.arena-chat-modal {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 320px;
+  height: 400px;
+  background: rgba(15, 15, 20, 0.95);
+  border: 1px solid #c9a34e;
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(201, 163, 78, 0.3);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  font-family: 'Cinzel', 'Roboto', sans-serif;
+}
+
+.chat-header {
+  background: linear-gradient(180deg, #2a2a35 0%, #15151c 100%);
+  color: #e0e0e0;
+  padding: 10px 15px;
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid #c9a34e;
+  border-radius: 8px 8px 0 0;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  color: #c9a34e;
+  font-size: 20px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.close-btn:hover { color: #fff; }
+
+.chat-messages {
+  flex-grow: 1;
+  padding: 15px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-messages::-webkit-scrollbar { width: 6px; }
+.chat-messages::-webkit-scrollbar-thumb { background: #4a4a5a; border-radius: 3px; }
+
+.message-wrapper {
+  display: flex;
+  width: 100%;
+}
+
+.message-wrapper.mine { justify-content: flex-end; }
+.message-wrapper.theirs { justify-content: flex-start; }
+
+.message-bubble {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.message-wrapper.mine .message-bubble {
+  background: rgba(201, 163, 78, 0.2);
+  border: 1px solid rgba(201, 163, 78, 0.5);
+  color: #fff;
+}
+
+.message-wrapper.theirs .message-bubble {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ccc;
+}
+
+.chat-input-area {
+  display: flex;
+  padding: 10px;
+  background: #111;
+  border-top: 1px solid #333;
+  border-radius: 0 0 8px 8px;
+}
+
+.chat-input {
+  flex-grow: 1;
+  background: #222;
+  border: 1px solid #444;
+  color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  outline: none;
+}
+
+.chat-input:focus { border-color: #c9a34e; }
+
+.chat-send-btn {
+  background: #c9a34e;
+  color: #111;
+  border: none;
+  padding: 0 15px;
+  margin-left: 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.chat-send-btn:hover { background: #e0b85f; }
