@@ -972,6 +972,32 @@
   will-change: left, top, width, height, opacity, transform;
 }
 
+.battle-effects-layer__burst {
+  position: fixed;
+  border-radius: 999px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  mix-blend-mode: screen;
+}
+
+.battle-effects-layer__burst--assault {
+  background:
+    radial-gradient(circle, rgba(244, 146, 102, 0.95) 0%, rgba(191, 58, 42, 0.72) 45%, rgba(191, 58, 42, 0) 72%);
+  box-shadow: 0 0 34px rgba(191, 58, 42, 0.55);
+}
+
+.battle-effects-layer__burst--precision {
+  background:
+    radial-gradient(circle, rgba(255, 236, 155, 0.95) 0%, rgba(201, 169, 98, 0.72) 45%, rgba(201, 169, 98, 0) 72%);
+  box-shadow: 0 0 34px rgba(201, 169, 98, 0.55);
+}
+
+.battle-effects-layer__burst--arcane {
+  background:
+    radial-gradient(circle, rgba(214, 194, 255, 0.95) 0%, rgba(139, 92, 246, 0.72) 45%, rgba(139, 92, 246, 0) 72%);
+  box-shadow: 0 0 34px rgba(139, 92, 246, 0.55);
+}
+
 
 
 

@@ -20,9 +20,23 @@ export type CardFlyEffect = {
   };
 };
 
+export type SpellBurstEffect = {
+  id: string;
+  type: "spell_burst";
+  triadType: "ASSAULT" | "PRECISION" | "ARCANE";
+  target: {
+    left: number;
+    top: number;
+    width: number;
+    height: number;
+  };
+};
+
+export type BattleEffect = CardFlyEffect | SpellBurstEffect;
+
 type BattleEffectsLayerProps = {
-  effects: CardFlyEffect[];
-  onComplete: (effect: CardFlyEffect) => void;
+  effects: BattleEffect[];
+  onComplete: (effect: BattleEffect) => void;
 };
 
 export default function BattleEffectsLayer({
@@ -33,7 +47,34 @@ export default function BattleEffectsLayer({
     <div className="battle-effects-layer">
       <AnimatePresence>
         {effects.map((effect) => {
-          if (effect.type !== "card_fly") return null;
+          if (effect.type === "spell_burst") {
+            const size = Math.max(effect.target.width, effect.target.height, 72);
+            const left = effect.target.left + effect.target.width / 2 - size / 2;
+            const top = effect.target.top + effect.target.height / 2 - size / 2;
+
+            return (
+              <motion.div
+                key={effect.id}
+                className={`battle-effects-layer__burst battle-effects-layer__burst--${effect.triadType.toLowerCase()}`}
+                style={{
+                  left,
+                  top,
+                  width: size,
+                  height: size,
+                }}
+                initial={{
+                  opacity: 0,
+                  scale: 0.4,
+                }}
+                animate={{
+                  opacity: [0, 0.95, 0],
+                  scale: [0.4, 1.15, 1.4],
+                }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                onAnimationComplete={() => onComplete(effect)}
+              />
+            );
+          }
 
           return (
             <motion.div

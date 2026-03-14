@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
 import type { CardModel } from "../components/Card";
@@ -25,7 +26,11 @@ import TurnCountdown from "../components/TurnCountdown";
 import LeaveArenaConfirmModal from "../components/LeaveArenaConfirmModal";
 import MatchBoard from "../components/MatchBoard";
 import BattlefieldUnitCard from "../components/BattlefieldUnitCard";
-import BattleEffectsLayer, { type CardFlyEffect } from "../components/BattleEffectsLayer";
+import BattleEffectsLayer, {
+  type BattleEffect,
+  type CardFlyEffect,
+  type SpellBurstEffect,
+} from "../components/BattleEffectsLayer";
 
 
 // ─── Attack flow state ────────────────────────────────────────────────────────
@@ -53,6 +58,8 @@ function mapMatchErrorMessage(type?: string, fallback?: string): string {
   return fallback || "Match action failed.";
 }
 
+const MAX_BOARD_UNITS = 5;
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function GamePage() {
@@ -79,10 +86,12 @@ export default function GamePage() {
   const [finishGameMode, setFinishGameMode] = useState<string | null>(null);
   const [attackState, setAttackState] = useState<AttackState>({ mode: "idle" });
   const [timerRemaining, setTimerRemaining] = useState(45);
-  const [battleEffects, setBattleEffects] = useState<CardFlyEffect[]>([]);
+  const [battleEffects, setBattleEffects] = useState<BattleEffect[]>([]);
   const [pendingPlayedCardIds, setPendingPlayedCardIds] = useState<string[]>([]);
   const handCardElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
   const selfPlayedZoneRef = useRef<HTMLDivElement | null>(null);
+  const enemyHeroRef = useRef<HTMLDivElement | null>(null);
+  const enemyUnitElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
 
   const [isMobileView, setIsMobileView] = useState(
     () => typeof window !== "undefined" && window.innerWidth <= 768
@@ -295,6 +304,9 @@ export default function GamePage() {
     if (selfIndex < 0) return "You are not part of this match";
     if (match.state.finished) return "Match already finished";
     if (!isMyTurn) return "Wait for your turn";
+    if (card.type === "UNIT" && (selfStats.board?.length ?? 0) >= MAX_BOARD_UNITS) {
+      return "Board is full";
+    }
     if (playedCardIdsThisTurn.size >= 3) return "Card limit reached (3 cards per turn)";
     if (playedCardIdsThisTurn.has(card.id.split(":")[0])) return "Card already played this turn";
     if (currentEnergy < card.mana_cost) return "Not enough energy";
@@ -338,6 +350,28 @@ export default function GamePage() {
           height: fromRect.height * 0.8,
         },
       },
+    ]);
+  }, []);
+
+  const spawnSpellBurstEffect = useCallback((
+    triadType: CardModel["triad_type"],
+    targetRect?: DOMRect | null
+  ) => {
+    if (!targetRect) return;
+
+    setBattleEffects((prev) => [
+      ...prev,
+      {
+        id: `burst-${Date.now()}-${triadType}`,
+        type: "spell_burst",
+        triadType,
+        target: {
+          left: targetRect.left,
+          top: targetRect.top,
+          width: targetRect.width,
+          height: targetRect.height,
+        },
+      } satisfies SpellBurstEffect,
     ]);
   }, []);
 
@@ -404,13 +438,19 @@ export default function GamePage() {
     setAttackState({ mode: "selectingTarget", attackerInstanceId: unit.instanceId });
   }, [attackState, hideBattlefieldHint, hideHandHint, isMyTurn, match, showBattlefieldHint]);
 
-  const handleEnemyUnitClick = useCallback((unit: UnitInstance) => {
+  const handleEnemyUnitClick = useCallback((unit: UnitInstance, targetRect?: DOMRect) => {
     if (!match) return;
 
     if (attackState.mode === "selectingSpellTarget") {
       const spellCard = handCards.find((card) => card.id === attackState.spellCardId);
       if (spellCard) {
         spawnCardFlyEffect(spellCard);
+        window.setTimeout(() => {
+          spawnSpellBurstEffect(
+            spellCard.triad_type,
+            targetRect
+          );
+        }, 360);
       }
       playMatchCard({
         matchId: match.matchId,
@@ -444,7 +484,7 @@ export default function GamePage() {
     hideHandHint();
     setSelectedCardId(null);
     setMatchError(null);
-  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, match, spawnCardFlyEffect]);
+  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, match, spawnCardFlyEffect, spawnSpellBurstEffect]);
 
   const handleEnemyHeroClick = useCallback(() => {
     if (!match) return;
@@ -459,6 +499,10 @@ export default function GamePage() {
       const spellCard = handCards.find((card) => card.id === attackState.spellCardId);
       if (spellCard) {
         spawnCardFlyEffect(spellCard);
+        const targetRect = enemyHeroRef.current?.getBoundingClientRect() ?? null;
+        window.setTimeout(() => {
+          spawnSpellBurstEffect(spellCard.triad_type, targetRect);
+        }, 200);
       }
       playMatchCard({
         matchId: match.matchId,
@@ -497,7 +541,7 @@ export default function GamePage() {
     hideHandHint();
     setSelectedCardId(null);
     setMatchError(null);
-  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, isSameUser, match, spawnCardFlyEffect]);
+  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, isSameUser, match, spawnCardFlyEffect, spawnSpellBurstEffect]);
 
   // ── Turn / leave ──────────────────────────────────────────────────────────────
 
@@ -569,6 +613,7 @@ export default function GamePage() {
 
         <div
           className={`game-state${isAnyTargetingMode ? " game-state--attackable" : ""}`}
+          ref={enemyHeroRef}
           onClick={handleEnemyHeroClick}
           title={isSelectingSpellTarget ? "Cast spell on enemy hero" : isSelectingTarget ? "Attack enemy hero" : undefined}
           style={{ cursor: isAnyTargetingMode ? "crosshair" : undefined }}
@@ -666,40 +711,51 @@ export default function GamePage() {
             }}
             selfUnits={
               selfStats.board.length > 0
-                ? selfStats.board.map((unit, index) => (
-                  <BattlefieldUnitCard
-                    key={unit.instanceId}
-                    unit={unit}
-                    enterIndex={index}
-                    isOwn
-                    isMyTurn={isMyTurn}
-                    isAnyTargetingMode={isAnyTargetingMode}
-                    selectedAttackerId={selectedAttackerId}
-                    cardCatalog={cardCatalog}
-                    onOwnUnitClick={handleMyUnitClick}
-                    onEnemyUnitClick={handleEnemyUnitClick}
-                    renderStatuses={renderStatuses}
-                  />
-                ))
+                ? (
+                  <AnimatePresence initial={false}>
+                    {selfStats.board.map((unit, index) => (
+                      <BattlefieldUnitCard
+                        key={unit.instanceId}
+                        unit={unit}
+                        enterIndex={index}
+                        isOwn
+                        isMyTurn={isMyTurn}
+                        isAnyTargetingMode={isAnyTargetingMode}
+                        selectedAttackerId={selectedAttackerId}
+                        cardCatalog={cardCatalog}
+                        onOwnUnitClick={handleMyUnitClick}
+                        onEnemyUnitClick={handleEnemyUnitClick}
+                        renderStatuses={renderStatuses}
+                      />
+                    ))}
+                  </AnimatePresence>
+                )
                 : <span className="battlefield-empty">No units</span>
             }
             enemyUnits={
               oppStats.board.length > 0
-                ? oppStats.board.map((unit, index) => (
-                  <BattlefieldUnitCard
-                    key={unit.instanceId}
-                    unit={unit}
-                    enterIndex={index}
-                    isOwn={false}
-                    isMyTurn={isMyTurn}
-                    isAnyTargetingMode={isAnyTargetingMode}
-                    selectedAttackerId={selectedAttackerId}
-                    cardCatalog={cardCatalog}
-                    onOwnUnitClick={handleMyUnitClick}
-                    onEnemyUnitClick={handleEnemyUnitClick}
-                    renderStatuses={renderStatuses}
-                  />
-                ))
+                ? (
+                  <AnimatePresence initial={false}>
+                    {oppStats.board.map((unit, index) => (
+                      <BattlefieldUnitCard
+                        key={unit.instanceId}
+                        unit={unit}
+                        enterIndex={index}
+                        isOwn={false}
+                        isMyTurn={isMyTurn}
+                        isAnyTargetingMode={isAnyTargetingMode}
+                        selectedAttackerId={selectedAttackerId}
+                        cardCatalog={cardCatalog}
+                        onOwnUnitClick={handleMyUnitClick}
+                        onEnemyUnitClick={handleEnemyUnitClick}
+                        onMount={(unitId, element) => {
+                          enemyUnitElementsRef.current[unitId] = element;
+                        }}
+                        renderStatuses={renderStatuses}
+                      />
+                    ))}
+                  </AnimatePresence>
+                )
                 : <span className="battlefield-empty">No units</span>
             }
           />
@@ -805,7 +861,9 @@ export default function GamePage() {
         effects={battleEffects}
         onComplete={(effect) => {
           setBattleEffects((prev) => prev.filter((entry) => entry.id !== effect.id));
-          setPendingPlayedCardIds((prev) => prev.filter((cardId) => cardId !== effect.playedCardId));
+          if (effect.type === "card_fly") {
+            setPendingPlayedCardIds((prev) => prev.filter((cardId) => cardId !== effect.playedCardId));
+          }
         }}
       />
     </div>

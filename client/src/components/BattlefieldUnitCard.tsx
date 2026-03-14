@@ -14,7 +14,8 @@ type BattlefieldUnitCardProps = {
   selectedAttackerId: string | null;
   cardCatalog: Record<string, CardModel>;
   onOwnUnitClick: (unit: UnitInstance) => void;
-  onEnemyUnitClick: (unit: UnitInstance) => void;
+  onEnemyUnitClick: (unit: UnitInstance, targetRect?: DOMRect) => void;
+  onMount?: (unitId: string, element: HTMLDivElement | null) => void;
   renderStatuses: (statuses?: StatusView[]) => ReactNode;
 };
 
@@ -28,6 +29,7 @@ export default function BattlefieldUnitCard({
   cardCatalog,
   onOwnUnitClick,
   onEnemyUnitClick,
+  onMount,
   renderStatuses,
 }: BattlefieldUnitCardProps) {
   const isSelected = isOwn && unit.instanceId === selectedAttackerId;
@@ -60,20 +62,25 @@ export default function BattlefieldUnitCard({
     created_at: base?.created_at || "",
   };
 
-  const handleClick = isOwn
-    ? () => onOwnUnitClick(unit)
-    : () => onEnemyUnitClick(unit);
-
   return (
     <motion.div
       className={unitClass}
-      onClick={handleClick}
+      ref={(element) => onMount?.(unit.instanceId, element)}
+      onClick={(event) => {
+        if (isOwn) {
+          onOwnUnitClick(unit);
+          return;
+        }
+
+        onEnemyUnitClick(unit, event.currentTarget.getBoundingClientRect());
+      }}
       title={isSick ? "Summoning sickness - can attack next turn" : unit.canAttack ? "Ready to attack" : "Already attacked"}
       initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      exit={{ opacity: 0, scale: 1.5, filter: "blur(3px)" }}
       whileHover={isAttackable || isTargetable ? { y: -2 } : undefined}
       transition={{
-        duration: 0.28,
+        duration: 2,
         ease: "easeOut",
         delay: enterIndex * 0.06,
       }}
@@ -89,4 +96,3 @@ export default function BattlefieldUnitCard({
     </motion.div>
   );
 }
-
