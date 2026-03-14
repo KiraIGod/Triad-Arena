@@ -39,30 +39,7 @@ export default function MatchBoard({
         </div>
       )}
 
-
-      <div className="game-board__side game-board__side--self">
-        <p className="game-board__title">My Played Cards</p>
-        <div className="game-board__cards app-scrollbar">
-          {selfCards.map((entry, index) => (
-            <div
-              key={`${entry.card.id}-self-board-${index}`}
-              className="game-board__card-slot"
-              style={{ "--card-enter-delay": `${index * 60}ms` } as CSSProperties}
-            >
-              <GameCard card={entry.card} size="small" disabled />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="battlefield-self-col">
-        {selfHint}
-        <div className="battlefield-row battlefield-row--self app-scrollbar">
-          <p className="battlefield-col-title">My Units</p>
-          {selfUnits}
-        </div>
-      </div>
-
+      {/* ── Enemy half (top) ──────────────────────────────────── */}
       <div className="battlefield-enemy-col">
         {enemyHint}
         <div className={`battlefield-row battlefield-row--enemy app-scrollbar${enemyTargeting ? " battlefield-row--enemy-targeting" : ""}`}>
@@ -72,7 +49,7 @@ export default function MatchBoard({
       </div>
 
       <div className="game-board__side game-board__side--opponent">
-        <p className="game-board__title">Opponent Played Cards</p>
+        <p className="game-board__title">Opponent Played</p>
         <div className="game-board__cards app-scrollbar">
           {opponentCards.map((entry, index) => (
             <div
@@ -86,7 +63,32 @@ export default function MatchBoard({
         </div>
       </div>
 
+      {/* ── Divider ───────────────────────────────────────────── */}
+      <div className="game-battlefield__divider" />
 
+      {/* ── Self half (bottom) ────────────────────────────────── */}
+      <div className="battlefield-self-col">
+        {selfHint}
+        <div className="battlefield-row battlefield-row--self app-scrollbar">
+          <p className="battlefield-col-title">My Units</p>
+          {selfUnits}
+        </div>
+      </div>
+
+      <div className="game-board__side game-board__side--self">
+        <p className="game-board__title">My Played</p>
+        <div className="game-board__cards app-scrollbar">
+          {selfCards.map((entry, index) => (
+            <div
+              key={`${entry.card.id}-self-board-${index}`}
+              className="game-board__card-slot"
+              style={{ "--card-enter-delay": `${index * 60}ms` } as CSSProperties}
+            >
+              <GameCard card={entry.card} size="small" disabled />
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   );
 }
