@@ -10,6 +10,8 @@ type MatchBoardProps = {
   currentUserId: string | null;
   selfUnits: ReactNode;
   enemyUnits: ReactNode;
+  hiddenSelfCardIds?: string[];
+  selfPlayedRef?: (element: HTMLDivElement | null) => void;
   enemyHint?: ReactNode;
   enemyTargeting?: boolean;
   spellNotice?: string | null;
@@ -22,6 +24,8 @@ export default function MatchBoard({
   currentUserId,
   selfUnits,
   enemyUnits,
+  hiddenSelfCardIds = [],
+  selfPlayedRef,
   enemyHint = null,
   enemyTargeting = false,
   spellNotice = null,
@@ -29,7 +33,12 @@ export default function MatchBoard({
   spellNoticeTone = "default"
 }: MatchBoardProps) {
   const normalize = (value: string | null | undefined) => String(value ?? "").trim().toLowerCase();
-  const selfCards = cards.filter((entry) => normalize(entry.playerId) === normalize(currentUserId));
+  const hiddenSelfCardIdsSet = new Set(hiddenSelfCardIds);
+  const selfCards = cards.filter(
+    (entry) =>
+      normalize(entry.playerId) === normalize(currentUserId) &&
+      !hiddenSelfCardIdsSet.has(entry.card.id)
+  );
   const opponentCards = cards.filter((entry) => normalize(entry.playerId) !== normalize(currentUserId));
 
   return (
@@ -40,7 +49,7 @@ export default function MatchBoard({
             className={`game-spell-notice game-spell-notice--board game-spell-notice--${spellNoticeTone}`}
             initial={{ opacity: 0, y: 10 }}
             animate={spellNoticeFading ? { opacity: 0, y: 0 } : { opacity: 1, y: 0 }}
-            transition={{ duration: spellNoticeFading ? 3 : 0.2, ease: "easeOut" }}
+            transition={{ duration: spellNoticeFading ? 2 : 0.2, ease: "easeOut" }}
           >
             <span>{spellNotice}</span>
           </motion.div>
@@ -85,7 +94,7 @@ export default function MatchBoard({
 
       <div className="game-board__side game-board__side--self">
         <p className="game-board__title">My Played</p>
-        <div className="game-board__cards app-scrollbar">
+        <div className="game-board__cards app-scrollbar" ref={selfPlayedRef}>
           {selfCards.map((entry, index) => (
             <div
               key={`${entry.card.id}-self-board-${index}`}

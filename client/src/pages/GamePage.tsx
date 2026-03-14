@@ -25,6 +25,7 @@ import TurnCountdown from "../components/TurnCountdown";
 import LeaveArenaConfirmModal from "../components/LeaveArenaConfirmModal";
 import MatchBoard from "../components/MatchBoard";
 import BattlefieldUnitCard from "../components/BattlefieldUnitCard";
+import BattleEffectsLayer, { type CardFlyEffect } from "../components/BattleEffectsLayer";
 
 
 // ─── Attack flow state ────────────────────────────────────────────────────────
@@ -78,6 +79,10 @@ export default function GamePage() {
   const [finishGameMode, setFinishGameMode] = useState<string | null>(null);
   const [attackState, setAttackState] = useState<AttackState>({ mode: "idle" });
   const [timerRemaining, setTimerRemaining] = useState(45);
+  const [battleEffects, setBattleEffects] = useState<CardFlyEffect[]>([]);
+  const [pendingPlayedCardIds, setPendingPlayedCardIds] = useState<string[]>([]);
+  const handCardElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
+  const selfPlayedZoneRef = useRef<HTMLDivElement | null>(null);
 
   const [isMobileView, setIsMobileView] = useState(
     () => typeof window !== "undefined" && window.innerWidth <= 768
@@ -300,6 +305,42 @@ export default function GamePage() {
 
   const canPlayCard = (card: CardModel): boolean => getCardDisabledReason(card) === null;
 
+  const spawnCardFlyEffect = useCallback((card: CardModel) => {
+    const fromElement = handCardElementsRef.current[card.id];
+    const toElement = selfPlayedZoneRef.current;
+
+    if (!fromElement || !toElement) return;
+
+    const playedCardId = card.id.split(":")[0];
+    const fromRect = fromElement.getBoundingClientRect();
+    const toRect = toElement.getBoundingClientRect();
+
+    setPendingPlayedCardIds((prev) =>
+      prev.includes(playedCardId) ? prev : [...prev, playedCardId]
+    );
+    setBattleEffects((prev) => [
+      ...prev,
+      {
+        id: `fly-${Date.now()}-${card.id}`,
+        type: "card_fly",
+        playedCardId,
+        card,
+        from: {
+          left: fromRect.left,
+          top: fromRect.top,
+          width: fromRect.width,
+          height: fromRect.height,
+        },
+        to: {
+          left: toRect.left + 16,
+          top: toRect.top + 16,
+          width: fromRect.width * 0.8,
+          height: fromRect.height * 0.8,
+        },
+      },
+    ]);
+  }, []);
+
   const handleCardClick = (card: CardModel) => {
     // Clicking the already-selected spell card cancels targeting mode.
     if (attackState.mode === "selectingSpellTarget" && attackState.spellCardId === card.id) {
@@ -327,6 +368,7 @@ export default function GamePage() {
       return;
     }
 
+    spawnCardFlyEffect(card);
     playMatchCard({ matchId: match.matchId, cardId: originalCardId, actionId, version: match.state.version });
   };
 
@@ -366,6 +408,10 @@ export default function GamePage() {
     if (!match) return;
 
     if (attackState.mode === "selectingSpellTarget") {
+      const spellCard = handCards.find((card) => card.id === attackState.spellCardId);
+      if (spellCard) {
+        spawnCardFlyEffect(spellCard);
+      }
       playMatchCard({
         matchId: match.matchId,
         cardId: attackState.originalCardId,
@@ -398,7 +444,7 @@ export default function GamePage() {
     hideHandHint();
     setSelectedCardId(null);
     setMatchError(null);
-  }, [attackState, hideBattlefieldHint, hideHandHint, match]);
+  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, match, spawnCardFlyEffect]);
 
   const handleEnemyHeroClick = useCallback(() => {
     if (!match) return;
@@ -409,6 +455,10 @@ export default function GamePage() {
       if (!enemyHeroId) {
         setMatchError("Enemy hero target not found");
         return;
+      }
+      const spellCard = handCards.find((card) => card.id === attackState.spellCardId);
+      if (spellCard) {
+        spawnCardFlyEffect(spellCard);
       }
       playMatchCard({
         matchId: match.matchId,
@@ -447,7 +497,7 @@ export default function GamePage() {
     hideHandHint();
     setSelectedCardId(null);
     setMatchError(null);
-  }, [attackState, hideBattlefieldHint, hideHandHint, isSameUser, match]);
+  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, isSameUser, match, spawnCardFlyEffect]);
 
   // ── Turn / leave ──────────────────────────────────────────────────────────────
 
@@ -610,6 +660,10 @@ export default function GamePage() {
             spellNotice={boardNotice}
             spellNoticeFading={isBoardNoticeFading}
             spellNoticeTone={boardNoticeTone}
+            hiddenSelfCardIds={pendingPlayedCardIds}
+            selfPlayedRef={(element) => {
+              selfPlayedZoneRef.current = element;
+            }}
             selfUnits={
               selfStats.board.length > 0
                 ? selfStats.board.map((unit, index) => (
@@ -656,6 +710,9 @@ export default function GamePage() {
           selectedCardId={selectedCardId}
           canPlayCard={canPlayCard}
           onCardClick={handleCardClick}
+          onCardMount={(cardId, element) => {
+            handCardElementsRef.current[cardId] = element;
+          }}
           cardSize={isMobileView ? "small" : "normal"}
         />
       </section>
@@ -743,6 +800,14 @@ export default function GamePage() {
           </button>
         </div>
       </footer>
+
+      <BattleEffectsLayer
+        effects={battleEffects}
+        onComplete={(effect) => {
+          setBattleEffects((prev) => prev.filter((entry) => entry.id !== effect.id));
+          setPendingPlayedCardIds((prev) => prev.filter((cardId) => cardId !== effect.playedCardId));
+        }}
+      />
     </div>
   );
 }
