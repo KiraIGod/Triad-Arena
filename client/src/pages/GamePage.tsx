@@ -612,10 +612,11 @@ export default function GamePage() {
             spellNoticeTone={boardNoticeTone}
             selfUnits={
               selfStats.board.length > 0
-                ? selfStats.board.map((unit) => (
+                ? selfStats.board.map((unit, index) => (
                   <BattlefieldUnitCard
                     key={unit.instanceId}
                     unit={unit}
+                    enterIndex={index}
                     isOwn
                     isMyTurn={isMyTurn}
                     isAnyTargetingMode={isAnyTargetingMode}
@@ -630,10 +631,11 @@ export default function GamePage() {
             }
             enemyUnits={
               oppStats.board.length > 0
-                ? oppStats.board.map((unit) => (
+                ? oppStats.board.map((unit, index) => (
                   <BattlefieldUnitCard
                     key={unit.instanceId}
                     unit={unit}
+                    enterIndex={index}
                     isOwn={false}
                     isMyTurn={isMyTurn}
                     isAnyTargetingMode={isAnyTargetingMode}

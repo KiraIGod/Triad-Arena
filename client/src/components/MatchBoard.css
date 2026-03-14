@@ -1,0 +1,43 @@
+.game-spell-notice-overlay {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  pointer-events: none;
+}
+
+.game-spell-notice {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 32px;
+  background: rgba(201, 169, 98, 0.5);
+  border: 1px solid rgba(201, 169, 98, 0.3);
+  border-radius: 6px;
+  font-size: 26px;
+  color: rgba(255, 255, 255, 0.86);
+  white-space: nowrap;
+}
+
+.game-spell-notice--warning {
+  background: linear-gradient(180deg, rgba(137, 27, 27, 0.5) 0%, rgba(94, 14, 14, 0.96) 100%);
+  border-color: rgba(58, 6, 6, 0.9);
+  color: #f8e7dc;
+  box-shadow:
+    0 14px 30px rgba(72, 8, 8, 0.45),
+    inset 0 1px 0 rgba(255, 214, 214, 0.14);
+}
+
+@media (max-width: 768px) {
+  .game-spell-notice-overlay {
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+
+  .game-spell-notice {
+    max-width: calc(100% - 24px);
+    white-space: normal;
+  }
+}

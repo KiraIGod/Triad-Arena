@@ -1,6 +1,9 @@
 import type { CSSProperties, ReactNode } from "react";
 import { GameCard } from "./Card";
 import type { PlayedBoardCard } from "../features/customHooks/useMatchBoard";
+import { motion } from "motion/react";
+import "./MatchBoard.css";
+
 
 type MatchBoardProps = {
   cards: PlayedBoardCard[];
@@ -32,10 +35,18 @@ export default function MatchBoard({
   return (
     <section className="game-battlefield-layout" aria-label="Match board">
       {spellNotice && (
-        <div className={`game-spell-notice game-spell-notice--board game-spell-notice--${spellNoticeTone}${spellNoticeFading ? " is-fading" : ""}`}>
-          <span>{spellNotice}</span>
+        <div className="game-spell-notice-overlay">
+          <motion.div
+            className={`game-spell-notice game-spell-notice--board game-spell-notice--${spellNoticeTone}`}
+            initial={{ opacity: 0, y: 10 }}
+            animate={spellNoticeFading ? { opacity: 0, y: 0 } : { opacity: 1, y: 0 }}
+            transition={{ duration: spellNoticeFading ? 3 : 0.2, ease: "easeOut" }}
+          >
+            <span>{spellNotice}</span>
+          </motion.div>
         </div>
       )}
+
 
       {/* ── Enemy half (top) ──────────────────────────────────── */}
       <div className="battlefield-enemy-col">

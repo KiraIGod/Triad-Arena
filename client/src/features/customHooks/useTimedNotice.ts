@@ -14,7 +14,7 @@ type UseTimedNoticeResult = {
 
 export function useTimedNotice(options?: UseTimedNoticeOptions): UseTimedNoticeResult {
   const visibleMs = options?.visibleMs ?? 2000;
-  const fadeMs = options?.fadeMs ?? 3000;
+  const fadeMs = options?.fadeMs ?? 2000;
   const hideMs = visibleMs + fadeMs;
 
   const [value, setValue] = useState<string | null>(null);

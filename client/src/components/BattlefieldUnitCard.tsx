@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { motion } from "motion/react";
 import { GameCard, type CardModel } from "./Card";
 import type { UnitInstance } from "../shared/socket/matchSocket";
 
@@ -6,6 +7,7 @@ type StatusView = { type: string; turns?: number; amount?: number };
 
 type BattlefieldUnitCardProps = {
   unit: UnitInstance;
+  enterIndex: number;
   isOwn: boolean;
   isMyTurn: boolean;
   isAnyTargetingMode: boolean;
@@ -18,6 +20,7 @@ type BattlefieldUnitCardProps = {
 
 export default function BattlefieldUnitCard({
   unit,
+  enterIndex,
   isOwn,
   isMyTurn,
   isAnyTargetingMode,
@@ -62,10 +65,18 @@ export default function BattlefieldUnitCard({
     : () => onEnemyUnitClick(unit);
 
   return (
-    <div
+    <motion.div
       className={unitClass}
       onClick={handleClick}
       title={isSick ? "Summoning sickness - can attack next turn" : unit.canAttack ? "Ready to attack" : "Already attacked"}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      whileHover={isAttackable || isTargetable ? { y: -2 } : undefined}
+      transition={{
+        duration: 0.28,
+        ease: "easeOut",
+        delay: enterIndex * 0.06,
+      }}
     >
       <GameCard card={card} size="small" />
       {unitShield > 0 && <span className="battlefield-unit__shield">SH {unitShield}</span>}
@@ -75,8 +86,7 @@ export default function BattlefieldUnitCard({
         </div>
       )}
       {isSelected && <span className="battlefield-unit__badge">{"\u2694"}</span>}
-    </div>
+    </motion.div>
   );
 }
-
 
