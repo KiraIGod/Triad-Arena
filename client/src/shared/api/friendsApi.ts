@@ -1,20 +1,28 @@
-import axiosInstance from "./axios";
-
+import axiosInstance from "./axios"
 export interface Friend {
-  id: string;
-  username: string;
-  status: "online" | "offline";
+  id: string
+  username: string
+  status: "online" | "offline"
 }
 
 export interface FriendRequest {
-  id: string;
-  userId: string;
-  username: string;
+  id: string
+  userId: string
+  username: string
 }
 
 export interface FriendsResponse {
-  friends: Friend[];
-  requests: FriendRequest[];
+  friends: Friend[]
+  requests: FriendRequest[]
+}
+
+export interface ChatMessage {
+  id: string
+  senderId: string
+  receiverId: string
+  text: string
+  createdAt: string
+  updatedAt: string
 }
 
 export const fetchFriendsList = async (
@@ -22,9 +30,9 @@ export const fetchFriendsList = async (
 ): Promise<FriendsResponse> => {
   const response = await axiosInstance.get("/friends", {
     headers: { Authorization: `Bearer ${token}` },
-  });
+  })
   return response.data;
-};
+}
 
 export const sendFriendRequest = async (
   token: string,
@@ -34,9 +42,9 @@ export const sendFriendRequest = async (
     "/friends/request",
     { targetUsername },
     { headers: { Authorization: `Bearer ${token}` } },
-  );
-  return response.data;
-};
+  )
+  return response.data
+}
 
 export const respondToFriendRequest = async (
   token: string,
@@ -47,6 +55,16 @@ export const respondToFriendRequest = async (
     "/friends/respond",
     { requestId, action },
     { headers: { Authorization: `Bearer ${token}` } },
-  );
-  return response.data;
-};
+  )
+  return response.data
+}
+
+export const fetchChatHistory = async (
+  token: string,
+  friendId: string,
+): Promise<ChatMessage[]> => {
+  const response = await axiosInstance.get(`/friends/${friendId}/messages`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return response.data
+}
