@@ -369,6 +369,10 @@
   height: 185.6px;
 }
 
+.game-board__card-slot .game-card.is-disabled {
+  opacity: 1;
+}
+
 .game-board__side--self .game-board__card-slot {
   position: relative;
   cursor: pointer;
