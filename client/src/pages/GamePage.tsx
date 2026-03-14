@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
-import { GameCard, type CardModel } from "../components/Card";
+import type { CardModel } from "../components/Card";
 import HandCards from "../components/HandCards";
 import socket from "../shared/socket/socket";
 import {
@@ -24,6 +24,7 @@ import "./GamePage.css";
 import TurnCountdown from "../components/TurnCountdown";
 import LeaveArenaConfirmModal from "../components/LeaveArenaConfirmModal";
 import MatchBoard from "../components/MatchBoard";
+import BattlefieldUnitCard from "../components/BattlefieldUnitCard";
 
 
 // ─── Attack flow state ────────────────────────────────────────────────────────
@@ -73,10 +74,14 @@ export default function GamePage() {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [finishReason, setFinishReason] = useState<string | null>(null);
+  const [ratingChange, setRatingChange] = useState<number | null>(null);
+  const [finishGameMode, setFinishGameMode] = useState<string | null>(null);
   const [attackState, setAttackState] = useState<AttackState>({ mode: "idle" });
   const [timerRemaining, setTimerRemaining] = useState(45);
 
-  const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 768);
+  const [isMobileView, setIsMobileView] = useState(
+    () => typeof window !== "undefined" && window.innerWidth <= 768
+  );
   const lastSpellNoticeEventIdRef = useRef<number | null>(null);
   const { playedCards, cardCatalog, applyEvents, resetBoard } = useMatchBoard();
   const {
@@ -105,7 +110,7 @@ export default function GamePage() {
     const hasTurns = Number.isFinite(status?.turns);
     const hasAmount = Number.isFinite(status?.amount);
 
-    if (type === "SHIELD" && hasAmount && hasTurns) return `${type} +${status.amount} • ${status.turns}t`;
+    if (type === "SHIELD" && hasAmount && hasTurns) return `${type} +${status.amount} \u2022 ${status.turns}t`;
     if (type === "SHIELD" && hasAmount) return `${type} +${status.amount}`;
     if (hasTurns) return `${type} x${status.turns}`;
     return type;
@@ -476,64 +481,6 @@ export default function GamePage() {
   const isSelectingSpellTarget = attackState.mode === "selectingSpellTarget";
   const isAnyTargetingMode = isSelectingTarget || isSelectingSpellTarget;
   const selectedAttackerId = isSelectingTarget ? attackState.attackerInstanceId : null;
-
-  // Prefer metadata embedded by the server (survives reconnect); fall back to cardCatalog.
-  const toBoardCardModel = (unit: UnitInstance): CardModel => {
-    const base = cardCatalog[unit.cardId];
-    return {
-      id: unit.cardId,
-      name: unit.name || base?.name || "Unknown Unit",
-      type: (base?.type || "UNIT") as CardModel["type"],
-      triad_type: (unit.triad_type || base?.triad_type || "ASSAULT") as CardModel["triad_type"],
-      mana_cost: base?.mana_cost ?? 0,
-      attack: unit.attack,
-      hp: unit.hp,
-      description: base?.description || "Unit on the battlefield",
-      image: unit.image || base?.image || "crimson_duelist.png",
-      created_at: base?.created_at || ""
-    };
-  };
-
-  const renderUnit = (unit: UnitInstance, isOwn: boolean) => {
-    const isSelected = isOwn && unit.instanceId === selectedAttackerId;
-    const isAttackable = isOwn && isMyTurn && unit.canAttack && !isAnyTargetingMode;
-    const isTargetable = !isOwn && isAnyTargetingMode;
-    const isSick = !unit.canAttack && !unit.hasAttacked;
-    const unitShield = Array.isArray(unit.statuses)
-      ? unit.statuses
-        .filter((status) => String(status?.type || "").toLowerCase() === "shield")
-        .reduce((total, status) => total + (Number(status?.amount) || 0), 0)
-      : 0;
-
-    let unitClass = "battlefield-unit-card";
-    if (isSelected) unitClass += " battlefield-unit--selected";
-    if (isAttackable) unitClass += " battlefield-unit--can-attack";
-    if (isTargetable) unitClass += " battlefield-unit--targetable";
-    if (isSick) unitClass += " battlefield-unit--sick";
-
-    const handleClick = isOwn
-      ? () => handleMyUnitClick(unit)
-      : () => handleEnemyUnitClick(unit);
-
-    return (
-      <div
-        key={unit.instanceId}
-        className={unitClass}
-        onClick={handleClick}
-        title={isSick ? "Summoning sickness — can attack next turn" : unit.canAttack ? "Ready to attack" : "Already attacked"}
-      >
-        <GameCard card={toBoardCardModel(unit)} size="small" />
-        {unitShield > 0 && <span className="battlefield-unit__shield">SH {unitShield}</span>}
-        {Array.isArray(unit.statuses) && unit.statuses.length > 0 && (
-          <div className="battlefield-unit__statuses">
-            {renderStatuses(unit.statuses)}
-          </div>
-        )}
-        {isSelected && <span className="battlefield-unit__badge">⚔</span>}
-      </div>
-    );
-  };
-
   const [isLeaveConfirmOpen, setIsLeaveConfirmOpen] = useState(false);
 
 
@@ -580,8 +527,8 @@ export default function GamePage() {
           <p className="game-state__value">
             {(oppStats.statuses || []).length
               ? renderStatuses(oppStats.statuses)
-              : isSelectingSpellTarget ? "← Click to target hero"
-              : isSelectingTarget ? "← Click to attack hero"
+              : isSelectingSpellTarget ? "\u2190 Click to target hero"
+              : isSelectingTarget ? "\u2190 Click to attack hero"
               : "None"}
           </p>
         </div>
@@ -612,7 +559,7 @@ export default function GamePage() {
               <div className={`game-triad-combo game-triad-combo--${triadComboInfo.type}`}>
                 <span className="game-triad-combo__label">Triad Combo</span>
                 <span className="game-triad-combo__type">
-                  {triadComboInfo.type.toUpperCase()} ×{triadComboInfo.count}
+                  {triadComboInfo.type.toUpperCase()} \u00D7{triadComboInfo.count}
                 </span>
                 <span className="game-triad-combo__bonus">+{triadComboInfo.bonus} DMG</span>
               </div>
@@ -665,12 +612,38 @@ export default function GamePage() {
             spellNoticeTone={boardNoticeTone}
             selfUnits={
               selfStats.board.length > 0
-                ? selfStats.board.map((unit) => renderUnit(unit, true))
+                ? selfStats.board.map((unit) => (
+                  <BattlefieldUnitCard
+                    key={unit.instanceId}
+                    unit={unit}
+                    isOwn
+                    isMyTurn={isMyTurn}
+                    isAnyTargetingMode={isAnyTargetingMode}
+                    selectedAttackerId={selectedAttackerId}
+                    cardCatalog={cardCatalog}
+                    onOwnUnitClick={handleMyUnitClick}
+                    onEnemyUnitClick={handleEnemyUnitClick}
+                    renderStatuses={renderStatuses}
+                  />
+                ))
                 : <span className="battlefield-empty">No units</span>
             }
             enemyUnits={
               oppStats.board.length > 0
-                ? oppStats.board.map((unit) => renderUnit(unit, false))
+                ? oppStats.board.map((unit) => (
+                  <BattlefieldUnitCard
+                    key={unit.instanceId}
+                    unit={unit}
+                    isOwn={false}
+                    isMyTurn={isMyTurn}
+                    isAnyTargetingMode={isAnyTargetingMode}
+                    selectedAttackerId={selectedAttackerId}
+                    cardCatalog={cardCatalog}
+                    onOwnUnitClick={handleMyUnitClick}
+                    onEnemyUnitClick={handleEnemyUnitClick}
+                    renderStatuses={renderStatuses}
+                  />
+                ))
                 : <span className="battlefield-empty">No units</span>
             }
           />
@@ -691,6 +664,21 @@ export default function GamePage() {
             <span className="comic-text-shadow">{matchResultLabel ?? "Match finished"}</span>
             {finishReason === "disconnect" && (
               <p style={{ marginTop: 8, textAlign: "center" }}>Opponent disconnected</p>
+            )}
+            {finishGameMode === "ranked" && ratingChange !== null && (
+              <p
+                className="comic-text-shadow"
+                style={{
+                  marginTop: 10,
+                  textAlign: "center",
+                  fontSize: "1.3rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.06em",
+                  color: ratingChange >= 0 ? "#6cca86" : "#c85040"
+                }}
+              >
+                {ratingChange >= 0 ? `+${ratingChange}` : ratingChange} Rating
+              </p>
             )}
             <div style={{ marginTop: 12, textAlign: "center" }}>
               <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
@@ -756,4 +744,6 @@ export default function GamePage() {
     </div>
   );
 }
+
+
 

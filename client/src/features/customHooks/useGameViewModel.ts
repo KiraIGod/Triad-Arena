@@ -33,6 +33,9 @@ type UseGameViewModelParams = {
 };
 
 type TriadComboInfo = { type: string; count: number; bonus: number } | null;
+type PlayerKey = "player1" | "player2";
+type MatchPlayer = NonNullable<MatchStatePayload["state"]["players"]["player1"]>;
+type HandCard = NonNullable<MatchPlayer["hand"]>[number];
 
 const DEFAULT_PLAYER_STATE: ViewPlayerState = {
   hp: 0,
@@ -83,8 +86,8 @@ export function useGameViewModel({
     const idx = idxFromState >= 0 ? idxFromState : match.players.findIndex((id) => isSameUser(id));
     if (idx < 0) return defaultResult;
 
-    const selfKey = idx === 0 ? "player1" : "player2";
-    const oppKey = selfKey === "player1" ? "player2" : "player1";
+    const selfKey: PlayerKey = idx === 0 ? "player1" : "player2";
+    const oppKey: PlayerKey = selfKey === "player1" ? "player2" : "player1";
     const self = match.state.players[selfKey];
     const opp = match.state.players[oppKey];
     const clampPercent = (value: number | null) =>
@@ -105,8 +108,8 @@ export function useGameViewModel({
 
   const handCards = useMemo<CardModel[]>(() => {
     if (!match || !userIdStr || baseState.selfIndex < 0) return [];
-    const playerHand = match.state.players[baseState.selfKey].hand || [];
-    return playerHand.map<CardModel>((card, index) => ({
+    const playerHand = (match.state.players[baseState.selfKey].hand || []) as HandCard[];
+    return playerHand.map<CardModel>((card: HandCard, index: number) => ({
       id: `${card.id}:${index}`,
       name: card.name,
       image: card.image || "crimson_duelist.png",

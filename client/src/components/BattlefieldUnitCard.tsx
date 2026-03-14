@@ -1,0 +1,82 @@
+import type { ReactNode } from "react";
+import { GameCard, type CardModel } from "./Card";
+import type { UnitInstance } from "../shared/socket/matchSocket";
+
+type StatusView = { type: string; turns?: number; amount?: number };
+
+type BattlefieldUnitCardProps = {
+  unit: UnitInstance;
+  isOwn: boolean;
+  isMyTurn: boolean;
+  isAnyTargetingMode: boolean;
+  selectedAttackerId: string | null;
+  cardCatalog: Record<string, CardModel>;
+  onOwnUnitClick: (unit: UnitInstance) => void;
+  onEnemyUnitClick: (unit: UnitInstance) => void;
+  renderStatuses: (statuses?: StatusView[]) => ReactNode;
+};
+
+export default function BattlefieldUnitCard({
+  unit,
+  isOwn,
+  isMyTurn,
+  isAnyTargetingMode,
+  selectedAttackerId,
+  cardCatalog,
+  onOwnUnitClick,
+  onEnemyUnitClick,
+  renderStatuses,
+}: BattlefieldUnitCardProps) {
+  const isSelected = isOwn && unit.instanceId === selectedAttackerId;
+  const isAttackable = isOwn && isMyTurn && unit.canAttack && !isAnyTargetingMode;
+  const isTargetable = !isOwn && isAnyTargetingMode;
+  const isSick = !unit.canAttack && !unit.hasAttacked;
+  const unitShield = Array.isArray(unit.statuses)
+    ? unit.statuses
+      .filter((status) => String(status?.type || "").toLowerCase() === "shield")
+      .reduce((total, status) => total + (Number(status?.amount) || 0), 0)
+    : 0;
+
+  let unitClass = "battlefield-unit-card";
+  if (isSelected) unitClass += " battlefield-unit--selected";
+  if (isAttackable) unitClass += " battlefield-unit--can-attack";
+  if (isTargetable) unitClass += " battlefield-unit--targetable";
+  if (isSick) unitClass += " battlefield-unit--sick";
+
+  const base = cardCatalog[unit.cardId];
+  const card: CardModel = {
+    id: unit.cardId,
+    name: unit.name || base?.name || "Unknown Unit",
+    type: (base?.type || "UNIT") as CardModel["type"],
+    triad_type: (unit.triad_type || base?.triad_type || "ASSAULT") as CardModel["triad_type"],
+    mana_cost: base?.mana_cost ?? 0,
+    attack: unit.attack,
+    hp: unit.hp,
+    description: base?.description || "Unit on the battlefield",
+    image: unit.image || base?.image || "crimson_duelist.png",
+    created_at: base?.created_at || "",
+  };
+
+  const handleClick = isOwn
+    ? () => onOwnUnitClick(unit)
+    : () => onEnemyUnitClick(unit);
+
+  return (
+    <div
+      className={unitClass}
+      onClick={handleClick}
+      title={isSick ? "Summoning sickness - can attack next turn" : unit.canAttack ? "Ready to attack" : "Already attacked"}
+    >
+      <GameCard card={card} size="small" />
+      {unitShield > 0 && <span className="battlefield-unit__shield">SH {unitShield}</span>}
+      {Array.isArray(unit.statuses) && unit.statuses.length > 0 && (
+        <div className="battlefield-unit__statuses">
+          {renderStatuses(unit.statuses)}
+        </div>
+      )}
+      {isSelected && <span className="battlefield-unit__badge">{"\u2694"}</span>}
+    </div>
+  );
+}
+
+

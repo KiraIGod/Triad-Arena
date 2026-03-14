@@ -48,6 +48,31 @@
   overflow: auto;
   padding-right: 0.3rem;
   flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: #4a3828 rgba(0, 0, 0, 0.3);
+}
+
+.listWrap::-webkit-scrollbar {
+  width: 8px;
+}
+
+.listWrap::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+}
+
+.listWrap::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #5a4530 0%, #3a2a1a 100%);
+  border: 1px solid #2a1e14;
+  border-radius: 2px;
+}
+
+.listWrap::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #6e5640 0%, #4a3828 100%);
+}
+
+.listWrap::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* State indicators */
@@ -151,6 +176,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.rankedBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2em;
+  height: 1.2em;
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  border: 1px solid var(--gold, #c9a962);
+  background: rgba(201, 169, 98, 0.15);
+  color: var(--gold, #c9a962);
+  flex-shrink: 0;
 }
 
 .resultVictory,

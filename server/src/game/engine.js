@@ -210,17 +210,10 @@ function applyStatuses(player, statuses) {
 
 function isDuplicatePlayAction(state, playerId, card) {
   const actionId = card?.actionId ?? card?.action_id;
+  if (!actionId) return false;
+
   const turnActions = state?.turnActions || [];
-  const playedCards = state?.playedCards || [];
-
-  if (actionId && turnActions.some((a) => a?.actionId === actionId)) return true;
-
-  const duplicatePlay = playedCards.some(
-    (entry) => entry?.playerId === playerId && entry?.cardId === card.id
-  );
-  return duplicatePlay || turnActions.some(
-    (entry) => entry?.playerId === playerId && entry?.cardId === card.id
-  );
+  return turnActions.some((a) => a?.actionId === actionId);
 }
 
 function isDuplicateAction(state, actionId) {
@@ -472,12 +465,9 @@ function attack(state, playerInput, attackPayload) {
         board: removeDeadUnits(defenderBoard)
       };
     } else {
-      // Unit vs Hero: hero takes damage, attacker board updated with spent unit
+      // Unit vs Hero: hero takes damage (shield absorbs first)
       const heroDamage = spentUnit.attack;
-      updatedOpponentState = {
-        ...state[opponentKey],
-        hp: Math.max(0, (state[opponentKey].hp || 0) - heroDamage)
-      };
+      updatedOpponentState = applyDamage(state[opponentKey], heroDamage);
       updatedPlayerState = { ...state[playerKey], board: attackerBoard };
     }
 

@@ -177,10 +177,88 @@ async function validateActiveDeckSize(userId) {
   return deckId;
 }
 
+// ─── ELO rating helpers ───────────────────────────────────────────────────────
+
+const ELO_K = 32;
+const MIN_RATING = 0;
+
+function calculateEloChange(winnerRating, loserRating) {
+  const expectedWinner = 1 / (1 + Math.pow(10, (loserRating - winnerRating) / 400));
+  const expectedLoser = 1 - expectedWinner;
+
+  const winnerGain = Math.round(ELO_K * (1 - expectedWinner));
+  const loserLoss = Math.round(ELO_K * (0 - expectedLoser));
+
+  return { winnerGain, loserLoss };
+}
+
+async function getOrCreatePlayerStats(userId) {
+  let stats = await db.PlayerStats.findOne({ where: { user_id: userId } });
+  if (!stats) {
+    stats = await db.PlayerStats.create({ user_id: userId });
+  }
+  return stats;
+}
+
+async function updateRankedStats(match, winnerId) {
+  const playerOneId = match.player_one_id;
+  const playerTwoId = match.player_two_id;
+  if (!playerOneId || !playerTwoId) return null;
+
+  const [statsOne, statsTwo] = await Promise.all([
+    getOrCreatePlayerStats(playerOneId),
+    getOrCreatePlayerStats(playerTwoId)
+  ]);
+
+  const ratingChanges = {};
+
+  if (!winnerId) {
+    await Promise.all([
+      statsOne.update({ games_played: statsOne.games_played + 1 }),
+      statsTwo.update({ games_played: statsTwo.games_played + 1 })
+    ]);
+    ratingChanges[playerOneId] = 0;
+    ratingChanges[playerTwoId] = 0;
+    return ratingChanges;
+  }
+
+  const loserId = String(winnerId) === String(playerOneId) ? playerTwoId : playerOneId;
+  const winnerStats = String(winnerId) === String(playerOneId) ? statsOne : statsTwo;
+  const loserStats = String(winnerId) === String(playerOneId) ? statsTwo : statsOne;
+
+  const { winnerGain, loserLoss } = calculateEloChange(winnerStats.rating, loserStats.rating);
+
+  const newWinnerRating = Math.max(MIN_RATING, winnerStats.rating + winnerGain);
+  const newLoserRating = Math.max(MIN_RATING, loserStats.rating + loserLoss);
+
+  await Promise.all([
+    winnerStats.update({
+      rating: newWinnerRating,
+      wins: winnerStats.wins + 1,
+      games_played: winnerStats.games_played + 1
+    }),
+    loserStats.update({
+      rating: newLoserRating,
+      losses: loserStats.losses + 1,
+      games_played: loserStats.games_played + 1
+    })
+  ]);
+
+  ratingChanges[String(winnerId)] = winnerGain;
+  ratingChanges[String(loserId)] = loserLoss;
+
+  console.log(
+    `[RANKED] ${winnerId} +${winnerGain} (${newWinnerRating}), ${loserId} ${loserLoss} (${newLoserRating})`
+  );
+
+  return ratingChanges;
+}
+
 // ─── Match lifecycle ──────────────────────────────────────────────────────────
 
 async function finalizeMatch(match, winnerId, state) {
   const now = new Date();
+  const gameMode = match.game_mode || "normal";
 
   await db.Match.update(
     {
@@ -197,6 +275,7 @@ async function finalizeMatch(match, winnerId, state) {
       player_one_id: match.player_one_id,
       player_two_id: match.player_two_id,
       winner_id: winnerId || null,
+      game_mode: gameMode,
       total_turns: state?.turn ?? 0,
       player_one_final_hp: state?.player1?.hp ?? 0,
       player_two_final_hp: state?.player2?.hp ?? 0,
@@ -205,6 +284,17 @@ async function finalizeMatch(match, winnerId, state) {
   } catch (err) {
     console.error("[finalizeMatch] Failed to create MatchHistory:", err?.message || err);
   }
+
+  let ratingChanges = null;
+  if (gameMode === "ranked") {
+    try {
+      ratingChanges = await updateRankedStats(match, winnerId);
+    } catch (err) {
+      console.error("[finalizeMatch] Failed to update ranked stats:", err?.message || err);
+    }
+  }
+
+  return ratingChanges;
 }
 
 function getWinnerId(match, state) {
@@ -232,7 +322,7 @@ async function cleanupFinishedMatch(io, match, persistedState, safeState, matchI
       payload: { winnerId }
     })
   );
-  await finalizeMatch(match, winnerId, persistedState);
+  const ratingChanges = await finalizeMatch(match, winnerId, persistedState);
   unregisterActiveMatch(match);
   clearSocketMatchRuntime(matchId);
   clearTurnTimer(matchId);
@@ -308,7 +398,7 @@ async function forceEndTurn(io, matchId, playerId) {
 
     if (persistedState.finished) {
       const winnerId = getWinnerId(match, persistedState);
-      await finalizeMatch(match, winnerId, persistedState);
+      const ratingChanges = await finalizeMatch(match, winnerId, persistedState);
       unregisterActiveMatch(match);
       clearSocketMatchRuntime(matchId);
       clearTurnTimer(matchId);
@@ -647,10 +737,11 @@ async function handleLeave(io, socket, payload = {}) {
   validateMatchAccess(match, playerId);
   const opponentId = getOpponentId(match, playerId);
 
-  socket.leave(matchId);
-  socket.data.inMatch = false;
-
-  if (match.status === "finished") return;
+  if (match.status === "finished") {
+    socket.leave(matchId);
+    socket.data.inMatch = false;
+    return;
+  }
 
   clearTurnTimer(matchId);
   const reconnectTimer = reconnectTimers.get(String(matchId));
@@ -665,15 +756,20 @@ async function handleLeave(io, socket, payload = {}) {
     leaveState = loaded.state;
   } catch (_) {}
 
-  await finalizeMatch(match, opponentId, leaveState);
+  const ratingChanges = await finalizeMatch(match, opponentId, leaveState);
   unregisterActiveMatch(match);
   clearSocketMatchRuntime(matchId);
 
-  socket.to(matchId).emit("match:finish", {
+  io.to(matchId).emit("match:finish", {
     winnerId: opponentId || null,
     reason: "opponent_left",
-    message: "Opponent cowardly left the arena"
+    message: "Opponent cowardly left the arena",
+    ratingChanges: ratingChanges || null,
+    gameMode: match.game_mode || "normal"
   });
+
+  socket.leave(matchId);
+  socket.data.inMatch = false;
 }
 
 // ─── Wrapper & registration ───────────────────────────────────────────────────
@@ -770,13 +866,16 @@ module.exports = function registerMatchSocket(io) {
               dcState = loaded.state;
             } catch (_) {}
 
+            clearTurnTimer(match.id);
             unregisterActiveMatch(match);
             reconnectTimers.delete(String(match.id));
             clearSocketMatchRuntime(match.id);
-            await finalizeMatch(match, opponentId, dcState);
+            const ratingChanges = await finalizeMatch(match, opponentId, dcState);
             io.to(String(match.id)).emit("match:finish", {
               winnerId: opponentId,
-              reason: "disconnect"
+              reason: "disconnect",
+              ratingChanges: ratingChanges || null,
+              gameMode: match.game_mode || "normal"
             });
           } catch (err) {
             console.error("[reconnect:timeout] failed:", err?.message || err);

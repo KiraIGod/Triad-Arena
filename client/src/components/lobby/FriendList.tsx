@@ -1,68 +1,76 @@
-import React, { useState, useEffect } from 'react'
-import './FriendList.css'
-import { FriendRequestsModal } from './FriendRequestModal'
-import { fetchFriendsList, sendFriendRequest, Friend, FriendRequest } from '../../shared/api/friendsApi'
-import { useAppSelector } from '../../store'
+import React, { useState, useEffect } from "react";
+import "./FriendList.css";
+import { FriendRequestsModal } from "./FriendRequestModal";
+import {
+  fetchFriendsList,
+  sendFriendRequest,
+  Friend,
+  FriendRequest,
+} from "../../shared/api/friendsApi";
+import { useAppSelector } from "../../store";
 
 export const FriendList: React.FC = () => {
-  const token = useAppSelector((s) => s.auth.token)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [addUsername, setAddUsername] = useState('')
-  const [isAdding, setIsAdding] = useState(false)
+  const token = useAppSelector((s) => s.auth.token);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [addUsername, setAddUsername] = useState("");
+  const [isAdding, setIsAdding] = useState(false);
 
-  const [friends, setFriends] = useState<Friend[]>([])
-  const [requests, setRequests] = useState<FriendRequest[]>([])
-  const [loading, setLoading] = useState(true)
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const loadFriends = async () => {
-    if (!token) return
+    if (!token) return;
     try {
-      setLoading(true)
-      const data = await fetchFriendsList(token)
-      setFriends(data.friends)
-      setRequests(data.requests)
+      setLoading(true);
+      const data = await fetchFriendsList(token);
+      setFriends(data.friends);
+      setRequests(data.requests);
     } catch (error) {
-      console.error('Failed to load friends', error)
+      console.error("Failed to load friends", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    loadFriends()
-  }, [token])
+    loadFriends();
+  }, [token]);
 
-  const onlineFriends = friends.filter(f => f.status === 'online')
-  const offlineFriends = friends.filter(f => f.status === 'offline')
+  const onlineFriends = friends.filter((f) => f.status === "online");
+  const offlineFriends = friends.filter((f) => f.status === "offline");
 
   const handleAddFriend = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!addUsername.trim() || !token) return
+    e.preventDefault();
+    if (!addUsername.trim() || !token) return;
 
     try {
-      await sendFriendRequest(token, addUsername)
-      alert('Request sent successfully!')
-      setAddUsername('')
-      setIsAdding(false)
-      loadFriends()
+      await sendFriendRequest(token, addUsername);
+      alert("Request sent successfully!");
+      setAddUsername("");
+      setIsAdding(false);
+      loadFriends();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to send request')
+      alert(error.response?.data?.message || "Failed to send request");
     }
-  }
+  };
 
   const refreshData = () => {
-    loadFriends()
-  }
+    loadFriends();
+  };
 
   if (loading) {
     return (
-      <div className="friend-list-container" style={{
-          padding: '20px',
-          textAlign: 'center'
-        }}>
+      <div
+        className="friend-list-container"
+        style={{
+          padding: "20px",
+          textAlign: "center",
+        }}
+      >
         Loading...
       </div>
-    )
+    );
   }
 
   return (
@@ -87,7 +95,9 @@ export const FriendList: React.FC = () => {
             onChange={(e) => setAddUsername(e.target.value)}
             className="friend-input"
           />
-          <button type="submit" className="friend-submit-btn">SEND</button>
+          <button type="submit" className="friend-submit-btn">
+            SEND
+          </button>
         </form>
       )}
 
@@ -96,7 +106,7 @@ export const FriendList: React.FC = () => {
           <div className="friend-group-title">
             ONLINE ({onlineFriends.length})
           </div>
-          {onlineFriends.map(friend => (
+          {onlineFriends.map((friend) => (
             <div key={friend.id} className="friend-item">
               <span className="status-dot online"></span>
               <span className="friend-name">{friend.username}</span>
@@ -108,7 +118,7 @@ export const FriendList: React.FC = () => {
           <div className="friend-group-title">
             OFFLINE ({offlineFriends.length})
           </div>
-          {offlineFriends.map(friend => (
+          {offlineFriends.map((friend) => (
             <div key={friend.id} className="friend-item offline-item">
               <span className="status-dot offline"></span>
               <span className="friend-name">{friend.username}</span>
@@ -122,7 +132,9 @@ export const FriendList: React.FC = () => {
         onClick={() => setIsModalOpen(true)}
       >
         FRIEND REQUESTS
-        {requests.length > 0 && <span className="request-badge">{requests.length}</span>}
+        {requests.length > 0 && (
+          <span className="request-badge">{requests.length}</span>
+        )}
       </button>
 
       {isModalOpen && (
@@ -134,5 +146,5 @@ export const FriendList: React.FC = () => {
         />
       )}
     </div>
-  )
-}
+  );
+};
