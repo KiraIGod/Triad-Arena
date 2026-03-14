@@ -16,7 +16,7 @@ function buildUnitIndex(board) {
 /**
  * Creates a fresh unit instance from a card template.
  * instanceId uses UUID v4 — no Math.random or Date.now.
- * summonedTurn is stored for debugging and replay.
+ * summonedTurn is stored for replay and history.
  */
 function createUnitInstance(card, ownerId, currentTurn) {
   return {

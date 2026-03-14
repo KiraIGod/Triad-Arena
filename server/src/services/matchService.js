@@ -3,7 +3,6 @@ const { createInitialGameState } = require("../game/gameState");
 const { INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
 const matchStateCache = new Map();
 const eventLogCache = new Map();
-const lastStateCache = new Map();
 const STARTING_HAND_SIZE = 3;
 
 function createError(type, message) {
@@ -142,7 +141,6 @@ async function loadMatchState(matchId) {
 
   const cachedState = matchStateCache.get(String(matchId));
   if (cachedState) {
-    lastStateCache.set(String(matchId), cachedState);
     return {
       match,
       state: cachedState,
@@ -152,9 +150,7 @@ async function loadMatchState(matchId) {
 
   const matchState = await ensureMatchState(match);
   const state = matchState.game_state || {};
-  const cacheKey = String(matchId);
-  matchStateCache.set(cacheKey, state);
-  lastStateCache.set(cacheKey, state);
+  matchStateCache.set(String(matchId), state);
   return {
     match,
     state,
@@ -190,9 +186,7 @@ async function saveMatchState(matchId, state, expectedVersion) {
     );
 
     const persistedState = matchState.game_state || state;
-    const cacheKey = String(matchId);
-    matchStateCache.set(cacheKey, persistedState);
-    lastStateCache.set(cacheKey, persistedState);
+    matchStateCache.set(String(matchId), persistedState);
 
     return persistedState;
   });
@@ -225,16 +219,10 @@ function getMatchEventLog(matchId) {
   return cloneValue(eventLogCache.get(String(matchId)) || []);
 }
 
-function getLastState(matchId) {
-  const state = lastStateCache.get(String(matchId));
-  return state ? cloneValue(state) : null;
-}
-
 function clearMatchRuntime(matchId) {
   const cacheKey = String(matchId);
   matchStateCache.delete(cacheKey);
   eventLogCache.delete(cacheKey);
-  lastStateCache.delete(cacheKey);
 }
 
 function cleanupArena(activeGames, userId, socketId) {
@@ -281,10 +269,8 @@ module.exports = {
   getPlayerFromSocket,
   appendMatchEvents,
   getMatchEventLog,
-  getLastState,
   clearMatchRuntime,
   cleanupArena,
   matchStateCache,
-  eventLogCache,
-  lastStateCache
+  eventLogCache
 };

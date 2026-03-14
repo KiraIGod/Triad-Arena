@@ -8,7 +8,7 @@ import ChatModal from './ChatModal'
 export const FriendList: React.FC = () => {
   const token = useAppSelector((s) => s.auth.token)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [addUsername, setAddUsername] = useState('')
+  const [addUsername, setAddUsername] = useState("")
   const [isAdding, setIsAdding] = useState(false)
 
   const [activeChatFriend, setActiveChatFriend] = useState<Friend | null>(null)
@@ -31,14 +31,14 @@ export const FriendList: React.FC = () => {
     finally {
       setLoading(false)
     }
-  }
+  };
 
   useEffect(() => {
     loadFriends()
   }, [token])
 
-  const onlineFriends = friends.filter(f => f.status === 'online')
-  const offlineFriends = friends.filter(f => f.status === 'offline')
+  const onlineFriends = friends.filter((f) => f.status === "online")
+  const offlineFriends = friends.filter((f) => f.status === "offline")
 
   const handleAddFriend = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -57,15 +57,18 @@ export const FriendList: React.FC = () => {
   }
 
   const refreshData = () => {
-    loadFriends()
+    loadFriends();
   }
 
   if (loading) {
     return (
-      <div className="friend-list-container" style={{
-          padding: '20px',
-          textAlign: 'center'
-        }}>
+      <div
+        className="friend-list-container"
+        style={{
+          padding: "20px",
+          textAlign: "center",
+        }}
+      >
         Loading...
       </div>
     )
@@ -93,7 +96,9 @@ export const FriendList: React.FC = () => {
             onChange={(e) => setAddUsername(e.target.value)}
             className="friend-input"
           />
-          <button type="submit" className="friend-submit-btn">SEND</button>
+          <button type="submit" className="friend-submit-btn">
+            SEND
+          </button>
         </form>
       )}
 
@@ -138,7 +143,9 @@ export const FriendList: React.FC = () => {
         onClick={() => setIsModalOpen(true)}
       >
         FRIEND REQUESTS
-        {requests.length > 0 && <span className="request-badge">{requests.length}</span>}
+        {requests.length > 0 && (
+          <span className="request-badge">{requests.length}</span>
+        )}
       </button>
 
       {isModalOpen && (

@@ -33,6 +33,7 @@ function initSocket(httpServer) {
     io.emit("arena:online", io.sockets.sockets.size)
 
     socket.on("join_game", (gameId) => {
+<<<<<<< HEAD
       const normalizedGameId = String(gameId)
       socket.join(normalizedGameId)
       const current = activeGames.get(normalizedGameId)
@@ -46,6 +47,26 @@ function initSocket(httpServer) {
         activeGames.set(normalizedGameId, { updatedAt: Date.now() })
       }
     })
+=======
+      const normalizedGameId = String(gameId || "");
+      if (!normalizedGameId) return;
+
+      const userId = socket.data?.userId;
+      const arena = activeGames.get(normalizedGameId);
+
+      // Only allow joining arena rooms that exist and include this user.
+      // This prevents authenticated-but-unauthorized users from joining
+      // match rooms or foreign arena rooms to spectate hand/state data.
+      if (!arena || !Array.isArray(arena.players)) return;
+      const isParticipant = arena.players.some(
+        (p) => p?.userId != null && String(p.userId) === String(userId)
+      );
+      if (!isParticipant) return;
+
+      socket.join(normalizedGameId);
+      activeGames.set(normalizedGameId, { ...arena, updatedAt: Date.now() });
+    });
+>>>>>>> 2f934aa126921099925c0196ee5a19ca4cc9ebb1
 
     socket.on("leave_game", (gameId) => {
       const normalizedGameId = String(gameId || "")

@@ -4,4 +4,30 @@
 @import "./tailwind.css";
 @import "./layout.css";
 
+.app-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 169, 98, 0.55) rgba(18, 14, 10, 0.35);
+}
+
+.app-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.app-scrollbar::-webkit-scrollbar-track {
+  background: rgba(18, 14, 10, 0.35);
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  border-radius: 999px;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #c9a962 0%, #8f7440 100%);
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  border-radius: 999px;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #d8b979 0%, #a2834b 100%);
+}
+
 

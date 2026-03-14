@@ -71,7 +71,7 @@ export default function LobbyPage() {
     activeMatchId,
     searchTimeLeft,
     cancelSearch,
-  } = useLobbyArena(token)
+  } = useLobbyArena(token, gameMode)
 
   useEffect(() => {
     if (!token) return

@@ -111,7 +111,7 @@ function getActionId(source) {
   return actionId;
 }
 
-// ─── State sanitizer (FIX 2: no board clamping — board size is enforced in playCard) ──
+// ─── State sanitizer ─────────────────────────────────────────────────────────
 
 function clampPlayer(player) {
   const hp = Number.isFinite(player?.hp) ? player.hp : 0;
@@ -119,7 +119,7 @@ function clampPlayer(player) {
   const energy = Number.isFinite(player?.energy) ? player.energy : 0;
   const board = Array.isArray(player?.board) ? player.board : [];
 
-  // FIX 10: rebuild unit index after every board mutation
+  // Rebuild unit index after each board mutation to keep O(1) lookups accurate
   const unitIndex = buildUnitIndex(board);
 
   return {
@@ -206,21 +206,14 @@ function applyStatuses(player, statuses) {
   }, { ...player, statuses: [...(player?.statuses || [])] });
 }
 
-// ─── Duplicate action protection (FIX 1: unified via turnActions) ─────────────
+// ─── Duplicate action protection ─────────────────────────────────────────────
 
 function isDuplicatePlayAction(state, playerId, card) {
   const actionId = card?.actionId ?? card?.action_id;
+  if (!actionId) return false;
+
   const turnActions = state?.turnActions || [];
-  const playedCards = state?.playedCards || [];
-
-  if (actionId && turnActions.some((a) => a?.actionId === actionId)) return true;
-
-  const duplicatePlay = playedCards.some(
-    (entry) => entry?.playerId === playerId && entry?.cardId === card.id
-  );
-  return duplicatePlay || turnActions.some(
-    (entry) => entry?.playerId === playerId && entry?.cardId === card.id
-  );
+  return turnActions.some((a) => a?.actionId === actionId);
 }
 
 function isDuplicateAction(state, actionId) {
@@ -288,9 +281,6 @@ function applySpellEffect(state, playerKey, opponentKey, attackerState, card) {
   const comboCount = getTriadComboCount(state.playedCards, attackerState.id, triadType);
   const finalDamage = applyTriadComboBonus(triadBoosted, comboCount);
 
-  console.log(`[TRIAD CHECK] cardId=${card.id} triad_type=${triadType} comboCount=${comboCount} baseDamage=${baseDamage} weakAdjusted=${weakAdjusted} triadBoosted=${triadBoosted} finalDamage=${finalDamage}`);
-  console.log(`[Spell resolved] card=${card.id} name="${card.name}" damage=${finalDamage} target=${card?.targetType || "hero"}:${card?.targetId || "n/a"}`);
-
   const targetType = card?.targetType ?? "hero";
   const targetId = card?.targetId ?? null;
 
@@ -347,7 +337,8 @@ function playCard(state, playerInput, card) {
     }
 
     const manaCost = getCardManaCost(card);
-    const actions = (state.turnActions || []).filter((a) => a?.playerId === playerId).length;
+    // Count only card plays (cardId != null); attacks must not reduce the card budget.
+    const actions = (state.turnActions || []).filter((a) => a?.playerId === playerId && a?.cardId != null).length;
     if (actions >= GAME_CONSTANTS.MAX_CARDS_PER_TURN) failInvalid("Card limit reached for this turn");
     if ((state[playerKey]?.energy || 0) < manaCost) failInvalid("Not enough energy");
 
@@ -362,13 +353,11 @@ function playCard(state, playerInput, card) {
     let nextOpponentState;
 
     if (card.type === "unit") {
-      // FIX 2: reject here, never silently trim board in sanitizeState
       const currentBoard = attackerAfterConsume.board || [];
       if (currentBoard.length >= GAME_CONSTANTS.MAX_BOARD) {
         failInvalid("Board is full");
       }
 
-      // FIX 5 & 8: UUID instanceId, summonedTurn from state.turn
       const unit = createUnitInstance(card, playerId, state.turn);
       const playerWithStatuses = applyStatuses(
         { ...attackerAfterConsume, energy, board: [...currentBoard, unit] },
@@ -422,7 +411,6 @@ function attack(state, playerInput, attackPayload) {
 
     const actionId = getActionId(attackPayload);
 
-    // FIX 1: duplicate check via unified turnActions
     if (isDuplicateAction(state, actionId)) {
       throw createError(DUPLICATE_ACTION, "Duplicate attack action");
     }
@@ -436,7 +424,6 @@ function attack(state, playerInput, attackPayload) {
     const playerKey = getPlayerKey(state, playerId);
     const opponentKey = getOpponentKey(playerKey);
 
-    // FIX 10: O(1) lookup via unitIndex (rebuilt by sanitizeState after each action)
     const playerUnitIndex = state[playerKey].unitIndex || buildUnitIndex(state[playerKey].board);
     const attackerIdx = playerUnitIndex[unitId] ?? -1;
     if (attackerIdx < 0) failInvalid("Attacking unit not found on your board");
@@ -444,7 +431,6 @@ function attack(state, playerInput, attackPayload) {
     const attackerBoard = [...(state[playerKey].board || [])];
     const attackerUnit = attackerBoard[attackerIdx];
 
-    // FIX 4: strict ownership + exhaustion checks
     if (!attackerUnit) failInvalid("Attacking unit not found on your board");
     if (attackerUnit.ownerId !== playerId) failInvalid("You do not own this unit");
     if (!attackerUnit.canAttack) failInvalid("Unit cannot attack this turn");
@@ -458,7 +444,6 @@ function attack(state, playerInput, attackPayload) {
     let updatedOpponentState = { ...state[opponentKey] };
 
     if (targetType === "unit") {
-      // FIX 10: O(1) lookup for defender
       const opponentUnitIndex =
         state[opponentKey].unitIndex || buildUnitIndex(state[opponentKey].board);
       const defenderIdx = opponentUnitIndex[targetId] ?? -1;
@@ -468,7 +453,6 @@ function attack(state, playerInput, attackPayload) {
       const defenderUnit = defenderBoard[defenderIdx];
       if (!defenderUnit) failInvalid("Target unit not found on opponent board");
 
-      // FIX 3: combat → applyDamage → removeDeadUnits immediately
       defenderBoard[defenderIdx] = applyDamageToUnit(defenderUnit, spentUnit.attack);
       attackerBoard[attackerIdx] = applyDamageToUnit(spentUnit, defenderUnit.attack);
 
@@ -481,16 +465,12 @@ function attack(state, playerInput, attackPayload) {
         board: removeDeadUnits(defenderBoard)
       };
     } else {
-      // Unit vs Hero: hero takes damage, attacker board updated with spent unit
+      // Unit vs Hero: hero takes damage (shield absorbs first)
       const heroDamage = spentUnit.attack;
-      updatedOpponentState = {
-        ...state[opponentKey],
-        hp: Math.max(0, (state[opponentKey].hp || 0) - heroDamage)
-      };
+      updatedOpponentState = applyDamage(state[opponentKey], heroDamage);
       updatedPlayerState = { ...state[playerKey], board: attackerBoard };
     }
 
-    // FIX 1: store attack in turnActions (unified action log)
     const actionIndex = (state.turnActions || []).length + 1;
     const nextState = {
       ...state,
