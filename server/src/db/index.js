@@ -1,8 +1,8 @@
-const { Sequelize } = require("sequelize");
-const rawConfig = require("./config/config");
+const { Sequelize } = require("sequelize")
+const rawConfig = require("./config/config")
 
-const env = process.env.NODE_ENV || "development";
-const config = rawConfig[env] || rawConfig.development;
+const env = process.env.NODE_ENV || "development"
+const config = rawConfig[env] || rawConfig.development
 
 const sequelize = new Sequelize(
   config.database,
@@ -14,6 +14,6 @@ const sequelize = new Sequelize(
     dialect: config.dialect,
     logging: Boolean(config.logging)
   }
-);
+)
 
-module.exports = { sequelize, Sequelize };
+module.exports = { sequelize, Sequelize }

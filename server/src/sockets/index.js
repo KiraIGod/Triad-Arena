@@ -17,23 +17,36 @@ function initSocket(httpServer) {
   io.use((socket, next) => {
     try {
       const token = socket.handshake?.auth?.token
+
       if (!token) {
+        console.error("[Socket Auth] ОШИБКА: Фронтенд не передал токен!")
         return next(new Error("UNAUTHORIZED"))
       }
+
       const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev_secret")
-      socket.data.userId = decoded.userId
+
+      const userId = decoded.id || decoded.userId || decoded.user_id
+
+      if (!userId) {
+        console.error("[Socket Auth] ОШИБКА: В токене нет ID юзера. Расшифровка:", decoded)
+        return next(new Error("UNAUTHORIZED"))
+      }
+
+      socket.data.userId = userId;
+      console.log(`[Socket Auth] Успешное подключение юзера ID: ${userId}`)
       return next()
     }
     catch (err) {
+      console.error("[Socket Auth] ОШИБКА проверки токена:", err.message)
       return next(new Error("UNAUTHORIZED"))
     }
   })
 
   io.on("connection", (socket) => {
+    console.log(`🔥 [Sockets] Главный коннект! ID: ${socket.id}`)
     io.emit("arena:online", io.sockets.sockets.size)
 
     socket.on("join_game", (gameId) => {
-<<<<<<< HEAD
       const normalizedGameId = String(gameId)
       socket.join(normalizedGameId)
       const current = activeGames.get(normalizedGameId)
@@ -47,26 +60,6 @@ function initSocket(httpServer) {
         activeGames.set(normalizedGameId, { updatedAt: Date.now() })
       }
     })
-=======
-      const normalizedGameId = String(gameId || "");
-      if (!normalizedGameId) return;
-
-      const userId = socket.data?.userId;
-      const arena = activeGames.get(normalizedGameId);
-
-      // Only allow joining arena rooms that exist and include this user.
-      // This prevents authenticated-but-unauthorized users from joining
-      // match rooms or foreign arena rooms to spectate hand/state data.
-      if (!arena || !Array.isArray(arena.players)) return;
-      const isParticipant = arena.players.some(
-        (p) => p?.userId != null && String(p.userId) === String(userId)
-      );
-      if (!isParticipant) return;
-
-      socket.join(normalizedGameId);
-      activeGames.set(normalizedGameId, { ...arena, updatedAt: Date.now() });
-    });
->>>>>>> 2f934aa126921099925c0196ee5a19ca4cc9ebb1
 
     socket.on("leave_game", (gameId) => {
       const normalizedGameId = String(gameId || "")
@@ -82,11 +75,13 @@ function initSocket(httpServer) {
       cleanupArena(activeGames, userId, socket.id)
       io.emit("arena:online", io.sockets.sockets.size)
     })
+
+    registerChatSocket(io, socket)
+
   })
 
   registerArenaSocket(io, activeGames)
   registerMatchSocket(io)
-  registerChatSocket(io)
 
   return io
 }

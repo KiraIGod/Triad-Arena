@@ -10,6 +10,7 @@ const initMatchModel = require("./Match")
 const initMatchStateModel = require("./MatchState")
 const initMatchHistoryModel = require("./MatchHistory")
 const initFriendModel = require('./Friend')
+const initChatMessageModel = require('./ChatMessage')
 
 const db = {}
 
@@ -23,6 +24,7 @@ db.Match = initMatchModel(sequelize)
 db.MatchState = initMatchStateModel(sequelize)
 db.MatchHistory = initMatchHistoryModel(sequelize)
 db.Friend = initFriendModel(sequelize)
+db.ChatMessage = initChatMessageModel(sequelize, Sequelize.DataTypes)
 db.Game = db.Match
 
 db.User.hasOne(db.PlayerStats, { foreignKey: "user_id", onDelete: "CASCADE" })
@@ -71,6 +73,12 @@ db.User.belongsToMany(db.User, {
   foreignKey: 'friendId',
   otherKey: 'userId'
 })
+
+db.ChatMessage.belongsTo(db.User, { foreignKey: 'senderId', as: 'sender' })
+db.ChatMessage.belongsTo(db.User, { foreignKey: 'receiverId', as: 'receiver' })
+
+db.User.hasMany(db.ChatMessage, { foreignKey: 'senderId', as: 'sentMessages' })
+db.User.hasMany(db.ChatMessage, { foreignKey: 'receiverId', as: 'receivedMessages' })
 
 db.sequelize = sequelize
 db.Sequelize = Sequelize

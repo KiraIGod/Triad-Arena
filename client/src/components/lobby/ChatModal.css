@@ -1,40 +1,113 @@
-.arena-chat-modal {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 320px;
-  height: 400px;
-  background: rgba(15, 15, 20, 0.95);
+.arena-antd-chat-modal {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+}
+
+.chat-messages,
+.chat-input {
+  user-select: text;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+}
+
+.arena-antd-chat-modal .ant-modal-content {
+  background: rgba(15, 15, 20, 0.95) !important;
   border: 1px solid #c9a34e;
   border-radius: 8px;
-  box-shadow: 0 0 15px rgba(201, 163, 78, 0.3);
-  display: flex;
-  flex-direction: column;
-  z-index: 1000;
+  padding: 0 !important;
+  overflow: hidden;
+  box-shadow: 0 0 15px rgba(201, 163, 78, 0.3) !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.arena-antd-chat-modal .ant-modal-header {
+  background: linear-gradient(180deg, #2a2a35 0%, #15151c 100%) !important;
+  border-bottom: 1px solid #c9a34e !important;
+  padding: 15px 40px 15px 15px !important;
+  margin: 0 !important;
+  border-radius: 8px 8px 0 0 !important;
+  position: relative !important;
+}
+
+.arena-antd-chat-modal .ant-modal-title {
+  color: #e0e0e0 !important;
   font-family: 'Cinzel', 'Roboto', sans-serif;
-}
-
-.chat-header {
-  background: linear-gradient(180deg, #2a2a35 0%, #15151c 100%);
-  color: #e0e0e0;
-  padding: 10px 15px;
   font-weight: bold;
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid #c9a34e;
-  border-radius: 8px 8px 0 0;
 }
 
-.close-btn {
+.arena-antd-chat-modal .ant-modal-close {
+  color: #c9a34e !important;
+  position: absolute !important;
+  top: 10px !important;
+  right: 10px !important;
+  width: 30px !important;
+  height: 30px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: transparent !important;
+  border: none !important;
+  outline: none !important;
+  z-index: 1000 !important;
+}
+
+.arena-antd-chat-modal .ant-modal-close:hover {
+  color: #fff !important;
+  background: transparent !important;
+}
+
+.arena-antd-chat-modal .ant-modal-body {
+  padding: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+}
+
+.chat-modal-drag-handle {
+  width: 100%;
+  cursor: move;
+  color: #e0e0e0;
+}
+
+.chat-resizable-container {
+  position: relative;
+  display: flex !important;
+  flex-direction: column;
+}
+
+.chat-resizable-container .react-resizable-handle {
+  position: absolute;
+  width: 40px;
+  height: 40px;
+  bottom: 0;
+  right: 0;
+  cursor: nwse-resize !important;
   background: transparent;
-  border: none;
-  color: #c9a34e;
-  font-size: 20px;
-  cursor: pointer;
-  line-height: 1;
+  z-index: 99999;
 }
 
-.close-btn:hover { color: #fff; }
+.chat-resizable-container .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 12px;
+  height: 12px;
+  background: linear-gradient(
+    135deg,
+    transparent 50%,
+    rgba(201, 163, 78, 0.3) 50%, rgba(201, 163, 78, 0.3) 65%,
+    transparent 65%, transparent 75%,
+    rgba(201, 163, 78, 0.7) 75%, rgba(201, 163, 78, 0.7) 90%,
+    transparent 90%, transparent 100%,
+    #c9a34e 100%
+  );
+  border-radius: 2px;
+}
 
 .chat-messages {
   flex-grow: 1;
@@ -43,6 +116,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  width: 100%;
 }
 
 .chat-messages::-webkit-scrollbar { width: 6px; }
@@ -83,6 +157,8 @@
   background: #111;
   border-top: 1px solid #333;
   border-radius: 0 0 8px 8px;
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .chat-input {

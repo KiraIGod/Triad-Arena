@@ -1,34 +1,62 @@
-function registerChatSocket(io) {
-  io.on("connection", (socket) => {
+const db = require('../db/models')
+const ChatMessage = db.ChatMessage
 
-    socket.on("join_private_chat", ({ friendId }) => {
-      if (!friendId) return
+function registerChatSocket(io, socket) {
+  const getRoomName = (id1, id2) => {
+    return [String(id1), String(id2)].sort().join('_')
+  }
 
-      const myId = socket.data?.userId
-      if (!myId) return
+  socket.on("join_private_chat", (data) => {
+    console.log(`[ChatSocket JOIN] Сокет ${socket.id} запросил вход в чат. Данные:`, data)
 
-      const roomName = [myId, friendId].sort().join('_')
-      socket.join(roomName)
-    })
+    const myId = data.myId || socket.data?.userId
+    const friendId = data.friendId
 
-    socket.on("send_private_message", ({ friendId, text }) => {
-      if (!friendId || !text) return
+    if (!myId || !friendId) {
+      console.log(`[ChatSocket JOIN] ОШИБКА: Нет ID.`)
+      return
+    }
 
-      const myId = socket.data?.userId
-      if (!myId) return
+    const roomName = getRoomName(myId, friendId)
+    socket.join(roomName)
+    console.log(`[ChatSocket JOIN] Юзер ${myId} вошел в ${roomName}`)
+  })
 
-      const roomName = [myId, friendId].sort().join('_')
+  socket.on("send_private_message", async (data) => {
+    console.log(`[ChatSocket SEND] Запрос на отправку от ${socket.id}:`, data)
+
+    const myId = data.myId || socket.data?.userId
+    const friendId = data.friendId
+    const text = data.text
+
+    if (!myId || !friendId || !text) {
+      console.error('[ChatSocket SEND] ОШИБКА: Не хватает данных!')
+      return
+    }
+
+    const roomName = getRoomName(myId, friendId)
+
+    try {
+      const newMessage = await ChatMessage.create({
+        senderId: myId,
+        receiverId: friendId,
+        text: text
+      })
+
+      console.log(`[ChatSocket SEND] БД: Сообщение ${newMessage.id} сохранено!`)
 
       const messageData = {
-        id: Date.now().toString(),
-        senderId: myId,
-        text,
-        timestamp: new Date().toISOString()
+        id: newMessage.id,
+        senderId: newMessage.senderId,
+        text: newMessage.text,
+        timestamp: newMessage.createdAt
       }
 
       io.to(roomName).emit("receive_private_message", messageData)
-    })
-
+      console.log(`[ChatSocket SEND] Отправлено в комнату ${roomName}`)
+    } catch (error) {
+      console.error('[ChatSocket Error] Ошибка БД:', error)
+    }
   })
 }
 
