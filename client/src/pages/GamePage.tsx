@@ -85,11 +85,14 @@ export default function GamePage() {
   const [isReconnecting, setIsReconnecting] = useState(false);
   const [winnerId, setWinnerId] = useState<string | null>(null);
   const [finishReason, setFinishReason] = useState<string | null>(null);
+  const [ratingChange, setRatingChange] = useState<number | null>(null);
+  const [finishGameMode, setFinishGameMode] = useState<string | null>(null);
   const [attackState, setAttackState] = useState<AttackState>({ mode: "idle" });
   const [timerRemaining, setTimerRemaining] = useState(45);
   const [spellNotice, setSpellNotice] = useState<string | null>(null);
   const [spellNoticeFading, setSpellNoticeFading] = useState(false);
 
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth <= 768);
   const joinedMatchRef = useRef<string | null>(null);
   const spellNoticeFadeTimeoutRef = useRef<number | null>(null);
   const spellNoticeHideTimeoutRef = useRef<number | null>(null);
@@ -239,6 +242,12 @@ export default function GamePage() {
   }, [hideBattlefieldHint]);
 
   useEffect(() => {
+    const handleResize = () => setIsMobileView(window.innerWidth <= 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
     return () => {
       if (spellNoticeFadeTimeoutRef.current) {
         window.clearTimeout(spellNoticeFadeTimeoutRef.current);
@@ -268,8 +277,6 @@ export default function GamePage() {
     if (fromQueryOpponent) setOpponentNickname(fromQueryOpponent);
     if (fromQueryMatchId) setArenaMatchId(fromQueryMatchId);
   }, [searchParams]);
-
-  // ── Action log ───────────────────────────────────────────────────────────────
 
   // ── Arena socket ─────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -314,16 +321,17 @@ export default function GamePage() {
       requestArenaState();
     };
 
-    const pollId = window.setInterval(() => {
-      if (!arenaMatchId) {
+    let pollId: number | undefined;
+    if (!arenaMatchId) {
+      pollId = window.setInterval(() => {
         requestArenaState();
-      }
-    }, 1500);
+      }, 1500);
+    }
 
     socket.on("connect", onConnect);
     socket.on("arena:ready", onArenaReady);
     return () => {
-      window.clearInterval(pollId);
+      if (pollId !== undefined) window.clearInterval(pollId);
       socket.off("connect", onConnect);
       socket.off("arena:ready", onArenaReady);
     };
@@ -380,12 +388,17 @@ export default function GamePage() {
     const handleFinish = (payload: MatchFinishPayload) => {
       setFinishReason(payload.reason ?? null);
       setWinnerId(payload.winnerId ?? null);
+      setFinishGameMode(payload.gameMode ?? null);
       setTimerRemaining(0);
       setSelectedCardId(null);
       hideHandHint();
       setAttackState({ mode: "idle" });
       hideBattlefieldHint();
       setMatch((prev) => (prev ? { ...prev, state: { ...prev.state, finished: true } } : prev));
+
+      if (payload.ratingChanges && userIdStr && payload.ratingChanges[userIdStr] !== undefined) {
+        setRatingChange(payload.ratingChanges[userIdStr]);
+      }
 
       if (payload.reason === "opponent_left") {
         const cowardMessage = "Opponent cowardly left the arena";
@@ -538,9 +551,10 @@ export default function GamePage() {
 
   const playedCardIdsThisTurn = useMemo(() => {
     if (!match || !userIdStr) return new Set<string>();
+    // Exclude attack entries (cardId === null) so the Set only contains actual card plays.
     const ids = match.state.turnActions
-      .filter((action) => isSameUser(action.playerId))
-      .map((action) => action.cardId);
+      .filter((action) => isSameUser(action.playerId) && action.cardId != null)
+      .map((action) => action.cardId as string);
     return new Set(ids);
   }, [match, userIdStr]);
 
@@ -589,6 +603,7 @@ export default function GamePage() {
     if (selfIndex < 0) return "You are not part of this match";
     if (match.state.finished) return "Match already finished";
     if (!isMyTurn) return "Wait for your turn";
+    if (playedCardIdsThisTurn.size >= 3) return "Card limit reached (3 cards per turn)";
     if (playedCardIdsThisTurn.has(card.id.split(":")[0])) return "Card already played this turn";
     if (currentEnergy < card.mana_cost) return "Not enough energy";
     const statuses = selfStats.statuses || [];
@@ -985,7 +1000,7 @@ export default function GamePage() {
           selectedCardId={selectedCardId}
           canPlayCard={canPlayCard}
           onCardClick={handleCardClick}
-          cardSize={window.innerWidth <= 768 ? "small" : "normal"}
+          cardSize={isMobileView ? "small" : "normal"}
         />
       </section>
 
@@ -995,6 +1010,21 @@ export default function GamePage() {
             <span className="comic-text-shadow">{matchResultLabel ?? "Match finished"}</span>
             {finishReason === "disconnect" && (
               <p style={{ marginTop: 8, textAlign: "center" }}>Opponent disconnected</p>
+            )}
+            {finishGameMode === "ranked" && ratingChange !== null && (
+              <p
+                className="comic-text-shadow"
+                style={{
+                  marginTop: 10,
+                  textAlign: "center",
+                  fontSize: "1.3rem",
+                  fontWeight: 800,
+                  letterSpacing: "0.06em",
+                  color: ratingChange >= 0 ? "#6cca86" : "#c85040"
+                }}
+              >
+                {ratingChange >= 0 ? `+${ratingChange}` : ratingChange} Rating
+              </p>
             )}
             <div style={{ marginTop: 12, textAlign: "center" }}>
               <button type="button" className="game-end-turn stress-warning" onClick={handleLeaveArenaClick}>
@@ -1060,5 +1090,3 @@ export default function GamePage() {
     </div>
   );
 }
-
-

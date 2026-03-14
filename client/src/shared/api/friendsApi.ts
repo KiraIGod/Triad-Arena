@@ -1,9 +1,9 @@
-import axiosInstance from './axios'
+import axiosInstance from "./axios";
 
 export interface Friend {
   id: string;
   username: string;
-  status: 'online' | 'offline';
+  status: "online" | "offline";
 }
 
 export interface FriendRequest {
@@ -17,25 +17,36 @@ export interface FriendsResponse {
   requests: FriendRequest[];
 }
 
-export const fetchFriendsList = async (token: string): Promise<FriendsResponse> => {
-  const response = await axiosInstance.get('/friends', {
-    headers: { Authorization: `Bearer ${token}` }
-  })
-  return response.data
-}
+export const fetchFriendsList = async (
+  token: string,
+): Promise<FriendsResponse> => {
+  const response = await axiosInstance.get("/friends", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
 
-export const sendFriendRequest = async (token: string, targetUsername: string): Promise<void> => {
-  const response = await axiosInstance.post('/friends/request',
+export const sendFriendRequest = async (
+  token: string,
+  targetUsername: string,
+): Promise<void> => {
+  const response = await axiosInstance.post(
+    "/friends/request",
     { targetUsername },
-    { headers: { Authorization: `Bearer ${token}` } }
+    { headers: { Authorization: `Bearer ${token}` } },
   );
-  return response.data
-}
+  return response.data;
+};
 
-export const respondToFriendRequest = async (token: string, requestId: string, action: 'accept' | 'decline'): Promise<void> => {
-  const response = await axiosInstance.put('/friends/respond',
+export const respondToFriendRequest = async (
+  token: string,
+  requestId: string,
+  action: "accept" | "decline",
+): Promise<void> => {
+  const response = await axiosInstance.put(
+    "/friends/respond",
     { requestId, action },
-    { headers: { Authorization: `Bearer ${token}` } }
+    { headers: { Authorization: `Bearer ${token}` } },
   );
-  return response.data
-}
+  return response.data;
+};

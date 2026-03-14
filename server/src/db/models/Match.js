@@ -38,6 +38,11 @@ function initMatchModel(sequelize) {
         type: DataTypes.DATE,
         allowNull: true
       },
+      game_mode: {
+        type: DataTypes.ENUM("normal", "ranked", "private"),
+        allowNull: false,
+        defaultValue: "normal"
+      },
       finished_at: {
         type: DataTypes.DATE,
         allowNull: true

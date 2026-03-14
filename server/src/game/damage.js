@@ -26,18 +26,6 @@ function applyDamage(defender, damage) {
   };
 }
 
-function calculateDamage(attacker, defender) {
-  const base = Number.isFinite(attacker?.attack) ? attacker.attack : 0;
-  const updatedDefender = applyDamage(defender, base);
-
-  return {
-    attacker,
-    defender: updatedDefender,
-    damage: Math.max(0, base)
-  };
-}
-
 module.exports = {
-  applyDamage,
-  calculateDamage
+  applyDamage
 };

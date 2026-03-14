@@ -290,7 +290,6 @@ function testUnitSummon() {
   assert(unit.ownerId === "p1", "ownerId is set");
   assert(Number.isFinite(unit.summonedTurn), "summonedTurn is a number");
   assert(unit.summonedTurn === 1, "summonedTurn recorded correctly");
-  // FIX 10: unitIndex should contain the unit
   assert(state.player1.unitIndex[unit.instanceId] === 0, "unitIndex maps instanceId to board position");
   assertSerializedState(state, "m-summon");
 }
@@ -457,7 +456,6 @@ function testDuplicateAttackProtection() {
     actionId: "da-atk-1"
   });
 
-  // FIX 1: attack actionId is stored in turnActions — re-use must be rejected
   assert(
     state.turnActions.some((a) => a.actionId === "da-atk-1"),
     "Attack action should be recorded in turnActions"
@@ -476,7 +474,6 @@ function testDuplicateAttackProtection() {
 }
 
 function testMaxHandBurn() {
-  // FIX 9: drawn card is discarded when hand is already at MAX_HAND
   const { GAME_CONSTANTS: GC } = require("./constants");
   // Build a player with exactly MAX_HAND cards in hand and 2 more in deck
   const allCards = Array.from({ length: GC.MAX_HAND + 2 }, (_, i) => ({ id: `hc-${i}` }));
@@ -514,7 +511,6 @@ function testMaxHandBurn() {
 }
 
 function testStrongAttackValidation() {
-  // FIX 4: unit.ownerId, canAttack, hasAttacked checks
   let state = createInitialGameState("p1", "p2");
   state = play(state, "p1", 1, makeUnit("guard", { attack: 2, hp: 3 }));
   state = end(state, "p1", 2);
