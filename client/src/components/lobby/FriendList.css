@@ -235,3 +235,21 @@
 .req-btn:hover {
   background: rgba(255, 255, 255, 0.1);
 }
+
+.friend-invite-btn {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid rgba(201, 169, 98, 0.5);
+  background: rgba(201, 169, 98, 0.1);
+  color: #c9a962;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.friend-invite-btn:hover {
+  background: rgba(201, 169, 98, 0.25);
+}

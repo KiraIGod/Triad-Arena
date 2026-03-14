@@ -2,6 +2,7 @@ const express = require('express')
 const { Op } = require('sequelize')
 const { User, Friend } = require('../db/models');
 const { jwtMiddleware } = require('../middlewares/jwt')
+const { isUserOnline } = require('../sockets')
 
 const router = express.Router()
 
@@ -36,7 +37,7 @@ router.get('/', jwtMiddleware, async (req, res) => {
         friends.push({
           id: otherUser.id,
           username: otherUser.nickname,
-          status: 'offline'
+          status: isUserOnline(otherUser.id) ? 'online' : 'offline'
         })
       } else if (f.status === 'pending') {
         if (f.friendId === userId) {

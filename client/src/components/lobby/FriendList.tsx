@@ -9,7 +9,13 @@ import {
 } from "../../shared/api/friendsApi";
 import { useAppSelector } from "../../store";
 
-export const FriendList: React.FC = () => {
+type FriendListProps = {
+  privateArenaId?: string | null;
+  onSendInvite?: (arenaId: string, targetUserId: string) => Promise<{ error?: string }>;
+  onInviteResult?: (res: { error?: string }) => void;
+};
+
+export const FriendList: React.FC<FriendListProps> = ({ privateArenaId, onSendInvite, onInviteResult }) => {
   const token = useAppSelector((s) => s.auth.token);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [addUsername, setAddUsername] = useState("");
@@ -110,6 +116,17 @@ export const FriendList: React.FC = () => {
             <div key={friend.id} className="friend-item">
               <span className="status-dot online"></span>
               <span className="friend-name">{friend.username}</span>
+              {privateArenaId && onSendInvite && (
+                <button
+                  className="friend-invite-btn"
+                  onClick={() => {
+                    onSendInvite(privateArenaId, friend.id).then((res) => onInviteResult?.(res));
+                  }}
+                  title={`Invite ${friend.username}`}
+                >
+                  Invite
+                </button>
+              )}
             </div>
           ))}
         </div>

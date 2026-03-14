@@ -333,3 +333,64 @@
   background: linear-gradient(90deg, var(--blood), var(--gold));
   transition: width 1s linear;
 }
+
+/* ─── Private room waiting ─────────────────────────────────────────────── */
+
+.waitingRoom {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 1.5rem 0;
+}
+
+.waitingTitle {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-main);
+}
+
+.waitingSubtitle {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.roomCodeDisplay {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0.5rem 0;
+  padding: 12px 20px;
+  border: 2px solid var(--gold);
+  background: rgba(201, 169, 98, 0.08);
+  cursor: pointer;
+  transition: background 0.15s;
+  user-select: all;
+}
+
+.roomCodeDisplay:hover {
+  background: rgba(201, 169, 98, 0.16);
+}
+
+.roomCodeValue {
+  font-size: 2rem;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  color: var(--gold);
+  font-family: var(--font-heading);
+}
+
+.roomCodeCopy {
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}

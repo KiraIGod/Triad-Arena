@@ -8,6 +8,9 @@ type PlayerPanelProps = {
   stats: PlayerStats | null;
   deck: DeckSummary | null;
   onEditDeck: () => void;
+  privateArenaId?: string | null;
+  onSendInvite?: (arenaId: string, targetUserId: string) => Promise<{ error?: string }>;
+  onInviteResult?: (res: { error?: string }) => void;
 };
 
 export function PlayerPanel({
@@ -15,6 +18,9 @@ export function PlayerPanel({
   stats,
   deck,
   onEditDeck,
+  privateArenaId,
+  onSendInvite,
+  onInviteResult,
 }: PlayerPanelProps) {
   const d = deck ?? {
     name: "—",
@@ -92,7 +98,7 @@ export function PlayerPanel({
       </button>
 
       <div style={{ marginTop: "20px" }}>
-        <FriendList />
+        <FriendList privateArenaId={privateArenaId} onSendInvite={onSendInvite} onInviteResult={onInviteResult} />
       </div>
     </section>
   );
