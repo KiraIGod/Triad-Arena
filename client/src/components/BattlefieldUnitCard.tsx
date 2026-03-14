@@ -52,8 +52,8 @@ export default function BattlefieldUnitCard({
   const card: CardModel = {
     id: unit.cardId,
     name: unit.name || base?.name || "Unknown Unit",
-    type: (base?.type || "UNIT") as CardModel["type"],
-    triad_type: (unit.triad_type || base?.triad_type || "ASSAULT") as CardModel["triad_type"],
+    type: String(base?.type || "UNIT").toUpperCase() as CardModel["type"],
+    triad_type: String(unit.triad_type || base?.triad_type || "ASSAULT").toUpperCase() as CardModel["triad_type"],
     mana_cost: base?.mana_cost ?? 0,
     attack: unit.attack,
     hp: unit.hp,
