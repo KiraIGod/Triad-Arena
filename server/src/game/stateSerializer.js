@@ -15,12 +15,11 @@ function normalizeUnit(unit, cardMap) {
     canAttack: Boolean(unit.canAttack),
     hasAttacked: Boolean(unit.hasAttacked),
     statuses: Array.isArray(unit.statuses) ? unit.statuses : [],
-    // Card metadata embedded for stable rendering after reconnect
-    ...(cardMeta && {
-      name: cardMeta.name,
-      image: cardMeta.image,
-      triad_type: cardMeta.triad_type
-    })
+    // Card metadata embedded for stable rendering — always present so the client never
+    // has to fall back to a potentially empty cardCatalog.
+    name: cardMeta?.name ?? null,
+    image: cardMeta?.image ?? null,
+    triad_type: cardMeta?.triad_type ?? null
   };
 }
 

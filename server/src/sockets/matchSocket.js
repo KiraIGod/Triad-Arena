@@ -1,6 +1,6 @@
 const db = require("../db/models");
 const { playCard, attack, endTurn } = require("../game/engine");
-const { INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
+const { GAME_CONSTANTS, INVALID_ACTION, STATE_OUTDATED } = require("../game/constants");
 const { serializeGameState } = require("../game/stateSerializer");
 const { validateGameState } = require("../game/stateValidator");
 const { enqueueMatchAction, clearMatchQueue } = require("../game/actionQueue");
@@ -145,8 +145,9 @@ function validateCardPlayPreconditions(state, playerId, card) {
     throw createSocketError(INVALID_ACTION, "Invalid player");
   }
 
-  const actionCount = (state?.turnActions || []).filter((a) => a?.playerId === playerId).length;
-  if (actionCount >= 3) {
+  // Attacks (cardId === null) must not count toward the card-play limit.
+  const actionCount = (state?.turnActions || []).filter((a) => a?.playerId === playerId && a?.cardId != null).length;
+  if (actionCount >= GAME_CONSTANTS.MAX_CARDS_PER_TURN) {
     throw createSocketError(INVALID_ACTION, "Card limit reached for this turn");
   }
 
@@ -176,10 +177,88 @@ async function validateActiveDeckSize(userId) {
   return deckId;
 }
 
+// ─── ELO rating helpers ───────────────────────────────────────────────────────
+
+const ELO_K = 32;
+const MIN_RATING = 0;
+
+function calculateEloChange(winnerRating, loserRating) {
+  const expectedWinner = 1 / (1 + Math.pow(10, (loserRating - winnerRating) / 400));
+  const expectedLoser = 1 - expectedWinner;
+
+  const winnerGain = Math.round(ELO_K * (1 - expectedWinner));
+  const loserLoss = Math.round(ELO_K * (0 - expectedLoser));
+
+  return { winnerGain, loserLoss };
+}
+
+async function getOrCreatePlayerStats(userId) {
+  let stats = await db.PlayerStats.findOne({ where: { user_id: userId } });
+  if (!stats) {
+    stats = await db.PlayerStats.create({ user_id: userId });
+  }
+  return stats;
+}
+
+async function updateRankedStats(match, winnerId) {
+  const playerOneId = match.player_one_id;
+  const playerTwoId = match.player_two_id;
+  if (!playerOneId || !playerTwoId) return null;
+
+  const [statsOne, statsTwo] = await Promise.all([
+    getOrCreatePlayerStats(playerOneId),
+    getOrCreatePlayerStats(playerTwoId)
+  ]);
+
+  const ratingChanges = {};
+
+  if (!winnerId) {
+    await Promise.all([
+      statsOne.update({ games_played: statsOne.games_played + 1 }),
+      statsTwo.update({ games_played: statsTwo.games_played + 1 })
+    ]);
+    ratingChanges[playerOneId] = 0;
+    ratingChanges[playerTwoId] = 0;
+    return ratingChanges;
+  }
+
+  const loserId = String(winnerId) === String(playerOneId) ? playerTwoId : playerOneId;
+  const winnerStats = String(winnerId) === String(playerOneId) ? statsOne : statsTwo;
+  const loserStats = String(winnerId) === String(playerOneId) ? statsTwo : statsOne;
+
+  const { winnerGain, loserLoss } = calculateEloChange(winnerStats.rating, loserStats.rating);
+
+  const newWinnerRating = Math.max(MIN_RATING, winnerStats.rating + winnerGain);
+  const newLoserRating = Math.max(MIN_RATING, loserStats.rating + loserLoss);
+
+  await Promise.all([
+    winnerStats.update({
+      rating: newWinnerRating,
+      wins: winnerStats.wins + 1,
+      games_played: winnerStats.games_played + 1
+    }),
+    loserStats.update({
+      rating: newLoserRating,
+      losses: loserStats.losses + 1,
+      games_played: loserStats.games_played + 1
+    })
+  ]);
+
+  ratingChanges[String(winnerId)] = winnerGain;
+  ratingChanges[String(loserId)] = loserLoss;
+
+  console.log(
+    `[RANKED] ${winnerId} +${winnerGain} (${newWinnerRating}), ${loserId} ${loserLoss} (${newLoserRating})`
+  );
+
+  return ratingChanges;
+}
+
 // ─── Match lifecycle ──────────────────────────────────────────────────────────
 
 async function finalizeMatch(match, winnerId, state) {
   const now = new Date();
+  const gameMode = match.game_mode || "normal";
 
   await db.Match.update(
     {
@@ -196,6 +275,7 @@ async function finalizeMatch(match, winnerId, state) {
       player_one_id: match.player_one_id,
       player_two_id: match.player_two_id,
       winner_id: winnerId || null,
+      game_mode: gameMode,
       total_turns: state?.turn ?? 0,
       player_one_final_hp: state?.player1?.hp ?? 0,
       player_two_final_hp: state?.player2?.hp ?? 0,
@@ -204,6 +284,17 @@ async function finalizeMatch(match, winnerId, state) {
   } catch (err) {
     console.error("[finalizeMatch] Failed to create MatchHistory:", err?.message || err);
   }
+
+  let ratingChanges = null;
+  if (gameMode === "ranked") {
+    try {
+      ratingChanges = await updateRankedStats(match, winnerId);
+    } catch (err) {
+      console.error("[finalizeMatch] Failed to update ranked stats:", err?.message || err);
+    }
+  }
+
+  return ratingChanges;
 }
 
 function getWinnerId(match, state) {
@@ -231,7 +322,7 @@ async function cleanupFinishedMatch(io, match, persistedState, safeState, matchI
       payload: { winnerId }
     })
   );
-  await finalizeMatch(match, winnerId, persistedState);
+  const ratingChanges = await finalizeMatch(match, winnerId, persistedState);
   unregisterActiveMatch(match);
   clearSocketMatchRuntime(matchId);
   clearTurnTimer(matchId);
@@ -247,7 +338,6 @@ async function cleanupFinishedMatch(io, match, persistedState, safeState, matchI
     events
   });
   io.to(String(matchId)).emit("match:finish", { winnerId });
-  clearSocketMatchRuntime(matchId);
 }
 
 // ─── Turn timer ───────────────────────────────────────────────────────────────
@@ -308,7 +398,7 @@ async function forceEndTurn(io, matchId, playerId) {
 
     if (persistedState.finished) {
       const winnerId = getWinnerId(match, persistedState);
-      await finalizeMatch(match, winnerId, persistedState);
+      const ratingChanges = await finalizeMatch(match, winnerId, persistedState);
       unregisterActiveMatch(match);
       clearSocketMatchRuntime(matchId);
       clearTurnTimer(matchId);
@@ -322,7 +412,6 @@ async function forceEndTurn(io, matchId, playerId) {
         events: [{ type: "TURN_TIMEOUT" }]
       });
       io.to(String(matchId)).emit("match:finish", { winnerId });
-      clearSocketMatchRuntime(matchId);
       return;
     }
 
@@ -347,10 +436,6 @@ async function handleJoin(io, socket, payload = {}) {
   validateMatchAccess(match, playerId);
 
   const safeState = getSerializedState(matchId, state);
-  console.log(`[MATCH] Player ${playerId} joined match ${matchId}`);
-  if (match.player_one_id && match.player_two_id) {
-    console.log(`[MATCH] Match started: ${match.player_one_id} vs ${match.player_two_id}`);
-  }
 
   const matchRoom = io.sockets.adapter.rooms.get(String(matchId));
   if (matchRoom && matchRoom.size >= 2 && !matchRoom.has(socket.id)) {
@@ -359,6 +444,16 @@ async function handleJoin(io, socket, payload = {}) {
 
   socket.join(String(matchId));
   socket.emit("match:state", buildMatchStatePayload(match, safeState));
+
+  // Start the timer on first join (arena path), or sync current remaining to the joining socket.
+  if (!state.finished) {
+    const timerEntry = turnTimers.get(String(matchId));
+    if (timerEntry) {
+      socket.emit("match:timer", { remaining: timerEntry.getRemaining() });
+    } else {
+      startTurnTimer(io, matchId, safeState.activePlayer);
+    }
+  }
 }
 
 async function handleQueue(io, socket) {
@@ -455,7 +550,6 @@ async function handlePlayCard(io, socket, payload = {}) {
 
   const cardData = card.get({ plain: true });
   validateCardPlayPreconditions(state, playerId, cardData);
-  console.log(`[ACTION] ${playerId} played card ${cardId}`);
 
   const nextState = playCard(
     state,
@@ -493,11 +587,6 @@ async function handlePlayCard(io, socket, payload = {}) {
     return;
   }
 
-  const lastTurnAction = persistedState.turnActions[persistedState.turnActions.length - 1];
-  if (lastTurnAction && Number.isFinite(lastTurnAction.actionIndex)) {
-    console.log(`[ACTION] Turn action #${lastTurnAction.actionIndex}`);
-  }
-
   io.to(String(matchId)).emit("match:update", {
     ...buildMatchStatePayload(match, safeState),
     events
@@ -525,8 +614,6 @@ async function handleAttack(io, socket, payload = {}) {
   }
   if (state?.finished) throw createSocketError("MATCH_FINISHED", "Game already finished");
   if (state?.activePlayer !== playerId) throw createSocketError("INVALID_TURN", "Not your turn");
-
-  console.log(`[ATTACK] ${playerId} attacking with ${unitId} → ${targetType}:${targetId}`);
 
   const nextState = attack(
     state,
@@ -572,8 +659,6 @@ async function handleEndTurn(io, socket, payload = {}) {
   if (state?.finished) throw createSocketError("MATCH_FINISHED", "Game already finished");
   if (state?.activePlayer !== playerId) throw createSocketError("INVALID_TURN", "Not your turn");
 
-  console.log(`[TURN] ${playerId} ended turn`);
-
   const nextState = endTurn(state, { playerId, expectedVersion: incomingVersion });
   const persistedState = await saveMatchState(matchId, nextState, incomingVersion);
   const safeState = getSerializedState(matchId, persistedState);
@@ -610,19 +695,17 @@ async function handleSync(io, socket) {
   if (pendingTimer) {
     clearTimeout(pendingTimer);
     reconnectTimers.delete(String(match.id));
-    console.log(`[reconnect] Cancelled defeat timer for player ${userId} match ${match.id}`);
   }
 
-  // Restore socket room membership so the player receives broadcasts again.
+  // Restore socket room membership and inMatch flag so the player receives broadcasts again.
   socket.join(String(match.id));
+  socket.data.inMatch = true;
 
   // Guard against the race condition where this sync fires BEFORE the old socket's
   // "disconnect" event. Marking the player here prevents disconnect from re-starting
   // the defeat timer. The mark auto-expires after 10 s to avoid a memory leak.
   reconnectedPlayers.add(String(userId));
   setTimeout(() => reconnectedPlayers.delete(String(userId)), 10_000);
-
-  console.log(`[reconnect] Player ${userId} rejoined match ${match.id}`);
 
   // Immediately send the current timer so the client UI is in sync.
   const timerEntry = turnTimers.get(String(match.id));
@@ -654,11 +737,11 @@ async function handleLeave(io, socket, payload = {}) {
   validateMatchAccess(match, playerId);
   const opponentId = getOpponentId(match, playerId);
 
-  socket.leave(matchId);
-  socket.data.inMatch = false;
-  console.log(`[MATCH] Player ${socket.data?.userId || "unknown"} left match ${matchId}`);
-
-  if (match.status === "finished") return;
+  if (match.status === "finished") {
+    socket.leave(matchId);
+    socket.data.inMatch = false;
+    return;
+  }
 
   clearTurnTimer(matchId);
   const reconnectTimer = reconnectTimers.get(String(matchId));
@@ -673,15 +756,20 @@ async function handleLeave(io, socket, payload = {}) {
     leaveState = loaded.state;
   } catch (_) {}
 
-  await finalizeMatch(match, opponentId, leaveState);
+  const ratingChanges = await finalizeMatch(match, opponentId, leaveState);
   unregisterActiveMatch(match);
   clearSocketMatchRuntime(matchId);
 
-  socket.to(matchId).emit("match:finish", {
+  io.to(matchId).emit("match:finish", {
     winnerId: opponentId || null,
     reason: "opponent_left",
-    message: "Opponent cowardly left the arena"
+    message: "Opponent cowardly left the arena",
+    ratingChanges: ratingChanges || null,
+    gameMode: match.game_mode || "normal"
   });
+
+  socket.leave(matchId);
+  socket.data.inMatch = false;
 }
 
 // ─── Wrapper & registration ───────────────────────────────────────────────────
@@ -708,7 +796,6 @@ module.exports = function registerMatchSocket(io) {
         waitingQueueEntry?.userId === socket.data?.userId
       ) {
         waitingQueueEntry = null;
-        console.log(`[match:cancel] Player ${socket.data?.userId} left queue`);
       }
     });
 
@@ -765,7 +852,6 @@ module.exports = function registerMatchSocket(io) {
       // this disconnect event), skip the defeat timer entirely.
       if (reconnectedPlayers.has(String(userId))) {
         reconnectedPlayers.delete(String(userId));
-        console.log(`[disconnect] Player ${userId} reconnected on new socket — skipping defeat timer for match ${match.id}`);
         return;
       }
 
@@ -780,15 +866,17 @@ module.exports = function registerMatchSocket(io) {
               dcState = loaded.state;
             } catch (_) {}
 
+            clearTurnTimer(match.id);
             unregisterActiveMatch(match);
             reconnectTimers.delete(String(match.id));
             clearSocketMatchRuntime(match.id);
-            await finalizeMatch(match, opponentId, dcState);
+            const ratingChanges = await finalizeMatch(match, opponentId, dcState);
             io.to(String(match.id)).emit("match:finish", {
               winnerId: opponentId,
-              reason: "disconnect"
+              reason: "disconnect",
+              ratingChanges: ratingChanges || null,
+              gameMode: match.game_mode || "normal"
             });
-            clearSocketMatchRuntime(match.id);
           } catch (err) {
             console.error("[reconnect:timeout] failed:", err?.message || err);
           }

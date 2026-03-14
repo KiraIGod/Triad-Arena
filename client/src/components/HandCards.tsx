@@ -7,6 +7,7 @@ type HandCardsProps = {
   canPlayCard: (card: CardModel) => boolean;
   onCardClick: (card: CardModel) => void;
   cardSize?: "small" | "normal" | "large";
+  onCardMount?: (cardId: string, element: HTMLDivElement | null) => void;
 };
 
 export default function HandCards({
@@ -14,7 +15,8 @@ export default function HandCards({
   selectedCardId,
   canPlayCard,
   onCardClick,
-  cardSize = "normal"
+  cardSize = "normal",
+  onCardMount,
 }: HandCardsProps) {
   const [viewportWidth, setViewportWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 1280
@@ -59,6 +61,7 @@ export default function HandCards({
         return (
           <div
             key={card.id}
+            ref={(element) => onCardMount?.(card.id, element)}
             className={`game-hand__slot ${isSelected ? "is-selected" : ""}`}
             style={
               {

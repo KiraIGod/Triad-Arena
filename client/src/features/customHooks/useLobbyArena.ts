@@ -22,6 +22,8 @@ type CheckActiveResponse = {
 const SEARCH_TIMEOUT_SEC = 60;
 const SEARCH_RETRY_MS = 3000;
 
+type GameMode = "normal" | "ranked" | "private";
+
 type UseLobbyArenaResult = {
   isOnline: boolean;
   isCreatingArena: boolean;
@@ -35,7 +37,7 @@ type UseLobbyArenaResult = {
   cancelSearch: () => void;
 };
 
-export function useLobbyArena(token: string | null): UseLobbyArenaResult {
+export function useLobbyArena(token: string | null, gameMode: GameMode = "normal"): UseLobbyArenaResult {
   const navigate = useNavigate();
   const [isCreatingArena, setIsCreatingArena] = useState(false);
   const [isJoiningArena, setIsJoiningArena] = useState(false);
@@ -73,11 +75,11 @@ export function useLobbyArena(token: string | null): UseLobbyArenaResult {
   }, []);
 
   useEffect(() => {
-    if (token) {
-      socket.auth = { token };
-      if (socket.connected) {
-        socket.disconnect();
-      }
+    if (!token) return;
+
+    socket.auth = { token };
+    if (socket.connected) {
+      socket.disconnect();
     }
     socket.connect();
 
@@ -97,6 +99,7 @@ export function useLobbyArena(token: string | null): UseLobbyArenaResult {
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      joinCancelledRef.current = true;
       clearSearchTimers();
     };
   }, [token, checkActiveMatch, clearSearchTimers]);
@@ -111,7 +114,35 @@ export function useLobbyArena(token: string | null): UseLobbyArenaResult {
     clearSearchTimers();
     setIsJoiningArena(false);
     setError(null);
+    socket.emit("match:cancel");
+    socket.emit("arena:cancel-search");
   };
+
+  useEffect(() => {
+    if (!isJoiningArena) return;
+
+    const onArenaReady = (payload?: {
+      arenaId?: string;
+      matchId?: string;
+      players?: Array<{ userId?: string; nickname?: string }>;
+    }) => {
+      if (!payload?.matchId || joinCancelledRef.current) return;
+
+      joinCancelledRef.current = true;
+      clearSearchTimers();
+      setIsJoiningArena(false);
+
+      const params = new URLSearchParams();
+      if (payload.arenaId) params.set("arenaId", payload.arenaId);
+      params.set("matchId", payload.matchId);
+      navigate(`/game?${params.toString()}`);
+    };
+
+    socket.on("arena:ready", onArenaReady);
+    return () => {
+      socket.off("arena:ready", onArenaReady);
+    };
+  }, [isJoiningArena, navigate, clearSearchTimers]);
 
   const attemptJoin = useCallback(() => {
     if (joinCancelledRef.current) return;
@@ -124,32 +155,43 @@ export function useLobbyArena(token: string | null): UseLobbyArenaResult {
       return;
     }
 
-    socket.emit("arena:join", (res?: JoinArenaResponse) => {
+    socket.emit("match:check-active", (activeRes?: CheckActiveResponse) => {
       if (joinCancelledRef.current) return;
 
-      if (res?.arenaId) {
+      if (activeRes?.hasActiveMatch && activeRes.matchId) {
         clearSearchTimers();
         setIsJoiningArena(false);
-        const opponent = encodeURIComponent(res.opponentNickname ?? "UNKNOWN");
-        const matchIdPart = res.matchId ? `&matchId=${encodeURIComponent(res.matchId)}` : "";
-        navigate(`/game?arenaId=${res.arenaId}&opponent=${opponent}${matchIdPart}`);
+        navigate(`/game?matchId=${encodeURIComponent(activeRes.matchId)}`);
         return;
       }
 
-      const isRetryable =
-        !res?.error ||
-        res.error === "No available arena found" ||
-        res.error === "Arena is unavailable";
+      socket.emit("arena:join", { gameMode }, (res?: JoinArenaResponse) => {
+        if (joinCancelledRef.current) return;
 
-      if (isRetryable && Date.now() < searchDeadlineRef.current) {
-        retryTimerRef.current = setTimeout(attemptJoin, SEARCH_RETRY_MS);
-      } else {
-        clearSearchTimers();
-        setIsJoiningArena(false);
-        setError(res?.error ?? "Failed to find a match");
-      }
+        if (res?.arenaId) {
+          clearSearchTimers();
+          setIsJoiningArena(false);
+          const opponent = encodeURIComponent(res.opponentNickname ?? "UNKNOWN");
+          const matchIdPart = res.matchId ? `&matchId=${encodeURIComponent(res.matchId)}` : "";
+          navigate(`/game?arenaId=${res.arenaId}&opponent=${opponent}${matchIdPart}`);
+          return;
+        }
+
+        const isRetryable =
+          !res?.error ||
+          res.error === "No available arena found" ||
+          res.error === "Arena is unavailable";
+
+        if (isRetryable && Date.now() < searchDeadlineRef.current) {
+          retryTimerRef.current = setTimeout(attemptJoin, SEARCH_RETRY_MS);
+        } else {
+          clearSearchTimers();
+          setIsJoiningArena(false);
+          setError(res?.error ?? "Failed to find a match");
+        }
+      });
     });
-  }, [navigate, clearSearchTimers]);
+  }, [navigate, clearSearchTimers, gameMode]);
 
   const handleJoinArena = () => {
     if (isJoiningArena || activeMatchId) return;
@@ -187,7 +229,7 @@ export function useLobbyArena(token: string | null): UseLobbyArenaResult {
       setIsCreatingArena(false);
     }, 7000);
 
-    socket.emit("arena:create", (res?: CreateArenaResponse) => {
+    socket.emit("arena:create", { gameMode }, (res?: CreateArenaResponse) => {
       clearTimeout(timeoutId);
 
       if (!res?.arenaId) {
