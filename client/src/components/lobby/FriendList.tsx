@@ -3,6 +3,7 @@ import './FriendList.css'
 import { FriendRequestsModal } from './FriendRequestModal'
 import { fetchFriendsList, sendFriendRequest, Friend, FriendRequest } from '../../shared/api/friendsApi'
 import { useAppSelector } from '../../store'
+import ChatModal from './ChatModal'
 
 export const FriendList: React.FC = () => {
   const token = useAppSelector((s) => s.auth.token)
@@ -21,9 +22,11 @@ export const FriendList: React.FC = () => {
       const data = await fetchFriendsList(token)
       setFriends(data.friends)
       setRequests(data.requests)
-    } catch (error) {
+    }
+    catch (error) {
       console.error('Failed to load friends', error)
-    } finally {
+    }
+    finally {
       setLoading(false)
     }
   }
@@ -45,7 +48,8 @@ export const FriendList: React.FC = () => {
       setAddUsername('')
       setIsAdding(false)
       loadFriends()
-    } catch (error: any) {
+    }
+    catch (error: any) {
       alert(error.response?.data?.message || 'Failed to send request')
     }
   }
