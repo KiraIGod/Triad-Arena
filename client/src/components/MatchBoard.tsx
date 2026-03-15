@@ -1,9 +1,7 @@
-import type { CSSProperties, ReactNode } from "react";
-import { GameCard } from "./Card";
-import type { PlayedBoardCard } from "../features/customHooks/useMatchBoard";
+import type { ReactNode } from "react";
 import { motion } from "motion/react";
+import type { PlayedBoardCard } from "../features/customHooks/useMatchBoard";
 import "./MatchBoard.css";
-
 
 type MatchBoardProps = {
   cards: PlayedBoardCard[];
@@ -11,6 +9,7 @@ type MatchBoardProps = {
   selfUnits: ReactNode;
   enemyUnits: ReactNode;
   hiddenSelfCardIds?: string[];
+  selfUnitsRef?: (element: HTMLDivElement | null) => void;
   selfPlayedRef?: (element: HTMLDivElement | null) => void;
   enemyHint?: ReactNode;
   enemyTargeting?: boolean;
@@ -20,11 +19,12 @@ type MatchBoardProps = {
 };
 
 export default function MatchBoard({
-  cards,
-  currentUserId,
+  cards: _cards,
+  currentUserId: _currentUserId,
   selfUnits,
   enemyUnits,
-  hiddenSelfCardIds = [],
+  hiddenSelfCardIds: _hiddenSelfCardIds,
+  selfUnitsRef,
   selfPlayedRef,
   enemyHint = null,
   enemyTargeting = false,
@@ -32,15 +32,6 @@ export default function MatchBoard({
   spellNoticeFading = false,
   spellNoticeTone = "default"
 }: MatchBoardProps) {
-  const normalize = (value: string | null | undefined) => String(value ?? "").trim().toLowerCase();
-  const hiddenSelfCardIdsSet = new Set(hiddenSelfCardIds);
-  const selfCards = cards.filter(
-    (entry) =>
-      normalize(entry.playerId) === normalize(currentUserId) &&
-      !hiddenSelfCardIdsSet.has(entry.card.id)
-  );
-  const opponentCards = cards.filter((entry) => normalize(entry.playerId) !== normalize(currentUserId));
-
   return (
     <section className="game-battlefield-layout" aria-label="Match board">
       {spellNotice && (
@@ -66,44 +57,20 @@ export default function MatchBoard({
         </div>
       </div>
 
-      <div className="game-board__side game-board__side--opponent">
-        <p className="game-board__title">Opponent Played</p>
-        <div className="game-board__cards app-scrollbar">
-          {opponentCards.map((entry, index) => (
-            <div
-              key={`${entry.card.id}-opp-board-${index}`}
-              className="game-board__card-slot"
-              style={{ "--card-enter-delay": `${index * 60}ms` } as CSSProperties}
-            >
-              <GameCard card={entry.card} size="small" disabled />
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* ── Divider ───────────────────────────────────────────── */}
+      <div className="game-battlefield__divider" />
+
+      {/* ── Center: empty (fly target for card animation only) ─── */}
+      <div className="game-board__center" ref={selfPlayedRef} aria-hidden />
 
       {/* ── Divider ───────────────────────────────────────────── */}
       <div className="game-battlefield__divider" />
 
       {/* ── Self half (bottom) ────────────────────────────────── */}
       <div className="battlefield-self-col">
-        <div className="battlefield-row battlefield-row--self app-scrollbar">
+        <div className="battlefield-row battlefield-row--self app-scrollbar" ref={selfUnitsRef}>
           <p className="battlefield-col-title">My Units</p>
           {selfUnits}
-        </div>
-      </div>
-
-      <div className="game-board__side game-board__side--self">
-        <p className="game-board__title">My Played</p>
-        <div className="game-board__cards app-scrollbar" ref={selfPlayedRef}>
-          {selfCards.map((entry, index) => (
-            <div
-              key={`${entry.card.id}-self-board-${index}`}
-              className="game-board__card-slot"
-              style={{ "--card-enter-delay": `${index * 60}ms` } as CSSProperties}
-            >
-              <GameCard card={entry.card} size="small" disabled />
-            </div>
-          ))}
         </div>
       </div>
     </section>

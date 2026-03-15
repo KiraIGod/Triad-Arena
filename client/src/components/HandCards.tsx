@@ -31,13 +31,13 @@ export default function HandCards({
   }, []);
 
   const overlapPx = useMemo(() => {
-    const cardWidth = cardSize === "small" ? 152 : cardSize === "large" ? 210 : 180;
+    const cardWidth = cardSize === "small" ? 152 : cardSize === "large" ? 210 : 153;
     const cardsCount = handCards.length;
     if (cardsCount <= 1) return 0;
 
     const horizontalPadding = viewportWidth <= 768 ? 24 : 64;
     const available = Math.max(cardWidth, viewportWidth - horizontalPadding);
-    const minStep = 36;
+    const minStep = 72;
     const naturalStep = cardWidth;
     const fittedStep = Math.max(minStep, (available - cardWidth) / (cardsCount - 1));
     const step = Math.min(naturalStep, fittedStep);

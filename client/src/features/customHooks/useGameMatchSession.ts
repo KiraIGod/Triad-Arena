@@ -127,6 +127,12 @@ export function useGameMatchSession({
       onSetReconnecting(true);
     };
 
+    // If the socket is already connected (e.g. navigated from lobby),
+    // call syncMatch() immediately to cancel the defeat timer on the server.
+    if (socket.connected) {
+      syncMatch();
+    }
+
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
     onMatchState(onMatchStatePayload);
