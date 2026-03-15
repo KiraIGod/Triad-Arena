@@ -68,6 +68,25 @@ const SPELL_HERO_BURST_DELAY_MS = 180;
 
 export default function GamePage() {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const html = document.documentElement;
+    const body = document.body;
+    const prevHtmlOverflow = html.style.overflow;
+    const prevHtmlHeight = html.style.height;
+    const prevBodyOverflow = body.style.overflow;
+    const prevBodyHeight = body.style.height;
+    html.style.overflow = "hidden";
+    html.style.height = "100%";
+    body.style.overflow = "hidden";
+    body.style.height = "100%";
+    return () => {
+      html.style.overflow = prevHtmlOverflow;
+      html.style.height = prevHtmlHeight;
+      body.style.overflow = prevBodyOverflow;
+      body.style.height = prevBodyHeight;
+    };
+  }, []);
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [searchParams] = useSearchParams();
   const arenaId = searchParams.get("arenaId") ?? "unknown";

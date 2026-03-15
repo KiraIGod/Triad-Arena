@@ -105,6 +105,9 @@ export default function BattlefieldUnitCard({
         transition={{ duration: 0.24, ease: "easeOut" }}
       >
         <GameCard card={card} size="small" />
+        <span className="battlefield-unit__stats-tooltip" aria-hidden>
+          ATK {unit.attack} | HP {unit.hp}
+        </span>
         {flashToken > 0 && (
           <motion.span
             key={`${unit.instanceId}-flash-${flashToken}`}
