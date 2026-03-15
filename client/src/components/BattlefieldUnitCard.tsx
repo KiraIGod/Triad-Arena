@@ -12,6 +12,7 @@ type BattlefieldUnitCardProps = {
   isMyTurn: boolean;
   isAnyTargetingMode: boolean;
   selectedAttackerId: string | null;
+  shakeToken?: number;
   cardCatalog: Record<string, CardModel>;
   onOwnUnitClick: (unit: UnitInstance) => void;
   onEnemyUnitClick: (unit: UnitInstance, targetRect?: DOMRect) => void;
@@ -26,6 +27,7 @@ export default function BattlefieldUnitCard({
   isMyTurn,
   isAnyTargetingMode,
   selectedAttackerId,
+  shakeToken = 0,
   cardCatalog,
   onOwnUnitClick,
   onEnemyUnitClick,
@@ -77,22 +79,38 @@ export default function BattlefieldUnitCard({
       title={isSick ? "Summoning sickness - can attack next turn" : unit.canAttack ? "Ready to attack" : "Already attacked"}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-      exit={{ opacity: 0, scale: 1.5, filter: "blur(3px)" }}
+      exit={{
+        opacity: 0,
+        scale: 1.5,
+        y: -20,
+        filter: "blur(3px)",
+        transition: {
+          duration: 2,
+          ease: "easeOut",
+        },
+      }}
       whileHover={isAttackable || isTargetable ? { y: -2 } : undefined}
       transition={{
-        duration: 2,
+        duration: 0.28,
         ease: "easeOut",
         delay: enterIndex * 0.06,
       }}
     >
-      <GameCard card={card} size="small" />
-      {unitShield > 0 && <span className="battlefield-unit__shield">SH {unitShield}</span>}
-      {Array.isArray(unit.statuses) && unit.statuses.length > 0 && (
-        <div className="battlefield-unit__statuses">
-          {renderStatuses(unit.statuses)}
-        </div>
-      )}
-      {isSelected && <span className="battlefield-unit__badge">{"\u2694"}</span>}
+      <motion.div
+        key={!isOwn && shakeToken > 0 ? `${unit.instanceId}-shake-${shakeToken}` : `${unit.instanceId}-steady`}
+        initial={{ x: 0 }}
+        animate={!isOwn && shakeToken > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+        transition={{ duration: 0.24, ease: "easeOut" }}
+      >
+        <GameCard card={card} size="small" />
+        {unitShield > 0 && <span className="battlefield-unit__shield">SH {unitShield}</span>}
+        {Array.isArray(unit.statuses) && unit.statuses.length > 0 && (
+          <div className="battlefield-unit__statuses">
+            {renderStatuses(unit.statuses)}
+          </div>
+        )}
+        {isSelected && <span className="battlefield-unit__badge">{"\u2694"}</span>}
+      </motion.div>
     </motion.div>
   );
 }

@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "motion/react";
 import { GameCard, type CardModel } from "./Card";
+import "./BattleEffectsLayer.css";
 
 export type CardFlyEffect = {
   id: string;
@@ -48,7 +49,7 @@ export default function BattleEffectsLayer({
       <AnimatePresence>
         {effects.map((effect) => {
           if (effect.type === "spell_burst") {
-            const size = Math.max(effect.target.width, effect.target.height, 72);
+            const size = Math.max(effect.target.width, effect.target.height, 96);
             const left = effect.target.left + effect.target.width / 2 - size / 2;
             const top = effect.target.top + effect.target.height / 2 - size / 2;
 
@@ -64,13 +65,13 @@ export default function BattleEffectsLayer({
                 }}
                 initial={{
                   opacity: 0,
-                  scale: 0.4,
+                  scale: 0.2,
                 }}
                 animate={{
-                  opacity: [0, 0.95, 0],
-                  scale: [0.4, 1.15, 1.4],
+                  opacity: [0, 1, 0],
+                  scale: [0.2, 1.1, 1.55],
                 }}
-                transition={{ duration: 0.5, ease: "easeOut" }}
+                transition={{ duration: 0.65, ease: "easeOut" }}
                 onAnimationComplete={() => onComplete(effect)}
               />
             );

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
 import type { CardModel } from "../components/Card";
@@ -59,6 +59,9 @@ function mapMatchErrorMessage(type?: string, fallback?: string): string {
 }
 
 const MAX_BOARD_UNITS = 5;
+const SPELL_VISUAL_LEAD_MS = 90;
+const SPELL_UNIT_BURST_DELAY_MS = 120;
+const SPELL_HERO_BURST_DELAY_MS = 180;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -88,6 +91,11 @@ export default function GamePage() {
   const [timerRemaining, setTimerRemaining] = useState(45);
   const [battleEffects, setBattleEffects] = useState<BattleEffect[]>([]);
   const [pendingPlayedCardIds, setPendingPlayedCardIds] = useState<string[]>([]);
+  const [enemyHeroShakeToken, setEnemyHeroShakeToken] = useState(0);
+  const [enemyUnitShake, setEnemyUnitShake] = useState<{ id: string | null; token: number }>({
+    id: null,
+    token: 0,
+  });
   const handCardElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
   const selfPlayedZoneRef = useRef<HTMLDivElement | null>(null);
   const enemyHeroRef = useRef<HTMLDivElement | null>(null);
@@ -375,6 +383,17 @@ export default function GamePage() {
     ]);
   }, []);
 
+  const triggerEnemyHeroShake = useCallback(() => {
+    setEnemyHeroShakeToken((prev) => prev + 1);
+  }, []);
+
+  const triggerEnemyUnitShake = useCallback((unitId: string) => {
+    setEnemyUnitShake((prev) => ({
+      id: unitId,
+      token: prev.token + 1,
+    }));
+  }, []);
+
   const handleCardClick = (card: CardModel) => {
     // Clicking the already-selected spell card cancels targeting mode.
     if (attackState.mode === "selectingSpellTarget" && attackState.spellCardId === card.id) {
@@ -444,22 +463,25 @@ export default function GamePage() {
     if (attackState.mode === "selectingSpellTarget") {
       const spellCard = handCards.find((card) => card.id === attackState.spellCardId);
       if (spellCard) {
+        triggerEnemyUnitShake(unit.instanceId);
         spawnCardFlyEffect(spellCard);
         window.setTimeout(() => {
           spawnSpellBurstEffect(
             spellCard.triad_type,
             targetRect
           );
-        }, 360);
+        }, SPELL_UNIT_BURST_DELAY_MS);
       }
-      playMatchCard({
-        matchId: match.matchId,
-        cardId: attackState.originalCardId,
-        actionId: attackState.actionId,
-        version: match.state.version,
-        targetType: "unit",
-        targetId: unit.instanceId
-      });
+      window.setTimeout(() => {
+        playMatchCard({
+          matchId: match.matchId,
+          cardId: attackState.originalCardId,
+          actionId: attackState.actionId,
+          version: match.state.version,
+          targetType: "unit",
+          targetId: unit.instanceId
+        });
+      }, SPELL_VISUAL_LEAD_MS);
       setAttackState({ mode: "idle" });
       hideBattlefieldHint();
       hideHandHint();
@@ -484,7 +506,7 @@ export default function GamePage() {
     hideHandHint();
     setSelectedCardId(null);
     setMatchError(null);
-  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, match, spawnCardFlyEffect, spawnSpellBurstEffect]);
+  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, match, spawnCardFlyEffect, spawnSpellBurstEffect, triggerEnemyUnitShake]);
 
   const handleEnemyHeroClick = useCallback(() => {
     if (!match) return;
@@ -498,20 +520,23 @@ export default function GamePage() {
       }
       const spellCard = handCards.find((card) => card.id === attackState.spellCardId);
       if (spellCard) {
+        triggerEnemyHeroShake();
         spawnCardFlyEffect(spellCard);
         const targetRect = enemyHeroRef.current?.getBoundingClientRect() ?? null;
         window.setTimeout(() => {
           spawnSpellBurstEffect(spellCard.triad_type, targetRect);
-        }, 200);
+        }, SPELL_HERO_BURST_DELAY_MS);
       }
-      playMatchCard({
-        matchId: match.matchId,
-        cardId: attackState.originalCardId,
-        actionId: attackState.actionId,
-        version: match.state.version,
-        targetType: "hero",
-        targetId: enemyHeroId
-      });
+      window.setTimeout(() => {
+        playMatchCard({
+          matchId: match.matchId,
+          cardId: attackState.originalCardId,
+          actionId: attackState.actionId,
+          version: match.state.version,
+          targetType: "hero",
+          targetId: enemyHeroId
+        });
+      }, SPELL_VISUAL_LEAD_MS);
       setAttackState({ mode: "idle" });
       hideBattlefieldHint();
       hideHandHint();
@@ -541,7 +566,7 @@ export default function GamePage() {
     hideHandHint();
     setSelectedCardId(null);
     setMatchError(null);
-  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, isSameUser, match, spawnCardFlyEffect, spawnSpellBurstEffect]);
+  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, isSameUser, match, spawnCardFlyEffect, spawnSpellBurstEffect, triggerEnemyHeroShake]);
 
   // ── Turn / leave ──────────────────────────────────────────────────────────────
 
@@ -618,14 +643,21 @@ export default function GamePage() {
           title={isSelectingSpellTarget ? "Cast spell on enemy hero" : isSelectingTarget ? "Attack enemy hero" : undefined}
           style={{ cursor: isAnyTargetingMode ? "crosshair" : undefined }}
         >
-          <p className="game-state__label">Opponent Status</p>
-          <p className="game-state__value">
-            {(oppStats.statuses || []).length
-              ? renderStatuses(oppStats.statuses)
-              : isSelectingSpellTarget ? "\u2190 Click to target hero"
-              : isSelectingTarget ? "\u2190 Click to attack hero"
-              : "None"}
-          </p>
+          <motion.div
+            key={`enemy-hero-shake-${enemyHeroShakeToken}`}
+            initial={{ x: 0 }}
+            animate={enemyHeroShakeToken > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+            transition={{ duration: 0.24, ease: "easeOut" }}
+          >
+            <p className="game-state__label">Opponent Status</p>
+            <p className="game-state__value">
+              {(oppStats.statuses || []).length
+                ? renderStatuses(oppStats.statuses)
+                : isSelectingSpellTarget ? "\u2190 Click to target hero"
+                : isSelectingTarget ? "\u2190 Click to attack hero"
+                : "None"}
+            </p>
+          </motion.div>
         </div>
       </header>
 
@@ -722,6 +754,7 @@ export default function GamePage() {
                         isMyTurn={isMyTurn}
                         isAnyTargetingMode={isAnyTargetingMode}
                         selectedAttackerId={selectedAttackerId}
+                        shakeToken={0}
                         cardCatalog={cardCatalog}
                         onOwnUnitClick={handleMyUnitClick}
                         onEnemyUnitClick={handleEnemyUnitClick}
@@ -745,6 +778,7 @@ export default function GamePage() {
                         isMyTurn={isMyTurn}
                         isAnyTargetingMode={isAnyTargetingMode}
                         selectedAttackerId={selectedAttackerId}
+                        shakeToken={enemyUnitShake.id === unit.instanceId ? enemyUnitShake.token : 0}
                         cardCatalog={cardCatalog}
                         onOwnUnitClick={handleMyUnitClick}
                         onEnemyUnitClick={handleEnemyUnitClick}

@@ -1,0 +1,47 @@
+.battle-effects-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 50;
+}
+
+.battle-effects-layer__card {
+  position: fixed;
+  pointer-events: none;
+  will-change: left, top, width, height, opacity, transform;
+}
+
+.battle-effects-layer__burst {
+  position: fixed;
+  border-radius: 999px;
+  pointer-events: none;
+  will-change: transform, opacity;
+  mix-blend-mode: screen;
+}
+
+.battle-effects-layer__burst--assault {
+  background:
+    radial-gradient(circle, rgba(255, 190, 140, 1) 0%, rgba(220, 70, 48, 0.82) 38%, rgba(220, 70, 48, 0) 72%);
+  box-shadow:
+    0 0 48px rgba(220, 70, 48, 0.72),
+    0 0 90px rgba(220, 70, 48, 0.32),
+    inset 0 0 18px rgba(255, 245, 220, 0.16);
+}
+
+.battle-effects-layer__burst--precision {
+  background:
+    radial-gradient(circle, rgba(255, 246, 180, 1) 0%, rgba(218, 183, 88, 0.82) 38%, rgba(218, 183, 88, 0) 72%);
+  box-shadow:
+    0 0 48px rgba(218, 183, 88, 0.72),
+    0 0 90px rgba(218, 183, 88, 0.32),
+    inset 0 0 18px rgba(255, 250, 230, 0.16);
+}
+
+.battle-effects-layer__burst--arcane {
+  background:
+    radial-gradient(circle, rgba(232, 220, 255, 1) 0%, rgba(155, 104, 255, 0.82) 38%, rgba(155, 104, 255, 0) 72%);
+  box-shadow:
+    0 0 48px rgba(155, 104, 255, 0.72),
+    0 0 90px rgba(155, 104, 255, 0.32),
+    inset 0 0 18px rgba(245, 240, 255, 0.16);
+}
