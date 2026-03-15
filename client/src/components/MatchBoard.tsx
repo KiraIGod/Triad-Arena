@@ -11,6 +11,7 @@ type MatchBoardProps = {
   selfUnits: ReactNode;
   enemyUnits: ReactNode;
   hiddenSelfCardIds?: string[];
+  selfUnitsRef?: (element: HTMLDivElement | null) => void;
   selfPlayedRef?: (element: HTMLDivElement | null) => void;
   enemyHint?: ReactNode;
   enemyTargeting?: boolean;
@@ -25,6 +26,7 @@ export default function MatchBoard({
   selfUnits,
   enemyUnits,
   hiddenSelfCardIds = [],
+  selfUnitsRef,
   selfPlayedRef,
   enemyHint = null,
   enemyTargeting = false,
@@ -86,7 +88,7 @@ export default function MatchBoard({
 
       {/* ── Self half (bottom) ────────────────────────────────── */}
       <div className="battlefield-self-col">
-        <div className="battlefield-row battlefield-row--self app-scrollbar">
+        <div className="battlefield-row battlefield-row--self app-scrollbar" ref={selfUnitsRef}>
           <p className="battlefield-col-title">My Units</p>
           {selfUnits}
         </div>
