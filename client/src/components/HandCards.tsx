@@ -31,7 +31,7 @@ export default function HandCards({
   }, []);
 
   const overlapPx = useMemo(() => {
-    const cardWidth = cardSize === "small" ? 152 : cardSize === "large" ? 210 : 180;
+    const cardWidth = cardSize === "small" ? 152 : cardSize === "large" ? 210 : 153;
     const cardsCount = handCards.length;
     if (cardsCount <= 1) return 0;
 
