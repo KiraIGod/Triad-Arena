@@ -825,52 +825,56 @@ export default function GamePage() {
             selfUnits={
               selfStats.board.length > 0
                 ? (
-                  <AnimatePresence initial={false}>
-                    {selfStats.board.map((unit, index) => (
-                      <BattlefieldUnitCard
-                        key={unit.instanceId}
-                        unit={unit}
-                        enterIndex={index}
-                        isOwn
-                        isMyTurn={isMyTurn}
-                        isAnyTargetingMode={isAnyTargetingMode}
-                        selectedAttackerId={selectedAttackerId}
-                        shakeToken={0}
-                        cardCatalog={cardCatalog}
-                        onOwnUnitClick={handleMyUnitClick}
-                        onEnemyUnitClick={handleEnemyUnitClick}
-                        renderStatuses={renderStatuses}
-                      />
-                    ))}
-                  </AnimatePresence>
+                  <div className="battlefield-units-wrap">
+                    <AnimatePresence initial={false}>
+                      {selfStats.board.map((unit, index) => (
+                        <BattlefieldUnitCard
+                          key={unit.instanceId}
+                          unit={unit}
+                          enterIndex={index}
+                          isOwn
+                          isMyTurn={isMyTurn}
+                          isAnyTargetingMode={isAnyTargetingMode}
+                          selectedAttackerId={selectedAttackerId}
+                          shakeToken={0}
+                          cardCatalog={cardCatalog}
+                          onOwnUnitClick={handleMyUnitClick}
+                          onEnemyUnitClick={handleEnemyUnitClick}
+                          renderStatuses={renderStatuses}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
                 )
                 : <span className="battlefield-empty">No units</span>
             }
             enemyUnits={
               oppStats.board.length > 0
                 ? (
-                  <AnimatePresence initial={false}>
-                    {oppStats.board.map((unit, index) => (
-                      <BattlefieldUnitCard
-                        key={unit.instanceId}
-                        unit={unit}
-                        enterIndex={index}
-                        isOwn={false}
-                        isMyTurn={isMyTurn}
-                        isAnyTargetingMode={isAnyTargetingMode}
-                        selectedAttackerId={selectedAttackerId}
-                        shakeToken={enemyUnitShake.id === unit.instanceId ? enemyUnitShake.token : 0}
-                        flashToken={enemyUnitFlash.id === unit.instanceId ? enemyUnitFlash.token : 0}
-                        cardCatalog={cardCatalog}
-                        onOwnUnitClick={handleMyUnitClick}
-                        onEnemyUnitClick={handleEnemyUnitClick}
-                        onMount={(unitId, element) => {
-                          enemyUnitElementsRef.current[unitId] = element;
-                        }}
-                        renderStatuses={renderStatuses}
-                      />
-                    ))}
-                  </AnimatePresence>
+                  <div className="battlefield-units-wrap">
+                    <AnimatePresence initial={false}>
+                      {oppStats.board.map((unit, index) => (
+                        <BattlefieldUnitCard
+                          key={unit.instanceId}
+                          unit={unit}
+                          enterIndex={index}
+                          isOwn={false}
+                          isMyTurn={isMyTurn}
+                          isAnyTargetingMode={isAnyTargetingMode}
+                          selectedAttackerId={selectedAttackerId}
+                          shakeToken={enemyUnitShake.id === unit.instanceId ? enemyUnitShake.token : 0}
+                          flashToken={enemyUnitFlash.id === unit.instanceId ? enemyUnitFlash.token : 0}
+                          cardCatalog={cardCatalog}
+                          onOwnUnitClick={handleMyUnitClick}
+                          onEnemyUnitClick={handleEnemyUnitClick}
+                          onMount={(unitId, element) => {
+                            enemyUnitElementsRef.current[unitId] = element;
+                          }}
+                          renderStatuses={renderStatuses}
+                        />
+                      ))}
+                    </AnimatePresence>
+                  </div>
                 )
                 : <span className="battlefield-empty">No units</span>
             }
