@@ -13,6 +13,7 @@ type BattlefieldUnitCardProps = {
   isAnyTargetingMode: boolean;
   selectedAttackerId: string | null;
   shakeToken?: number;
+  flashToken?: number;
   cardCatalog: Record<string, CardModel>;
   onOwnUnitClick: (unit: UnitInstance) => void;
   onEnemyUnitClick: (unit: UnitInstance, targetRect?: DOMRect) => void;
@@ -28,6 +29,7 @@ export default function BattlefieldUnitCard({
   isAnyTargetingMode,
   selectedAttackerId,
   shakeToken = 0,
+  flashToken = 0,
   cardCatalog,
   onOwnUnitClick,
   onEnemyUnitClick,
@@ -103,6 +105,15 @@ export default function BattlefieldUnitCard({
         transition={{ duration: 0.24, ease: "easeOut" }}
       >
         <GameCard card={card} size="small" />
+        {flashToken > 0 && (
+          <motion.span
+            key={`${unit.instanceId}-flash-${flashToken}`}
+            className="battlefield-unit__hit-flash"
+            initial={{ opacity: 0, scale: 0.92 }}
+            animate={{ opacity: [0, 0.95, 0], scale: [0.92, 1.04, 1] }}
+            transition={{ duration: 0.32, ease: "easeOut" }}
+          />
+        )}
         {unitShield > 0 && <span className="battlefield-unit__shield">SH {unitShield}</span>}
         {Array.isArray(unit.statuses) && unit.statuses.length > 0 && (
           <div className="battlefield-unit__statuses">

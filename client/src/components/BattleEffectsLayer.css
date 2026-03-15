@@ -45,3 +45,34 @@
     0 0 90px rgba(155, 104, 255, 0.32),
     inset 0 0 18px rgba(245, 240, 255, 0.16);
 }
+
+.battle-effects-layer__hit-text {
+  position: fixed;
+  pointer-events: none;
+  transform: translateX(-50%);
+  font-family: var(--font-heading);
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 10px rgba(0, 0, 0, 0.55),
+    0 0 20px rgba(0, 0, 0, 0.35);
+  will-change: transform, opacity;
+}
+
+.battle-effects-layer__hit-text--damage {
+  color: #ffd0b8;
+}
+
+.battle-effects-layer__hit-text--assault {
+  color: #ffb497;
+}
+
+.battle-effects-layer__hit-text--precision {
+  color: #f4dc86;
+}
+
+.battle-effects-layer__hit-text--arcane {
+  color: #d3bcff;
+}
