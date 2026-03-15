@@ -226,10 +226,17 @@ export default function GamePage() {
     hideBattlefieldHint();
     setMatch((prev) => (prev ? { ...prev, state: { ...prev.state, finished: true } } : prev));
 
+    setFinishGameMode(payload.gameMode ?? null);
+    const myRatingChange =
+      userIdStr && payload.ratingChanges != null && payload.ratingChanges[userIdStr] !== undefined
+        ? payload.ratingChanges[userIdStr]
+        : null;
+    setRatingChange(myRatingChange);
+
     if (payload.reason === "opponent_left") {
-      setMatchError("Opponent cowardly left the arena");
+      setMatchError(payload.message ?? "Opponent cowardly left the arena");
     }
-  }, [hideBattlefieldHint, hideHandHint]);
+  }, [hideBattlefieldHint, hideHandHint, userIdStr]);
 
   const handleMatchTimerPayload = useCallback((payload: MatchTimerPayload) => {
     setTimerRemaining(payload.remaining);
@@ -779,6 +786,9 @@ export default function GamePage() {
             <span className="comic-text-shadow">{matchResultLabel ?? "Match finished"}</span>
             {finishReason === "disconnect" && (
               <p style={{ marginTop: 8, textAlign: "center" }}>Opponent disconnected</p>
+            )}
+            {finishReason === "opponent_left" && (
+              <p style={{ marginTop: 8, textAlign: "center" }}>Opponent fled the arena</p>
             )}
             {finishGameMode === "ranked" && ratingChange !== null && (
               <p
