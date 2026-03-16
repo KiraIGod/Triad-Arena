@@ -835,10 +835,8 @@ export default function GamePage() {
             spellNoticeFading={isBoardNoticeFading}
             spellNoticeTone={boardNoticeTone}
             hiddenSelfCardIds={pendingPlayedCardIds}
-            selfUnitsRef={(element) => {
-              selfUnitsZoneRef.current = element;
-            }}
             selfPlayedRef={(element) => {
+              selfUnitsZoneRef.current = element;
               selfPlayedZoneRef.current = element;
             }}
             selfUnits={

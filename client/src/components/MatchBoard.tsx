@@ -9,7 +9,6 @@ type MatchBoardProps = {
   selfUnits: ReactNode;
   enemyUnits: ReactNode;
   hiddenSelfCardIds?: string[];
-  selfUnitsRef?: (element: HTMLDivElement | null) => void;
   selfPlayedRef?: (element: HTMLDivElement | null) => void;
   enemyHint?: ReactNode;
   enemyTargeting?: boolean;
@@ -24,7 +23,6 @@ export default function MatchBoard({
   selfUnits,
   enemyUnits,
   hiddenSelfCardIds: _hiddenSelfCardIds,
-  selfUnitsRef,
   selfPlayedRef,
   enemyHint = null,
   enemyTargeting = false,
@@ -48,30 +46,15 @@ export default function MatchBoard({
       )}
 
 
-      {/* ── Enemy half (top) ──────────────────────────────────── */}
-      <div className="battlefield-enemy-col">
+      <div className={`battlefield-board${enemyTargeting ? " battlefield-board--targeting" : ""}`} ref={selfPlayedRef}>
         {enemyHint}
-        <div className={`battlefield-row battlefield-row--enemy app-scrollbar${enemyTargeting ? " battlefield-row--enemy-targeting" : ""}`}>
-          <p className="battlefield-col-title">Enemy Units</p>
-          {enemyUnits}
-        </div>
-      </div>
+        <p className="battlefield-col-title">Enemy Units</p>
+        {enemyUnits}
 
-      {/* ── Divider ───────────────────────────────────────────── */}
-      <div className="game-battlefield__divider" />
+        <div className="battlefield-board__divider" />
 
-      {/* ── Center: empty (fly target for card animation only) ─── */}
-      <div className="game-board__center" ref={selfPlayedRef} aria-hidden />
-
-      {/* ── Divider ───────────────────────────────────────────── */}
-      <div className="game-battlefield__divider" />
-
-      {/* ── Self half (bottom) ────────────────────────────────── */}
-      <div className="battlefield-self-col">
-        <div className="battlefield-row battlefield-row--self app-scrollbar" ref={selfUnitsRef}>
-          <p className="battlefield-col-title">My Units</p>
-          {selfUnits}
-        </div>
+        <p className="battlefield-col-title">My Units</p>
+        {selfUnits}
       </div>
     </section>
   );

@@ -286,11 +286,9 @@
   position: relative;
   z-index: 1;
   flex: 1 1 0;
-  min-height: 240px;
+  min-height: 0;
   width: 100%;
-  overflow-x: hidden;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  overflow: hidden;
 }
 
 .battlefield-target-overlay {
@@ -310,39 +308,39 @@
 
 .game-battlefield-layout {
   position: relative;
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-rows: auto auto auto auto auto;
-  align-items: start;
   width: 100%;
+  height: 100%;
   min-height: 0;
-  overflow: visible;
+  overflow: hidden;
 }
 
-.game-battlefield-layout > .game-battlefield__divider {
-  grid-column: 1;
-}
-
-.battlefield-enemy-col {
-  position: relative;
-  min-height: 200px;
+.battlefield-board {
   display: flex;
-  padding-bottom: 8px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 4px 12px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(18, 14, 10, 0.35);
+  box-sizing: border-box;
 }
 
-.battlefield-self-col {
-  position: relative;
-  min-height: 200px;
-  display: flex;
-  padding-top: 8px;
+.battlefield-board--targeting {
+  background: rgba(201, 169, 98, 0.12);
+  border-color: rgba(201, 169, 98, 0.3);
 }
 
-.battlefield-self-col > .battlefield-row--self {
-  flex: 1 1 auto;
-}
-
-.battlefield-enemy-col > .battlefield-row--enemy {
-  flex: 1 1 auto;
+.battlefield-board__divider {
+  width: 60%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 4px 0;
+  flex-shrink: 0;
 }
 
 .game-content {
@@ -670,7 +668,8 @@
   }
 
   .game-battlefield {
-    min-height: 120px;
+    min-height: 0;
+    overflow: hidden;
   }
 
   .battlefield-target-overlay {
@@ -684,34 +683,8 @@
     grid-template-rows: auto;
   }
 
-  .game-battlefield-layout > .battlefield-enemy-col {
-    order: 1;
-  }
-  .game-battlefield-layout > .game-battlefield__divider:first-of-type {
-    order: 2;
-  }
-  .game-battlefield-layout > .game-board__center {
-    order: 3;
-  }
-  .game-battlefield-layout > .game-battlefield__divider:last-of-type {
-    order: 4;
-  }
-  .game-battlefield-layout > .battlefield-self-col {
-    order: 5;
-  }
-
-  .game-battlefield-layout > .battlefield-self-col,
-  .game-battlefield-layout > .battlefield-enemy-col,
-  .game-battlefield-layout > .game-board__center {
-    width: auto;
-    min-width: 0;
-    max-width: none;
-  }
-
-  .battlefield-row {
-    min-height: 90px;
-    flex-direction: row;
-    overflow: visible;
+  .battlefield-board {
+    padding: 4px 8px;
   }
 
   .game-top-row {
@@ -726,46 +699,22 @@
 
 /* ─── Battlefield board rows ─────────────────────────────────────────────────── */
 
-.battlefield-row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 24px;
-  align-items: flex-start;
-  align-content: flex-start;
-  justify-content: center;
-  min-height: 200px;
-  padding: 6px 12px;
-  overflow: visible;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(18, 14, 10, 0.35);
-}
-
-.battlefield-row--enemy {
-  justify-content: center;
-  margin-bottom: 0;
-}
-
-.battlefield-row--enemy-targeting {
-  background: rgba(201, 169, 98, 0.2);
-  border-color: rgba(201, 169, 98, 0.5);
-}
-
+.battlefield-row,
+.battlefield-row--enemy,
 .battlefield-row--self {
-  justify-content: center;
-  margin-top: 0;
+  display: contents;
 }
 
 .battlefield-units-wrap {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 16px;
   justify-content: center;
   align-items: flex-start;
   width: 100%;
   max-width: 880px;
-  margin: 0 auto;
   min-width: 0;
+  flex-shrink: 1;
 }
 
 .battlefield-empty {
@@ -776,18 +725,16 @@
 }
 
 .battlefield-col-title {
-  flex-basis: 100%;
   width: 100%;
-  margin: 0 0 8px;
+  margin: 2px 0;
   padding: 0;
   text-align: center;
   font-family: var(--font-accent);
-  font-size: 15px;
+  font-size: 12px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: #8b7e6f;
-  order: -1;
-  z-index: 1;
+  flex-shrink: 0;
 }
 
 /* ─── Unit card on the board ─────────────────────────────────────────────────── */
@@ -812,8 +759,7 @@
   display: block;
 }
 
-.battlefield-row--self .battlefield-unit-card,
-.battlefield-row--enemy .battlefield-unit-card {
+.battlefield-board .battlefield-unit-card {
   cursor: pointer;
 }
 
