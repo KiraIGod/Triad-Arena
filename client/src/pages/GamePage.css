@@ -550,6 +550,14 @@
   z-index: 1000 !important;
 }
 
+.game-hand__slot[draggable="true"] {
+  cursor: grab;
+}
+
+.game-hand__slot[draggable="true"]:active {
+  cursor: grabbing;
+}
+
 .game-hand .game-card--normal {
   width: 153px;
   height: 230px;

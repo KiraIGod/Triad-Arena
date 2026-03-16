@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { GameCard, type CardModel } from "./Card";
 
 type HandCardsProps = {
@@ -21,6 +21,7 @@ export default function HandCards({
   const [viewportWidth, setViewportWidth] = useState(
     typeof window !== "undefined" ? window.innerWidth : 1280
   );
+  const isDraggingRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -44,6 +45,31 @@ export default function HandCards({
 
     return Math.max(0, cardWidth - step);
   }, [cardSize, handCards.length, viewportWidth]);
+
+  const handleCardClickWithDragCheck = useCallback(
+    (card: CardModel) => {
+      if (isDraggingRef.current) return;
+      onCardClick(card);
+    },
+    [onCardClick]
+  );
+
+  const handleDragStart = useCallback((e: React.DragEvent<HTMLDivElement>, card: CardModel) => {
+    isDraggingRef.current = true;
+    e.dataTransfer.setData("application/json", JSON.stringify({ cardId: card.id }));
+    e.dataTransfer.effectAllowed = "copy";
+    const slot = e.currentTarget;
+    const cardEl = slot.querySelector(".game-card") as HTMLElement | null;
+    if (cardEl) {
+      e.dataTransfer.setDragImage(cardEl, cardEl.offsetWidth / 2, cardEl.offsetHeight / 2);
+    }
+  }, []);
+
+  const handleDragEnd = useCallback(() => {
+    setTimeout(() => {
+      isDraggingRef.current = false;
+    }, 0);
+  }, []);
 
   return (
     <section
@@ -70,11 +96,14 @@ export default function HandCards({
                 zIndex: isSelected ? handCards.length + 1 : index + 1
               } as CSSProperties
             }
+            draggable={!isDisabled}
+            onDragStart={(e) => handleDragStart(e, card)}
+            onDragEnd={handleDragEnd}
           >
             <GameCard
               card={card}
               size={cardSize}
-              onClick={onCardClick}
+              onClick={handleCardClickWithDragCheck}
               className={isDisabled ? "is-disabled" : undefined}
             />
           </div>
