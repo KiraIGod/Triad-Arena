@@ -1,16 +1,11 @@
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
-import type { PlayedBoardCard } from "../features/customHooks/useMatchBoard";
 import "./MatchBoard.css";
 
 type MatchBoardProps = {
-  cards: PlayedBoardCard[];
-  currentUserId: string | null;
   selfUnits: ReactNode;
   enemyUnits: ReactNode;
-  hiddenSelfCardIds?: string[];
   selfUnitsRef?: (element: HTMLDivElement | null) => void;
-  selfPlayedRef?: (element: HTMLDivElement | null) => void;
   enemyHint?: ReactNode;
   enemyTargeting?: boolean;
   spellNotice?: string | null;
@@ -19,18 +14,14 @@ type MatchBoardProps = {
 };
 
 export default function MatchBoard({
-  cards: _cards,
-  currentUserId: _currentUserId,
   selfUnits,
   enemyUnits,
-  hiddenSelfCardIds: _hiddenSelfCardIds,
   selfUnitsRef,
-  selfPlayedRef,
   enemyHint = null,
   enemyTargeting = false,
   spellNotice = null,
   spellNoticeFading = false,
-  spellNoticeTone = "default"
+  spellNoticeTone = "default",
 }: MatchBoardProps) {
   return (
     <section className="game-battlefield-layout" aria-label="Match board">
@@ -47,8 +38,6 @@ export default function MatchBoard({
         </div>
       )}
 
-
-      {/* ── Enemy half (top) ──────────────────────────────────── */}
       <div className="battlefield-enemy-col">
         {enemyHint}
         <div className={`battlefield-row battlefield-row--enemy app-scrollbar${enemyTargeting ? " battlefield-row--enemy-targeting" : ""}`}>
@@ -57,16 +46,8 @@ export default function MatchBoard({
         </div>
       </div>
 
-      {/* ── Divider ───────────────────────────────────────────── */}
       <div className="game-battlefield__divider" />
 
-      {/* ── Center: empty (fly target for card animation only) ─── */}
-      <div className="game-board__center" ref={selfPlayedRef} aria-hidden />
-
-      {/* ── Divider ───────────────────────────────────────────── */}
-      <div className="game-battlefield__divider" />
-
-      {/* ── Self half (bottom) ────────────────────────────────── */}
       <div className="battlefield-self-col">
         <div className="battlefield-row battlefield-row--self app-scrollbar" ref={selfUnitsRef}>
           <p className="battlefield-col-title">My Units</p>
@@ -76,5 +57,3 @@ export default function MatchBoard({
     </section>
   );
 }
-
-

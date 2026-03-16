@@ -41,7 +41,7 @@ export function PlayerPanel({
   const rankDisplay = stats?.rank != null ? `#${stats.rank}` : "—";
 
   return (
-    <section className={styles.panel}>
+    <section className={`${styles.panel} app-scrollbar`}>
       <div className={styles.header}>
         <span className={styles.diamond} />
         <span className={styles.label}>{nickname}</span>
