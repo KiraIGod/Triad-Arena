@@ -357,67 +357,6 @@
   box-shadow: 0 1px 0 rgba(168, 62, 54, 0.3);
 }
 
-.game-board {
-  /* position: absolute; */
-  /* inset: 24px 300px 24px 300px; */
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-/* Center: empty, fly target for card animation only */
-.game-board__center {
-  display: block;
-  min-height: 2px;
-  height: 2px;
-  padding: 0;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.game-board__card-slot {
-  opacity: 0;
-  animation: game-board-card-appear 280ms ease-out forwards;
-  animation-delay: var(--card-enter-delay, 0ms);
-  will-change: transform, opacity;
-}
-
-.game-board__card-slot .game-card--small {
-  width: 121.6px;
-  height: 185.6px;
-}
-
-.game-board__card-slot .game-card.is-disabled {
-  opacity: 1;
-}
-
-.game-board__center .game-board__card-slot {
-  position: relative;
-}
-
-.game-board__center .game-board__card-slot:hover {
-  z-index: 1;
-}
-
-@keyframes game-board-card-appear {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .game-board__card-slot {
-    animation: none;
-    opacity: 1;
-  }
-}
-
 .game-log {
   position: absolute;
   top: 50%;
@@ -634,13 +573,6 @@
     display: none;
   }
 
-  .game-board {
-    position: relative;
-    inset: auto;
-    margin: 8px 12px;
-    min-height: 120px;
-  }
-
   .game-deck-panel {
     width: 100%;
     margin: 0;
@@ -684,19 +616,12 @@
   .game-battlefield-layout > .game-battlefield__divider:first-of-type {
     order: 2;
   }
-  .game-battlefield-layout > .game-board__center {
-    order: 3;
-  }
-  .game-battlefield-layout > .game-battlefield__divider:last-of-type {
-    order: 4;
-  }
   .game-battlefield-layout > .battlefield-self-col {
-    order: 5;
+    order: 3;
   }
 
   .game-battlefield-layout > .battlefield-self-col,
-  .game-battlefield-layout > .battlefield-enemy-col,
-  .game-battlefield-layout > .game-board__center {
+  .game-battlefield-layout > .battlefield-enemy-col {
     width: auto;
     min-width: 0;
     max-width: none;
@@ -830,25 +755,21 @@
   justify-content: center;
 }
 
-/* Smaller typography for board/played cards only */
-.battlefield-unit-card .game-card__name,
-.game-board__card-slot .game-card__name {
+/* Smaller typography for board cards only */
+.battlefield-unit-card .game-card__name {
   font-size: 12px;
 }
 
-.battlefield-unit-card .game-card__description,
-.game-board__card-slot .game-card__description {
+.battlefield-unit-card .game-card__description {
   font-size: 12px;
   line-height: 1.25;
 }
 
-.battlefield-unit-card .game-card__type,
-.game-board__card-slot .game-card__type {
+.battlefield-unit-card .game-card__type {
   font-size: 11px;
 }
 
-.battlefield-unit-card .game-card__mana-value,
-.game-board__card-slot .game-card__mana-value {
+.battlefield-unit-card .game-card__mana-value {
   font-size: 14px;
 }
 

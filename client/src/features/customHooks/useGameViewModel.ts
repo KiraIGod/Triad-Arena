@@ -13,7 +13,6 @@ type ViewPlayerState = {
   board: UnitInstance[];
   hand?: MatchStatePayload["state"]["players"]["player1"]["hand"];
   deckCount?: number;
-  discardCount?: number;
 };
 
 type UseGameViewModelParams = {
@@ -128,11 +127,6 @@ export function useGameViewModel({
     return match.state.players[baseState.selfKey].deckCount ?? 0;
   }, [baseState.selfIndex, baseState.selfKey, match]);
 
-  const selfDiscardCount = useMemo(() => {
-    if (!match || baseState.selfIndex < 0) return 0;
-    return match.state.players[baseState.selfKey].discardCount ?? 0;
-  }, [baseState.selfIndex, baseState.selfKey, match]);
-
   const matchResultLabel = useMemo(() => {
     if (finishReason === "opponent_left") return "Opponent cowardly left the arena";
     if (!winnerId || !userIdStr) return null;
@@ -197,7 +191,6 @@ export function useGameViewModel({
     ...baseState,
     handCards,
     selfDeckCount,
-    selfDiscardCount,
     matchResultLabel,
     isMatchFinished,
     boardNotice,
