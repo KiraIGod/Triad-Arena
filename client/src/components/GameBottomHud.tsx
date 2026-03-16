@@ -1,4 +1,3 @@
-import type { MutableRefObject } from "react";
 import StatusBadges, { type StatusView } from "./StatusBadges";
 
 type GameBottomHudProps = {
@@ -14,7 +13,6 @@ type GameBottomHudProps = {
   matchExists: boolean;
   isMatchFinished: boolean;
   onEndTurnClick: () => void;
-  heroRef?: MutableRefObject<HTMLElement | null>;
 };
 
 export default function GameBottomHud({
@@ -26,10 +24,9 @@ export default function GameBottomHud({
   matchExists,
   isMatchFinished,
   onEndTurnClick,
-  heroRef,
 }: GameBottomHudProps) {
   return (
-    <footer className="game-hud game-hud--bottom parchment-panel" ref={heroRef}>
+    <footer className="game-hud game-hud--bottom parchment-panel">
       <div className="game-hud__identity">
         <div className="game-hud__accent game-hud__accent--gold" />
         <div>

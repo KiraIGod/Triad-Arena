@@ -550,6 +550,10 @@
   z-index: 1000 !important;
 }
 
+.game-hand__slot.is-selected .game-card__hover-glow {
+  opacity: 1;
+}
+
 .game-hand__slot[draggable="true"] {
   cursor: grab;
 }
