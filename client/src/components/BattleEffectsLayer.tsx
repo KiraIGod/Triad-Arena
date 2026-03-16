@@ -113,21 +113,23 @@ export default function BattleEffectsLayer({
             <motion.div
               key={effect.id}
               className="battle-effects-layer__card"
-              initial={{
+              style={{
                 left: effect.from.left,
                 top: effect.from.top,
                 width: effect.from.width,
                 height: effect.from.height,
+              }}
+              initial={{
+                x: 0,
+                y: 0,
                 opacity: 1,
                 scale: 1,
               }}
               animate={{
-                left: effect.to.left,
-                top: effect.to.top,
-                width: effect.to.width,
-                height: effect.to.height,
+                x: effect.to.left - effect.from.left,
+                y: effect.to.top - effect.from.top,
                 opacity: 0.92,
-                scale: 0.92,
+                scale: effect.to.width / effect.from.width,
               }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.45, ease: "easeInOut" }}

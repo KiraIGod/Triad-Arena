@@ -579,6 +579,8 @@ async function handlePlayCard(io, socket, payload = {}) {
       playerId,
       cardId,
       actionId: actionId || null,
+      targetType: targetType || "hero",
+      targetId: targetId || null,
       card: {
         id: cardData.id,
         name: cardData.name,

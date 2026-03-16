@@ -5,9 +5,12 @@ import "./MatchBoard.css";
 type MatchBoardProps = {
   selfUnits: ReactNode;
   enemyUnits: ReactNode;
+  opponentHandCount?: number;
   selfPlayedHistory?: ReactNode;
   enemyPlayedHistory?: ReactNode;
+  opponentHandRef?: (element: HTMLDivElement | null) => void;
   selfUnitsRef?: (element: HTMLDivElement | null) => void;
+  enemyUnitsRef?: (element: HTMLDivElement | null) => void;
   enemyHint?: ReactNode;
   enemyTargeting?: boolean;
   spellNotice?: string | null;
@@ -18,9 +21,12 @@ type MatchBoardProps = {
 export default function MatchBoard({
   selfUnits,
   enemyUnits,
+  opponentHandCount = 0,
   selfPlayedHistory = null,
   enemyPlayedHistory = null,
+  opponentHandRef,
   selfUnitsRef,
+  enemyUnitsRef,
   enemyHint = null,
   enemyTargeting = false,
   spellNotice = null,
@@ -42,21 +48,47 @@ export default function MatchBoard({
         </div>
       )}
 
+      <aside className="battlefield-opponent-hand-col card-panel">
+        <p className="battlefield-col-title">Opponent Hand</p>
+        <div className="battlefield-opponent-hand-list" ref={opponentHandRef}>
+          {opponentHandCount > 0 ? (
+            Array.from({ length: opponentHandCount }).map((_, index) => (
+              <div
+                key={`opponent-hand-back-${index}`}
+                className="battlefield-opponent-hand-card"
+                style={{ zIndex: index + 1 }}
+                aria-hidden
+              >
+                <div className="battlefield-opponent-hand-card__inner" />
+              </div>
+            ))
+          ) : (
+            <span className="battlefield-empty">No cards</span>
+          )}
+        </div>
+      </aside>
+
       <div className="game-battlefield-main">
         <div className="battlefield-enemy-col">
           {enemyHint}
-          <div className={`battlefield-row battlefield-row--enemy app-scrollbar${enemyTargeting ? " battlefield-row--enemy-targeting" : ""}`}>
+          <div
+            className={`battlefield-row battlefield-row--enemy app-scrollbar${enemyTargeting ? " battlefield-row--enemy-targeting" : ""}`}
+          >
             <p className="battlefield-col-title">Enemy Units</p>
-            {enemyUnits}
+            <div className="battlefield-row__content" ref={enemyUnitsRef}>
+              {enemyUnits}
+            </div>
           </div>
         </div>
 
         <div className="game-battlefield__divider" />
 
         <div className="battlefield-self-col">
-          <div className="battlefield-row battlefield-row--self app-scrollbar" ref={selfUnitsRef}>
+          <div className="battlefield-row battlefield-row--self app-scrollbar">
             <p className="battlefield-col-title">My Units</p>
-            {selfUnits}
+            <div className="battlefield-row__content" ref={selfUnitsRef}>
+              {selfUnits}
+            </div>
           </div>
         </div>
       </div>

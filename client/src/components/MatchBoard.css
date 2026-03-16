@@ -29,12 +29,171 @@
     inset 0 1px 0 rgba(255, 214, 214, 0.14);
 }
 
+.game-battlefield-layout {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.battlefield-target-overlay {
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.battlefield-enemy-col,
+.battlefield-self-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 880px;
+  min-width: 0;
+  flex: 1 1 0;
+}
+
+.game-battlefield__divider {
+  width: 100%;
+  max-width: 880px;
+  flex-shrink: 0;
+  background: #000;
+  box-shadow: 0 1px 0 rgba(168, 62, 54, 0.3);
+}
+
+.battlefield-row,
+.battlefield-row--enemy,
+.battlefield-row--self {
+  display: contents;
+}
+
+.battlefield-units-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 880px;
+  min-width: 0;
+  flex-shrink: 1;
+}
+
+.battlefield-empty {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.battlefield-col-title {
+  width: 100%;
+  margin: 2px 0;
+  padding: 0;
+  text-align: center;
+  font-family: var(--font-accent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #cca880;
+  flex-shrink: 0;
+  text-shadow: 2px 2px 2px rgba(0, 0, 0, 0.753);
+}
+
 .game-battlefield-main {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+}
+
+.battlefield-opponent-hand-col {
+  width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  flex: 0 0 160px;
+  padding: 10px 8px;
+  background: rgba(19, 15, 11, 0.9);
+}
+
+.battlefield-opponent-hand-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 0;
+  flex: 1 1 auto;
+  padding-top: 4px;
+}
+
+.battlefield-opponent-hand-card {
+  position: relative;
+  width: 116px;
+  height: 176px;
+}
+
+.battlefield-opponent-hand-card + .battlefield-opponent-hand-card {
+  margin-top: -154px;
+}
+
+.battlefield-opponent-hand-card__inner {
+  width: 100%;
+  height: 100%;
+  border: 1px solid rgba(14, 10, 7, 0.9);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, rgba(36, 20, 18, 0.96) 0%, rgba(21, 13, 12, 0.98) 100%);
+  box-shadow:
+    0 12px 20px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 2px rgba(95, 31, 31, 0.5),
+    inset 0 0 0 6px rgba(19, 10, 10, 0.85);
+  position: relative;
+  overflow: hidden;
+}
+
+.battlefield-opponent-hand-card__inner::before,
+.battlefield-opponent-hand-card__inner::after {
+  content: "";
+  position: absolute;
+  inset: 14px;
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.battlefield-opponent-hand-card__inner::before {
+  border: 1px solid rgba(201, 169, 98, 0.18);
+  background:
+    radial-gradient(circle at center, rgba(168, 62, 54, 0.18) 0%, rgba(168, 62, 54, 0) 62%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(201, 169, 98, 0.08) 0,
+      rgba(201, 169, 98, 0.08) 8px,
+      rgba(0, 0, 0, 0.02) 8px,
+      rgba(0, 0, 0, 0.02) 16px
+    );
+}
+
+.battlefield-opponent-hand-card__inner::after {
+  inset: 44px 30px;
+  border: 1px solid rgba(201, 169, 98, 0.2);
+  box-shadow:
+    0 0 0 1px rgba(95, 31, 31, 0.35),
+    inset 0 0 24px rgba(168, 62, 54, 0.18);
 }
 
 .battlefield-history-col {
@@ -53,6 +212,16 @@
   flex: 1 1 0;
   padding: 10px 8px;
   background: rgba(19, 15, 11, 0.438);
+}
+
+.battlefield-row__content {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: 0;
+  width: 100%;
 }
 
 .battlefield-history-list {
@@ -95,6 +264,49 @@
     width: 100%;
     max-width: none;
     flex: 0 0 auto;
+  }
+
+  .battlefield-opponent-hand-col {
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+    min-height: 180px;
+  }
+
+  .battlefield-target-overlay {
+    top: -18px;
+    left: 0;
+    width: max-content;
+  }
+
+  .game-battlefield-layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .game-battlefield-layout > .game-battlefield-main,
+  .game-battlefield-layout > .battlefield-history-col {
+    width: 100%;
+    max-width: none;
+  }
+
+  .battlefield-row {
+    min-height: 90px;
+    flex-direction: row;
+    overflow: visible;
+  }
+
+  .battlefield-opponent-hand-list {
+    flex-direction: row;
+    align-items: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 8px;
+    padding-bottom: 4px;
+  }
+
+  .battlefield-opponent-hand-card + .battlefield-opponent-hand-card {
+    margin-top: 0;
   }
 
   .battlefield-history-panel {

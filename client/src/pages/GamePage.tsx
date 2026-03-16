@@ -49,6 +49,8 @@ function mapMatchErrorMessage(type?: string, fallback?: string): string {
 
 export default function GamePage() {
   const navigate = useNavigate();
+  const selfHeroRef = useRef<HTMLDivElement | null>(null);
+  const selfUnitElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     const html = document.documentElement;
@@ -97,6 +99,7 @@ export default function GamePage() {
     () => typeof window !== "undefined" && window.innerWidth <= 768,
   );
   const lastSpellNoticeEventIdRef = useRef<number | null>(null);
+  const lastOpponentPlayVisualEventIdRef = useRef<number | null>(null);
   const { playedCards, cardCatalog, applyEvents, resetBoard } = useMatchBoard();
   const {
     value: spellNotice,
@@ -117,15 +120,26 @@ export default function GamePage() {
   } = useTimedNotice();
   const {
     battleEffects,
+    selfHeroShakeToken,
+    selfHeroFlashToken,
     enemyHeroShakeToken,
     enemyHeroFlashToken,
+    selfUnitShake,
+    selfUnitFlash,
     enemyUnitShake,
     enemyUnitFlash,
     handCardElementsRef,
+    opponentHandZoneRef,
     selfUnitsZoneRef,
+    enemyUnitsZoneRef,
     enemyHeroRef,
     spawnCardFlyEffect,
+    spawnOpponentUnitFlyEffect,
     spawnSpellBurstEffect,
+    triggerSelfHeroShake,
+    triggerSelfHeroFlash,
+    triggerSelfUnitShake,
+    triggerSelfUnitFlash,
     triggerEnemyHeroShake,
     triggerEnemyHeroFlash,
     triggerEnemyUnitShake,
@@ -171,6 +185,78 @@ export default function GamePage() {
     [isSameUser, showSpellNoticeMessage],
   );
 
+  const showOpponentPlayVisual = useCallback(
+    (events?: MatchStatePayload["events"]) => {
+      if (!Array.isArray(events) || events.length === 0) return;
+
+      const latestOpponentCardEvent = [...events]
+        .reverse()
+        .find(
+          (event) =>
+            String(event?.type || "") === "CARD_PLAYED" &&
+            !isSameUser(event?.payload?.playerId),
+        );
+
+      if (!latestOpponentCardEvent?.payload?.card) return;
+      if (lastOpponentPlayVisualEventIdRef.current === latestOpponentCardEvent.eventId) return;
+      lastOpponentPlayVisualEventIdRef.current = latestOpponentCardEvent.eventId;
+
+      const card = latestOpponentCardEvent.payload.card;
+      const cardModel = {
+        id: card.id,
+        name: card.name,
+        type: String(card.type).toUpperCase() as "UNIT" | "SPELL" | "ARTIFACT",
+        triad_type: String(card.triad_type).toUpperCase() as "ASSAULT" | "PRECISION" | "ARCANE",
+        mana_cost: card.mana_cost,
+        attack: card.attack,
+        hp: card.hp,
+        description: card.description,
+        image: card.image || "crimson_duelist.png",
+        created_at: card.created_at,
+      };
+
+      if (String(card.type).toLowerCase() === "unit") {
+        spawnOpponentUnitFlyEffect(cardModel);
+        return;
+      }
+
+      if (String(card.type).toLowerCase() !== "spell") return;
+
+      const targetType = String(latestOpponentCardEvent.payload.targetType || "").toLowerCase();
+      const targetId = String(latestOpponentCardEvent.payload.targetId || "");
+      const targetRect =
+        targetType === "unit" && targetId
+          ? selfUnitElementsRef.current[targetId]?.getBoundingClientRect()
+            ?? selfUnitsZoneRef.current?.getBoundingClientRect()
+            ?? null
+          : selfHeroRef.current?.getBoundingClientRect() ?? null;
+
+      if (targetType === "unit" && targetId) {
+        triggerSelfUnitShake(targetId);
+        triggerSelfUnitFlash(targetId);
+      } else {
+        triggerSelfHeroShake();
+        triggerSelfHeroFlash();
+      }
+
+      spawnOpponentUnitFlyEffect(cardModel, targetRect);
+      const burstTargetRect = targetRect;
+      window.setTimeout(() => {
+        spawnSpellBurstEffect(cardModel.triad_type, burstTargetRect);
+      }, 120);
+    },
+    [
+      isSameUser,
+      selfUnitsZoneRef,
+      spawnOpponentUnitFlyEffect,
+      spawnSpellBurstEffect,
+      triggerSelfHeroFlash,
+      triggerSelfHeroShake,
+      triggerSelfUnitFlash,
+      triggerSelfUnitShake,
+    ],
+  );
+
   useEffect(() => {
     const handleResize = () => setIsMobileView(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
@@ -195,11 +281,12 @@ export default function GamePage() {
       if (payload.state.finished) setTimerRemaining(0);
       setArenaMatchId(payload.matchId);
       if (payload.events?.length) {
+        showOpponentPlayVisual(payload.events);
         showSpellNotice(payload.events);
         applyEvents(payload.events);
       }
     },
-    [applyEvents, hideBattlefieldHint, hideHandHint, showSpellNotice],
+    [applyEvents, hideBattlefieldHint, hideHandHint, showOpponentPlayVisual, showSpellNotice],
   );
 
   const handleMatchUpdatePayload = useCallback(
@@ -211,11 +298,12 @@ export default function GamePage() {
       setMatch(payload);
       if (payload.state.finished) setTimerRemaining(0);
       if (payload.events?.length) {
+        showOpponentPlayVisual(payload.events);
         showSpellNotice(payload.events);
         applyEvents(payload.events);
       }
     },
-    [applyEvents, hideBattlefieldHint, hideHandHint, showSpellNotice],
+    [applyEvents, hideBattlefieldHint, hideHandHint, showOpponentPlayVisual, showSpellNotice],
   );
 
   const handleMatchErrorPayload = useCallback(
@@ -472,6 +560,10 @@ export default function GamePage() {
           onDrop={handleBattlefieldDrop}
         >
           <MatchBoard
+            opponentHandCount={oppStats.hand?.length ?? 0}
+            opponentHandRef={(element) => {
+              opponentHandZoneRef.current = element;
+            }}
             enemyHint={
               isAnyTargetingMode ? (
                 <div className="battlefield-target-overlay">
@@ -508,6 +600,9 @@ export default function GamePage() {
             selfUnitsRef={(element) => {
               selfUnitsZoneRef.current = element;
             }}
+            enemyUnitsRef={(element) => {
+              enemyUnitsZoneRef.current = element;
+            }}
             selfUnits={
               selfStats.board.length > 0 ? (
                 <div className="battlefield-units-wrap">
@@ -521,10 +616,22 @@ export default function GamePage() {
                         isMyTurn={isMyTurn}
                         isAnyTargetingMode={isAnyTargetingMode}
                         selectedAttackerId={selectedAttackerId}
-                        shakeToken={0}
+                        shakeToken={
+                          selfUnitShake.id === unit.instanceId
+                            ? selfUnitShake.token
+                            : 0
+                        }
+                        flashToken={
+                          selfUnitFlash.id === unit.instanceId
+                            ? selfUnitFlash.token
+                            : 0
+                        }
                         cardCatalog={cardCatalog}
                         onOwnUnitClick={handleMyUnitClick}
                         onEnemyUnitClick={handleEnemyUnitClick}
+                        onMount={(unitId, element) => {
+                          selfUnitElementsRef.current[unitId] = element;
+                        }}
                       />
                     ))}
                   </AnimatePresence>
@@ -644,6 +751,9 @@ export default function GamePage() {
         matchExists={Boolean(match)}
         isMatchFinished={Boolean(match?.state.finished)}
         onEndTurnClick={handleEndTurnClick}
+        heroRef={selfHeroRef}
+        heroShakeToken={selfHeroShakeToken}
+        heroFlashToken={selfHeroFlashToken}
       />
 
       <BattleEffectsLayer effects={battleEffects} onComplete={completeEffect} />

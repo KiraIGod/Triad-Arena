@@ -9,6 +9,7 @@
   position: fixed;
   pointer-events: none;
   will-change: left, top, width, height, opacity, transform;
+  transform-origin: top left;
 }
 
 .battle-effects-layer__burst {

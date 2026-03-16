@@ -1,3 +1,5 @@
+import { motion } from "motion/react";
+import type { MutableRefObject } from "react";
 import StatusBadges, { type StatusView } from "./StatusBadges";
 
 type GameBottomHudProps = {
@@ -13,6 +15,9 @@ type GameBottomHudProps = {
   matchExists: boolean;
   isMatchFinished: boolean;
   onEndTurnClick: () => void;
+  heroRef?: MutableRefObject<HTMLDivElement | null>;
+  heroShakeToken?: number;
+  heroFlashToken?: number;
 };
 
 export default function GameBottomHud({
@@ -24,9 +29,28 @@ export default function GameBottomHud({
   matchExists,
   isMatchFinished,
   onEndTurnClick,
+  heroRef,
+  heroShakeToken = 0,
+  heroFlashToken = 0,
 }: GameBottomHudProps) {
   return (
-    <footer className="game-hud game-hud--bottom parchment-panel">
+    <motion.footer
+      className="game-hud game-hud--bottom parchment-panel"
+      ref={heroRef}
+      key={`self-hero-shake-${heroShakeToken}`}
+      initial={{ x: 0 }}
+      animate={heroShakeToken > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+      transition={{ duration: 0.24, ease: "easeOut" }}
+    >
+      {heroFlashToken > 0 && (
+        <motion.span
+          key={`self-hero-flash-${heroFlashToken}`}
+          className="game-state__hit-flash"
+          initial={{ opacity: 0, scale: 0.94 }}
+          animate={{ opacity: [0, 0.9, 0], scale: [0.94, 1.04, 1] }}
+          transition={{ duration: 0.34, ease: "easeOut" }}
+        />
+      )}
       <div className="game-hud__identity">
         <div className="game-hud__accent game-hud__accent--gold" />
         <div>
@@ -68,6 +92,6 @@ export default function GameBottomHud({
           End Turn
         </button>
       </div>
-    </footer>
+    </motion.footer>
   );
 }

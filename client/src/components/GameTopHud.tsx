@@ -69,26 +69,17 @@ export default function GameTopHud({
           </div>
         </div>
 
-        <div className="game-hp">
-          <div className="game-hp__meta">
-            <span>Death&apos;s Door</span>
-            <strong className="comic-text-shadow">
-              {Math.round(opponentHPPercent)}% | HP {oppStats.hp} | SH {oppStats.shield}
-            </strong>
-          </div>
-          <div className="game-hp__track ink-border-thin">
-            <div
-              className="game-hp__fill game-hp__fill--enemy blood-glow"
-              style={{ width: `${opponentHPPercent}%` }}
-            />
-          </div>
-        </div>
-
         <div
-          className={`game-state${isAnyTargetingMode ? " game-state--attackable" : ""}`}
+          className={`game-hp${isAnyTargetingMode ? " game-hp--attackable" : ""}`}
           ref={enemyHeroRef}
           onClick={handleEnemyHeroClick}
-          title={isSelectingSpellTarget ? "Cast spell on enemy hero" : isSelectingTarget ? "Attack enemy hero" : undefined}
+          title={
+            isSelectingSpellTarget
+              ? "Cast spell on enemy hero"
+              : isSelectingTarget
+                ? "Attack enemy hero"
+                : undefined
+          }
           style={{ cursor: isAnyTargetingMode ? "crosshair" : undefined }}
         >
           <motion.div
@@ -96,7 +87,7 @@ export default function GameTopHud({
             initial={{ x: 0 }}
             animate={enemyHeroShakeToken > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
             transition={{ duration: 0.24, ease: "easeOut" }}
-            className="game-state__content"
+            className="game-hp__content"
           >
             {enemyHeroFlashToken > 0 && (
               <motion.span
@@ -107,6 +98,23 @@ export default function GameTopHud({
                 transition={{ duration: 0.34, ease: "easeOut" }}
               />
             )}
+            <div className="game-hp__meta">
+              <span>Death&apos;s Door</span>
+              <strong className="comic-text-shadow">
+                {Math.round(opponentHPPercent)}% | HP {oppStats.hp} | SH {oppStats.shield}
+              </strong>
+            </div>
+            <div className="game-hp__track ink-border-thin">
+              <div
+                className="game-hp__fill game-hp__fill--enemy blood-glow"
+                style={{ width: `${opponentHPPercent}%` }}
+              />
+            </div>
+          </motion.div>
+        </div>
+
+        <div className="game-state">
+          <div className="game-state__content">
             <p className="game-state__label">Opponent Status</p>
             <p className="game-state__value">
               {(oppStats.statuses || []).length
@@ -115,7 +123,7 @@ export default function GameTopHud({
                 : isSelectingTarget ? "\u2190 Click to attack hero"
                 : "None"}
             </p>
-          </motion.div>
+          </div>
         </div>
       </header>
 

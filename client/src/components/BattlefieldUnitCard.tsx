@@ -95,15 +95,15 @@ export default function BattlefieldUnitCard({
       }}
     >
       <motion.div
-        key={!isOwn && shakeToken > 0 ? `${unit.instanceId}-shake-${shakeToken}` : `${unit.instanceId}-steady`}
+        key={shakeToken > 0 ? `${unit.instanceId}-shake-${shakeToken}` : `${unit.instanceId}-steady`}
         initial={{ x: 0 }}
-        animate={!isOwn && shakeToken > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
+        animate={shakeToken > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
         transition={{ duration: 0.24, ease: "easeOut" }}
       >
         <GameCard card={card} size="small" />
-        <span className="battlefield-unit__stats-tooltip" aria-hidden>
+        {/* <span className="battlefield-unit__stats-tooltip" aria-hidden>
           ATK {unit.attack} | HP {unit.hp}
-        </span>
+        </span> */}
         {flashToken > 0 && (
           <motion.span
             key={`${unit.instanceId}-flash-${flashToken}`}

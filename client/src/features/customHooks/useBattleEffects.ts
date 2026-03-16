@@ -13,8 +13,12 @@ type UnitShakeState = {
 
 type BattleEffectsState = {
   battleEffects: BattleEffect[];
+  selfHeroShakeToken: number;
+  selfHeroFlashToken: number;
   enemyHeroShakeToken: number;
   enemyHeroFlashToken: number;
+  selfUnitShake: UnitShakeState;
+  selfUnitFlash: UnitShakeState;
   enemyUnitShake: UnitShakeState;
   enemyUnitFlash: UnitShakeState;
 };
@@ -23,23 +27,38 @@ type BattleEffectsAction =
   | { type: "cardFlySpawned"; effect: Extract<BattleEffect, { type: "card_fly" }> }
   | { type: "effectSpawned"; effect: Exclude<BattleEffect, { type: "card_fly" }> }
   | { type: "effectCompleted"; effect: BattleEffect }
+  | { type: "selfHeroShakeTriggered" }
+  | { type: "selfHeroFlashTriggered" }
   | { type: "enemyHeroShakeTriggered" }
   | { type: "enemyHeroFlashTriggered" }
+  | { type: "selfUnitShakeTriggered"; unitId: string }
+  | { type: "selfUnitFlashTriggered"; unitId: string }
   | { type: "enemyUnitShakeTriggered"; unitId: string }
   | { type: "enemyUnitFlashTriggered"; unitId: string };
 
 type UseBattleEffectsResult = {
   battleEffects: BattleEffect[];
+  selfHeroShakeToken: number;
+  selfHeroFlashToken: number;
   enemyHeroShakeToken: number;
   enemyHeroFlashToken: number;
+  selfUnitShake: UnitShakeState;
+  selfUnitFlash: UnitShakeState;
   enemyUnitShake: UnitShakeState;
   enemyUnitFlash: UnitShakeState;
   handCardElementsRef: React.MutableRefObject<Record<string, HTMLDivElement | null>>;
+  opponentHandZoneRef: React.MutableRefObject<HTMLDivElement | null>;
   selfUnitsZoneRef: React.MutableRefObject<HTMLDivElement | null>;
+  enemyUnitsZoneRef: React.MutableRefObject<HTMLDivElement | null>;
   enemyHeroRef: React.MutableRefObject<HTMLDivElement | null>;
   spawnCardFlyEffect: (card: CardModel, targetRect?: DOMRect | null) => void;
+  spawnOpponentUnitFlyEffect: (card: CardModel, targetRect?: DOMRect | null) => void;
   spawnSpellBurstEffect: (triadType: CardModel["triad_type"], targetRect?: DOMRect | null) => void;
   spawnHitTextEffect: (text: string, targetRect?: DOMRect | null, tone?: HitTextEffect["tone"]) => void;
+  triggerSelfHeroShake: () => void;
+  triggerSelfHeroFlash: () => void;
+  triggerSelfUnitShake: (unitId: string) => void;
+  triggerSelfUnitFlash: (unitId: string) => void;
   triggerEnemyHeroShake: () => void;
   triggerEnemyHeroFlash: () => void;
   triggerEnemyUnitShake: (unitId: string) => void;
@@ -49,8 +68,12 @@ type UseBattleEffectsResult = {
 
 const initialState: BattleEffectsState = {
   battleEffects: [],
+  selfHeroShakeToken: 0,
+  selfHeroFlashToken: 0,
   enemyHeroShakeToken: 0,
   enemyHeroFlashToken: 0,
+  selfUnitShake: { id: null, token: 0 },
+  selfUnitFlash: { id: null, token: 0 },
   enemyUnitShake: { id: null, token: 0 },
   enemyUnitFlash: { id: null, token: 0 },
 };
@@ -80,6 +103,18 @@ function battleEffectsReducer(
       };
     }
 
+    case "selfHeroShakeTriggered":
+      return {
+        ...state,
+        selfHeroShakeToken: state.selfHeroShakeToken + 1,
+      };
+
+    case "selfHeroFlashTriggered":
+      return {
+        ...state,
+        selfHeroFlashToken: state.selfHeroFlashToken + 1,
+      };
+
     case "enemyHeroShakeTriggered":
       return {
         ...state,
@@ -90,6 +125,24 @@ function battleEffectsReducer(
       return {
         ...state,
         enemyHeroFlashToken: state.enemyHeroFlashToken + 1,
+      };
+
+    case "selfUnitShakeTriggered":
+      return {
+        ...state,
+        selfUnitShake: {
+          id: action.unitId,
+          token: state.selfUnitShake.token + 1,
+        },
+      };
+
+    case "selfUnitFlashTriggered":
+      return {
+        ...state,
+        selfUnitFlash: {
+          id: action.unitId,
+          token: state.selfUnitFlash.token + 1,
+        },
       };
 
     case "enemyUnitShakeTriggered":
@@ -119,7 +172,9 @@ export function useBattleEffects(): UseBattleEffectsResult {
   const [state, dispatch] = useReducer(battleEffectsReducer, initialState);
 
   const handCardElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
+  const opponentHandZoneRef = useRef<HTMLDivElement | null>(null);
   const selfUnitsZoneRef = useRef<HTMLDivElement | null>(null);
+  const enemyUnitsZoneRef = useRef<HTMLDivElement | null>(null);
   const enemyHeroRef = useRef<HTMLDivElement | null>(null);
 
   const spawnCardFlyEffect = useCallback((card: CardModel, targetRect?: DOMRect | null) => {
@@ -158,6 +213,48 @@ export function useBattleEffects(): UseBattleEffectsResult {
           top: targetTop,
           width: targetWidth,
           height: targetHeight,
+        },
+      },
+    });
+  }, []);
+
+  const spawnOpponentUnitFlyEffect = useCallback((card: CardModel, targetRect?: DOMRect | null) => {
+    const fromZone = opponentHandZoneRef.current;
+    const toZone = enemyUnitsZoneRef.current;
+
+    if (!fromZone) return;
+    if (!targetRect && !toZone) return;
+
+    const fromZoneRect = fromZone.getBoundingClientRect();
+    const toZoneRect = targetRect ?? toZone?.getBoundingClientRect();
+    if (!toZoneRect) return;
+    const fromWidth = 116;
+    const fromHeight = 176;
+    const toWidth = fromWidth * 0.8;
+    const toHeight = fromHeight * 0.8;
+    const fromLeft = fromZoneRect.left + fromZoneRect.width / 2 - fromWidth / 2;
+    const fromTop = fromZoneRect.top + fromZoneRect.height / 2 - fromHeight / 2;
+    const toLeft = toZoneRect.left + toZoneRect.width / 2 - toWidth / 2;
+    const toTop = toZoneRect.top + toZoneRect.height / 2 - toHeight / 2;
+
+    dispatch({
+      type: "cardFlySpawned",
+      effect: {
+        id: `opp-fly-${Date.now()}-${card.id}`,
+        type: "card_fly",
+        playedCardId: card.id,
+        card,
+        from: {
+          left: fromLeft,
+          top: fromTop,
+          width: fromWidth,
+          height: fromHeight,
+        },
+        to: {
+          left: toLeft,
+          top: toTop,
+          width: toWidth,
+          height: toHeight,
         },
       },
     });
@@ -209,12 +306,28 @@ export function useBattleEffects(): UseBattleEffectsResult {
     });
   }, []);
 
+  const triggerSelfHeroShake = useCallback(() => {
+    dispatch({ type: "selfHeroShakeTriggered" });
+  }, []);
+
+  const triggerSelfHeroFlash = useCallback(() => {
+    dispatch({ type: "selfHeroFlashTriggered" });
+  }, []);
+
   const triggerEnemyHeroShake = useCallback(() => {
     dispatch({ type: "enemyHeroShakeTriggered" });
   }, []);
 
   const triggerEnemyHeroFlash = useCallback(() => {
     dispatch({ type: "enemyHeroFlashTriggered" });
+  }, []);
+
+  const triggerSelfUnitShake = useCallback((unitId: string) => {
+    dispatch({ type: "selfUnitShakeTriggered", unitId });
+  }, []);
+
+  const triggerSelfUnitFlash = useCallback((unitId: string) => {
+    dispatch({ type: "selfUnitFlashTriggered", unitId });
   }, []);
 
   const triggerEnemyUnitShake = useCallback((unitId: string) => {
@@ -231,16 +344,27 @@ export function useBattleEffects(): UseBattleEffectsResult {
 
   return {
     battleEffects: state.battleEffects,
+    selfHeroShakeToken: state.selfHeroShakeToken,
+    selfHeroFlashToken: state.selfHeroFlashToken,
     enemyHeroShakeToken: state.enemyHeroShakeToken,
     enemyHeroFlashToken: state.enemyHeroFlashToken,
+    selfUnitShake: state.selfUnitShake,
+    selfUnitFlash: state.selfUnitFlash,
     enemyUnitShake: state.enemyUnitShake,
     enemyUnitFlash: state.enemyUnitFlash,
     handCardElementsRef,
+    opponentHandZoneRef,
     selfUnitsZoneRef,
+    enemyUnitsZoneRef,
     enemyHeroRef,
     spawnCardFlyEffect,
+    spawnOpponentUnitFlyEffect,
     spawnSpellBurstEffect,
     spawnHitTextEffect,
+    triggerSelfHeroShake,
+    triggerSelfHeroFlash,
+    triggerSelfUnitShake,
+    triggerSelfUnitFlash,
     triggerEnemyHeroShake,
     triggerEnemyHeroFlash,
     triggerEnemyUnitShake,
