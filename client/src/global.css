@@ -1,0 +1,24 @@
+*:focus {
+  outline: none !important;
+}
+
+*:focus-visible {
+  outline: 2px solid #c9a34e !important;
+  outline-offset: 2px !important;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  border-color: #c9a34e !important;
+  box-shadow: 0 0 0 1px rgba(201, 163, 78, 0.4) !important;
+}
+
+.ant-input:focus,
+.ant-input-focused,
+.ant-btn:focus,
+.ant-btn:focus-visible {
+  border-color: #c9a34e !important;
+  box-shadow: 0 0 0 2px rgba(201, 163, 78, 0.2) !important;
+}

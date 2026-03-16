@@ -14,6 +14,7 @@ import type { DeckSummary } from "../types/lobby"
 import type { MatchHistoryEntry, PlayerStats } from "../shared/api/lobbyApi"
 import { FriendList } from "../components/lobby/FriendList"
 import styles from "./LobbyPage.module.css"
+import { Link } from "react-router-dom"
 
 type GameMode = "normal" | "ranked" | "private"
 
@@ -121,7 +122,9 @@ export default function LobbyPage() {
         <div className={styles.brandWrap}>
           <div className={styles.brandAccent} />
           <div className={styles.brand}>
-            <h1 className={styles.title}>Triad Arena</h1>
+            <Link to="/" className={styles.link}>
+              <h1 className={styles.title}>TRIAD ARENA</h1>
+            </Link>
           </div>
         </div>
 

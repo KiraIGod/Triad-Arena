@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react"
+import { AnimatePresence, motion } from "motion/react"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useAppSelector } from "../store";
-import type { CardModel } from "../components/Card";
-import HandCards from "../components/HandCards";
-import socket from "../shared/socket/socket";
+import type { CardModel } from "../components/Card"
+import HandCards from "../components/HandCards"
+import socket from "../shared/socket/socket"
 import {
   attackWithUnit,
   endMatchTurn,
@@ -759,7 +759,7 @@ export default function GamePage() {
             <p className="game-log__entry">Deck: {selfDeckCount}</p>
             <p className="game-log__entry">Discard: {selfDiscardCount}</p>
             <p className="game-log__entry">Hand: {handCards.length}</p>
-            
+
             {triadComboInfo && (
               <div className={`game-triad-combo game-triad-combo--${triadComboInfo.type}`}>
                 <span className="game-triad-combo__label">Triad Combo</span>

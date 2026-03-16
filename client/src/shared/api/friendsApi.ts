@@ -23,6 +23,7 @@ export interface ChatMessage {
   text: string
   createdAt: string
   updatedAt: string
+  isRead?: boolean
 }
 
 export const fetchFriendsList = async (
@@ -64,6 +65,25 @@ export const fetchChatHistory = async (
   friendId: string,
 ): Promise<ChatMessage[]> => {
   const response = await axiosInstance.get(`/friends/${friendId}/messages`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return response.data
+}
+
+export const fetchUnreadCounts = async (
+  token: string
+): Promise<Record<string, number>> => {
+  const response = await axiosInstance.get("/friends/messages/unread", {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  return response.data
+}
+
+export const markMessagesAsRead = async (
+  token: string,
+  friendId: string
+): Promise<void> => {
+  const response = await axiosInstance.put(`/friends/${friendId}/messages/read`, {}, {
     headers: { Authorization: `Bearer ${token}` },
   })
   return response.data

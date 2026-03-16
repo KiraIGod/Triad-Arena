@@ -85,6 +85,29 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.15em;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.link {
+  text-decoration: none;
+  cursor: pointer;
+  display: block;
+}
+
+.link .title {
+  color: #ffffff;
+}
+
+.link:hover .title {
+  color: var(--gold);
+  text-shadow:
+    0 0 8px rgba(201, 169, 98, 0.8),
+    0 0 16px rgba(201, 169, 98, 0.6);
+}
+
+.link:focus,
+.link:focus-visible {
+  outline: none;
 }
 
 .subtitle {
@@ -223,8 +246,6 @@
     padding: 0.4rem 0;
   }
 }
-
-/* ─── Game invite banner ───────────────────────────────────────────────── */
 
 .inviteBanner {
   position: fixed;

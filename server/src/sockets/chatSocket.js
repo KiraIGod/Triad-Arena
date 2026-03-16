@@ -2,6 +2,10 @@ const db = require('../db/models')
 const ChatMessage = db.ChatMessage
 
 function registerChatSocket(io, socket) {
+  if (socket.data?.userId) {
+    socket.join(socket.data.userId)
+  }
+
   const getRoomName = (id1, id2) => {
     return [String(id1), String(id2)].sort().join('_')
   }
@@ -54,7 +58,12 @@ function registerChatSocket(io, socket) {
 
       io.to(roomName).emit("receive_private_message", messageData)
       console.log(`[ChatSocket SEND] Отправлено в комнату ${roomName}`)
-    } catch (error) {
+
+      socket.to(friendId).emit('new_message_notification', {
+        senderId: myId
+      })
+    }
+      catch (error) {
       console.error('[ChatSocket Error] Ошибка БД:', error)
     }
   })

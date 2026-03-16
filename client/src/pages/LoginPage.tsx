@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Card, Typography, Form, Input, Button, message } from "antd"
+import { Typography, Form, Input, Button, notification } from "antd"
 import type { FormProps } from "antd"
 import { useAppDispatch } from "../store"
 import { setCredentials } from "../features/auth/authSlice"
@@ -29,9 +29,17 @@ export default function LoginPage() {
         },
       )
       dispatch(setCredentials({ token: data.token, userId: data.userId, nickname: typeof data.nickname === "string" ? data.nickname : "" }))
-      message.success("Login completed")
+
+      notification.success({
+        message: "Login completed",
+        placement: 'top',
+        className: 'arena-custom-notification',
+        duration: 3,
+      })
+
       navigate("/lobby", { replace: true })
-    } catch (err) {
+    }
+      catch (err) {
       const msg =
         err &&
           typeof err === "object" &&
@@ -41,8 +49,14 @@ export default function LoginPage() {
           ? (err as { response: { data: { message: string } } }).response.data
             .message
           : "Login error"
-      message.error(msg)
-    } finally {
+
+      notification.error({
+        message: msg,
+        placement: 'top',
+        className: 'arena-custom-notification',
+      })
+    }
+      finally {
       setLoading(false)
     }
   }

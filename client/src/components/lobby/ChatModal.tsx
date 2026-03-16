@@ -33,6 +33,8 @@ const ChatModal = ({ friend, onClose }: ChatModalProps) => {
   const socketRef = useRef<Socket | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
+  const isInitialScroll = useRef(true)
+
   const token = useAppSelector((state) => state.auth.token)
   const myUserId = useAppSelector((state) => state.auth.userId)
 
@@ -121,7 +123,14 @@ const ChatModal = ({ friend, onClose }: ChatModalProps) => {
   }, [friend.id, token, myUserId])
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (messages.length === 0) return;
+
+    if (isInitialScroll.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
+      isInitialScroll.current = false;
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [messages])
 
   const sendMessage = (e: React.FormEvent) => {

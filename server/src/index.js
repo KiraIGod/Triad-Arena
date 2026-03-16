@@ -32,7 +32,8 @@ app.use("/api/players", playersRoutes)
 app.use('/static', express.static(path.join(__dirname, 'public')))
 app.use('/api/friends', friendsRouter)
 
-initSocket(server)
+const io = initSocket(server)
+app.set('io', io)
 
 const PORT = process.env.PORT || 3001
 server.listen(PORT, () => {

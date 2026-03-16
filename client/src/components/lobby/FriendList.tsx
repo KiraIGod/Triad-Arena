@@ -1,47 +1,120 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import './FriendList.css'
 import { FriendRequestsModal } from './FriendRequestModal'
-import { fetchFriendsList, sendFriendRequest, Friend, FriendRequest } from '../../shared/api/friendsApi'
 import { useAppSelector } from '../../store'
 import ChatModal from './ChatModal'
+import { io } from 'socket.io-client'
+import { Badge, notification } from 'antd'
+import { isAxiosError } from 'axios'
+
+import {
+  fetchFriendsList,
+  sendFriendRequest,
+  Friend,
+  FriendRequest,
+  fetchUnreadCounts,
+  markMessagesAsRead
+} from '../../shared/api/friendsApi'
 
 type FriendListProps = {
-  privateArenaId?: string | null;
-  onSendInvite?: (arenaId: string, targetUserId: string) => Promise<{ error?: string }>;
-  onInviteResult?: (res: { error?: string }) => void;
-};
+  privateArenaId?: string | null
+  onSendInvite?: (arenaId: string, targetUserId: string) => Promise<{ error?: string }>
+  onInviteResult?: (res: { error?: string }) => void
+}
 
 export const FriendList: React.FC<FriendListProps> = ({ privateArenaId, onSendInvite, onInviteResult }) => {
   const token = useAppSelector((s) => s.auth.token)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [addUsername, setAddUsername] = useState("")
   const [isAdding, setIsAdding] = useState(false)
-
   const [activeChatFriend, setActiveChatFriend] = useState<Friend | null>(null)
-
   const [friends, setFriends] = useState<Friend[]>([])
   const [requests, setRequests] = useState<FriendRequest[]>([])
   const [loading, setLoading] = useState(true)
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({})
+  const activeChatRef = useRef<string | null>(null)
 
-  const loadFriends = async () => {
+  const loadFriends = useCallback(async () => {
     if (!token) return
     try {
       setLoading(true)
-      const data = await fetchFriendsList(token)
+      const [data, counts] = await Promise.all([
+        fetchFriendsList(token),
+        fetchUnreadCounts(token)
+      ])
+
       setFriends(data.friends)
       setRequests(data.requests)
+      setUnreadCounts(counts)
     }
-    catch (error) {
-      console.error('Failed to load friends', error)
+      catch (error) {
+      console.error('Failed to load friends or unread counts', error)
     }
-    finally {
+      finally {
       setLoading(false)
     }
-  };
+  }, [token])
 
   useEffect(() => {
     loadFriends()
-  }, [token])
+  }, [loadFriends])
+
+  useEffect(() => {
+    if (!token) return
+
+    const rawUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    const socketUrl = rawUrl.replace(/\/api\/?$/, '')
+
+    const socketInstance = io(socketUrl, {
+      auth: { token },
+      transports: ['websocket', 'polling'],
+      reconnection: true
+    })
+
+    socketInstance.on('new_message_notification', (data: { senderId: string }) => {
+      if (activeChatRef.current === data.senderId) return;
+
+      setUnreadCounts((prev) => ({
+        ...prev,
+        [data.senderId]: (prev[data.senderId] || 0) + 1
+      }))
+    })
+
+    socketInstance.on('friend_request_received', (data: { senderUsername: string }) => {
+      notification.info({
+        message: `New friend request from ${data.senderUsername}`,
+        placement: 'top',
+        className: 'arena-custom-notification',
+        duration: 3,
+      })
+      loadFriends()
+    })
+
+    socketInstance.on('friend_request_accepted', (data: { receiverUsername: string }) => {
+      notification.success({
+        message: `${data.receiverUsername} accepted your request`,
+        placement: 'top',
+        className: 'arena-custom-notification',
+        duration: 3,
+      })
+      loadFriends()
+    })
+
+    return () => {
+      socketInstance.disconnect()
+    }
+  }, [token, loadFriends])
+
+  useEffect(() => {
+    activeChatRef.current = activeChatFriend?.id || null
+
+    if (activeChatFriend && token) {
+      setUnreadCounts((prev) => ({ ...prev, [activeChatFriend.id]: 0 }))
+      markMessagesAsRead(token, activeChatFriend.id).catch((err) =>
+        console.error("Ошибка при сбросе счетчика в БД:", err)
+      )
+    }
+  }, [activeChatFriend, token])
 
   const onlineFriends = friends.filter((f) => f.status === "online")
   const offlineFriends = friends.filter((f) => f.status === "offline")
@@ -52,18 +125,37 @@ export const FriendList: React.FC<FriendListProps> = ({ privateArenaId, onSendIn
 
     try {
       await sendFriendRequest(token, addUsername)
-      alert('Request sent successfully!')
+
+      notification.success({
+        message: `Friend request sent to ${addUsername}`,
+        placement: 'top',
+        className: 'arena-custom-notification',
+        duration: 3,
+      })
+
       setAddUsername('')
       setIsAdding(false)
       loadFriends()
     }
-    catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to send request')
+    catch (error) {
+      let errorMessage = 'Failed to send request'
+
+      if (isAxiosError(error)) {
+        errorMessage = error.response?.data?.message || errorMessage
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      notification.error({
+        message: errorMessage,
+        placement: 'top',
+        className: 'arena-custom-notification',
+      })
     }
   }
 
   const refreshData = () => {
-    loadFriends();
+    loadFriends()
   }
 
   if (loading) {
@@ -121,12 +213,14 @@ export const FriendList: React.FC<FriendListProps> = ({ privateArenaId, onSendIn
               style={{ cursor: 'pointer' }}
             >
               <span className="status-dot online"></span>
-              <span className="friend-name">{friend.username}</span>
+              <Badge count={unreadCounts[friend.id]} offset={[6, -3]} size="small">
+                <span className="friend-name">{friend.username}</span>
+              </Badge>
               {privateArenaId && onSendInvite && (
                 <button
                   className="friend-invite-btn"
                   onClick={() => {
-                    onSendInvite(privateArenaId, friend.id).then((res) => onInviteResult?.(res));
+                    onSendInvite(privateArenaId, friend.id).then((res) => onInviteResult?.(res))
                   }}
                   title={`Invite ${friend.username}`}
                 >
@@ -149,7 +243,9 @@ export const FriendList: React.FC<FriendListProps> = ({ privateArenaId, onSendIn
               style={{ cursor: 'pointer' }}
             >
               <span className="status-dot offline"></span>
-              <span className="friend-name">{friend.username}</span>
+              <Badge count={unreadCounts[friend.id]} offset={[6, -3]} size="small">
+                <span className="friend-name">{friend.username}</span>
+              </Badge>
             </div>
           ))}
         </div>

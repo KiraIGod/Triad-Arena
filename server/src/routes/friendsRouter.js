@@ -54,7 +54,8 @@ router.get('/', jwtMiddleware, async (req, res) => {
     })
 
     res.json({ friends, requests })
-  } catch (error) {
+  }
+  catch (error) {
     console.error('Error fetching friends:', error)
     res.status(500).json({ message: 'Internal server error' })
   }
@@ -75,7 +76,12 @@ router.post('/request', jwtMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Username is required' })
     }
 
-    const targetUser = await User.findOne({ where: { nickname: targetUsername } })
+    const targetUser = await User.findOne({
+      where: db.sequelize.where(
+        db.sequelize.fn('lower', db.sequelize.col('nickname')),
+        db.sequelize.fn('lower', targetUsername)
+      )
+    })
 
     if (!targetUser) {
       return res.status(404).json({ message: 'User not found' })
@@ -104,6 +110,14 @@ router.post('/request', jwtMiddleware, async (req, res) => {
       status: 'pending'
     })
 
+    const io = req.app.get('io')
+    if (io) {
+      const sender = await User.findByPk(userId)
+      io.to(targetUser.id).emit('friend_request_received', {
+        senderUsername: sender ? sender.nickname : 'Неизвестный игрок'
+      })
+    }
+
     res.status(201).json({ message: 'Friend request sent successfully' })
   }
   catch (error) {
@@ -130,6 +144,15 @@ router.put('/respond', jwtMiddleware, async (req, res) => {
 
     if (action === 'accept') {
       await request.update({ status: 'accepted' })
+
+      const io = req.app.get('io')
+      if (io) {
+        const acceptor = await User.findByPk(userId)
+        io.to(request.userId).emit('friend_request_accepted', {
+          receiverUsername: acceptor ? acceptor.nickname : 'Неизвестный игрок'
+        })
+      }
+
       res.json({ message: 'Friend request accepted' })
     }
     else if (action === 'decline') {
@@ -166,8 +189,51 @@ router.get('/:friendId/messages', jwtMiddleware, async (req, res) => {
     })
 
     return res.status(200).json(messages)
-  } catch (error) {
+  }
+  catch (error) {
     console.error('[Friends API] Ошибка загрузки истории чата:', error)
+    return res.status(500).json({ message: 'Внутренняя ошибка сервера' })
+  }
+})
+
+router.get('/messages/unread', jwtMiddleware, async (req, res) => {
+  try {
+    const myId = getUserId(req)
+    if (!myId) return res.status(401).json({ message: 'Не авторизован' })
+
+    const unreadCounts = await ChatMessage.findAll({
+      where: { receiverId: myId, isRead: false },
+      attributes: ['senderId', [db.sequelize.fn('COUNT', db.sequelize.col('id')), 'count']],
+      group: ['senderId']
+    })
+
+    const countsMap = {}
+    unreadCounts.forEach(item => {
+      countsMap[item.senderId] = parseInt(item.get('count'), 10)
+    })
+
+    return res.status(200).json(countsMap)
+  }
+  catch (error) {
+    console.error('[Friends API] Ошибка получения счетчиков:', error)
+    return res.status(500).json({ message: 'Внутренняя ошибка сервера' })
+  }
+})
+
+router.put('/:friendId/messages/read', jwtMiddleware, async (req, res) => {
+  try {
+    const myId = getUserId(req)
+    const friendId = req.params.friendId
+
+    await ChatMessage.update(
+      { isRead: true },
+      { where: { receiverId: myId, senderId: friendId, isRead: false } }
+    )
+
+    return res.status(200).json({ message: 'Сообщения прочитаны' })
+  }
+  catch (error) {
+    console.error('[Friends API] Ошибка обновления статуса:', error)
     return res.status(500).json({ message: 'Внутренняя ошибка сервера' })
   }
 })

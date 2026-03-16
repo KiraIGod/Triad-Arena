@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Typography, Form, Input, Button, message } from "antd"
+import { Typography, Form, Input, Button, notification } from "antd"
 import type { FormProps } from "antd"
 import { useAppDispatch } from "../store"
 import { setCredentials } from "../features/auth/authSlice"
@@ -30,7 +30,14 @@ export default function RegisterPage() {
         },
       )
       dispatch(setCredentials({ token: data.token, userId: data.userId, nickname: typeof data.nickname === "string" ? data.nickname : "" }))
-      message.success("Registration is successful")
+
+      notification.success({
+        message: "Registration is successful",
+        placement: 'top',
+        className: 'arena-custom-notification',
+        duration: 3,
+      })
+
       navigate("/lobby", { replace: true })
     } catch (err) {
       const msg =
@@ -42,66 +49,18 @@ export default function RegisterPage() {
           ? (err as { response: { data: { message: string } } }).response.data
               .message
           : "Registration error"
-      message.error(msg)
+
+      notification.error({
+        message: msg,
+        placement: 'top',
+        className: 'arena-custom-notification',
+      })
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    // <Card className="registerCard">
-    //   <Typography.Title level={3}>Join the dark side</Typography.Title>
-    //   <Form<RegisterFields>
-    //     name="register"
-    //     layout="vertical"
-    //     onFinish={onFinish}
-    //     autoComplete="off"
-    //     requiredMark={false}
-    //   >
-    //     <Form.Item
-    //       name="username"
-    //       label=""
-    //       rules={[{ required: true, message: "Введите имя пользователя" }]}
-    //     >
-    //       <Input placeholder="username" autoComplete="username" />
-    //     </Form.Item>
-    //     <Form.Item
-    //       name="password"
-    //       label=""
-    //       rules={[{ required: true, message: "Введите пароль" }]}
-    //     >
-    //       <Input.Password placeholder="password" autoComplete="new-password" />
-    //     </Form.Item>
-    //     <Form.Item
-    //       name="confirmPassword"
-    //       label=""
-    //       dependencies={["password"]}
-    //       rules={[
-    //         { required: true, message: "Повторите пароль" },
-    //         ({ getFieldValue }) => ({
-    //           validator(_, value) {
-    //             if (!value || getFieldValue("password") === value) {
-    //               return Promise.resolve();
-    //             }
-    //             return Promise.reject(new Error("Пароли не совпадают"));
-    //           },
-    //         }),
-    //       ]}
-    //     >
-    //       <Input.Password placeholder="repeat password" autoComplete="new-password" />
-    //     </Form.Item>
-    //     <Form.Item>
-    //       <Button type="primary" htmlType="submit" block loading={loading}>
-    //         Зарегистрироваться
-    //       </Button>
-    //     </Form.Item>
-    //     <div>
-    //       <Typography.Text type="secondary">Уже есть аккаунт? </Typography.Text>
-    //       <Link to="/login">Вход</Link>
-    //     </div>
-    //   </Form>
-    // </Card>
-
     <div className="authPage">
       <div className="authBg" />
       <div className="authTexture" />
