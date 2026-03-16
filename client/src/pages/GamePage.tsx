@@ -39,7 +39,7 @@ function mapMatchErrorMessage(type?: string, fallback?: string): string {
   if (normalized === "INVALID_CARD") return "Card not found.";
   if (normalized === "INVALID_DECK") return "Deck must contain 20 valid cards.";
   if (normalized === "MATCH_FULL") return "Match is full.";
-  if (normalized === "INVALID_ACTION") return "Invalid action.";
+  if (normalized === "INVALID_ACTION") return fallback || "Invalid action.";
 
   return fallback || "Match action failed.";
 }
@@ -48,6 +48,9 @@ function mapMatchErrorMessage(type?: string, fallback?: string): string {
 
 export default function GamePage() {
   const navigate = useNavigate();
+  const selfHeroRef = useRef<HTMLElement | null>(null);
+  const selfUnitElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
+  const enemyUnitElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     const html = document.documentElement;
@@ -171,6 +174,58 @@ export default function GamePage() {
     [isSameUser, showSpellNoticeMessage],
   );
 
+  const getUnitShield = useCallback(
+    (unit?: MatchStatePayload["state"]["players"]["player1"]["board"][number] | null) =>
+      Array.isArray(unit?.statuses)
+        ? unit.statuses
+            .filter((status) => String(status?.type || "").toLowerCase() === "shield")
+            .reduce((total, status) => total + (Number(status?.amount) || 0), 0)
+        : 0,
+    [],
+  );
+
+  const spawnDamageDiffEffects = useCallback(
+    (prevMatch: MatchStatePayload | null, nextMatch: MatchStatePayload) => {
+      if (!prevMatch || prevMatch.matchId !== nextMatch.matchId) return;
+
+      const playerKeys = ["player1", "player2"] as const;
+
+      for (const playerKey of playerKeys) {
+        const prevPlayer = prevMatch.state.players[playerKey];
+        const nextPlayer = nextMatch.state.players[playerKey];
+        const prevHeroTotal = (prevPlayer.hp ?? 0) + (prevPlayer.shield ?? 0);
+        const nextHeroTotal = (nextPlayer.hp ?? 0) + (nextPlayer.shield ?? 0);
+        const heroDamage = Math.max(0, prevHeroTotal - nextHeroTotal);
+
+        if (heroDamage > 0) {
+          const heroRect = isSameUser(prevPlayer.id)
+            ? selfHeroRef.current?.getBoundingClientRect() ?? null
+            : enemyHeroRef.current?.getBoundingClientRect() ?? null;
+
+          spawnHitTextEffect(`-${heroDamage}`, heroRect);
+        }
+
+        for (const prevUnit of prevPlayer.board || []) {
+          const nextUnit =
+            nextPlayer.board.find((unit) => unit.instanceId === prevUnit.instanceId) ?? null;
+          const prevUnitTotal = (prevUnit.hp ?? 0) + getUnitShield(prevUnit);
+          const nextUnitTotal = nextUnit ? (nextUnit.hp ?? 0) + getUnitShield(nextUnit) : 0;
+          const unitDamage = Math.max(0, prevUnitTotal - nextUnitTotal);
+
+          if (unitDamage <= 0) continue;
+
+          const unitElement = isSameUser(prevUnit.ownerId)
+            ? selfUnitElementsRef.current[prevUnit.instanceId]
+            : enemyUnitElementsRef.current[prevUnit.instanceId];
+
+          const unitRect = unitElement?.getBoundingClientRect() ?? null;
+          spawnHitTextEffect(`-${unitDamage}`, unitRect);
+        }
+      }
+    },
+    [enemyHeroRef, getUnitShield, isSameUser, spawnHitTextEffect],
+  );
+
   useEffect(() => {
     const handleResize = () => setIsMobileView(window.innerWidth <= 768);
     window.addEventListener("resize", handleResize);
@@ -208,6 +263,7 @@ export default function GamePage() {
       hideBattlefieldHint();
       hideHandHint();
       setAttackState({ mode: "idle" });
+      spawnDamageDiffEffects(match, payload);
       setMatch(payload);
       if (payload.state.finished) setTimerRemaining(0);
       if (payload.events?.length) {
@@ -215,7 +271,7 @@ export default function GamePage() {
         applyEvents(payload.events);
       }
     },
-    [applyEvents, hideBattlefieldHint, hideHandHint, showSpellNotice],
+    [applyEvents, hideBattlefieldHint, hideHandHint, match, showSpellNotice, spawnDamageDiffEffects],
   );
 
   const handleMatchErrorPayload = useCallback(
@@ -349,7 +405,6 @@ export default function GamePage() {
     showHandHint,
     spawnCardFlyEffect,
     spawnSpellBurstEffect,
-    spawnHitTextEffect,
     triggerEnemyHeroShake,
     triggerEnemyHeroFlash,
     triggerEnemyUnitShake,
@@ -492,6 +547,9 @@ export default function GamePage() {
                         cardCatalog={cardCatalog}
                         onOwnUnitClick={handleMyUnitClick}
                         onEnemyUnitClick={handleEnemyUnitClick}
+                        onMount={(unitId, element) => {
+                          selfUnitElementsRef.current[unitId] = element;
+                        }}
                       />
                     ))}
                   </AnimatePresence>
@@ -526,6 +584,9 @@ export default function GamePage() {
                         cardCatalog={cardCatalog}
                         onOwnUnitClick={handleMyUnitClick}
                         onEnemyUnitClick={handleEnemyUnitClick}
+                        onMount={(unitId, element) => {
+                          enemyUnitElementsRef.current[unitId] = element;
+                        }}
                       />
                     ))}
                   </AnimatePresence>
@@ -611,6 +672,7 @@ export default function GamePage() {
         matchExists={Boolean(match)}
         isMatchFinished={Boolean(match?.state.finished)}
         onEndTurnClick={handleEndTurnClick}
+        heroRef={selfHeroRef}
       />
 
       <BattleEffectsLayer effects={battleEffects} onComplete={completeEffect} />

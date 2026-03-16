@@ -778,8 +778,6 @@
   font-weight: 800;
   color: #f0e6d2;
   text-align: center;
-  opacity: 0;
-  transition: opacity 0.15s ease;
   z-index: 5;
   pointer-events: none;
   letter-spacing: 0.05em;

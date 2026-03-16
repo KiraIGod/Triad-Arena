@@ -1,7 +1,6 @@
-import { useCallback, useReducer } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import type { MutableRefObject } from "react";
 import type { CardModel } from "../../components/Card";
-import type { HitTextEffect } from "../../components/BattleEffectsLayer";
 import {
   attackWithUnit,
   endMatchTurn,
@@ -11,7 +10,6 @@ import {
 } from "../../shared/socket/matchSocket";
 
 const MAX_BOARD_UNITS = 5;
-const SPELL_VISUAL_LEAD_MS = 90;
 const SPELL_UNIT_BURST_DELAY_MS = 120;
 const SPELL_HERO_BURST_DELAY_MS = 180;
 
@@ -53,7 +51,6 @@ type UseGameActionsParams = {
   showHandHint: (message: string | null) => void;
   spawnCardFlyEffect: (card: CardModel, targetRect?: DOMRect | null) => void;
   spawnSpellBurstEffect: (triadType: CardModel["triad_type"], targetRect?: DOMRect | null) => void;
-  spawnHitTextEffect: (text: string, targetRect?: DOMRect | null, tone?: HitTextEffect["tone"]) => void;
   triggerEnemyHeroShake: () => void;
   triggerEnemyHeroFlash: () => void;
   triggerEnemyUnitShake: (unitId: string) => void;
@@ -111,7 +108,6 @@ export function useGameActions({
   showHandHint,
   spawnCardFlyEffect,
   spawnSpellBurstEffect,
-  spawnHitTextEffect,
   triggerEnemyHeroShake,
   triggerEnemyHeroFlash,
   triggerEnemyUnitShake,
@@ -120,6 +116,7 @@ export function useGameActions({
   setMatchError,
 }: UseGameActionsParams): UseGameActionsResult {
   const [attackState, dispatchAttackState] = useReducer(attackStateReducer, { mode: "idle" } as AttackState);
+  const timeoutIdsRef = useRef<number[]>([]);
 
   const setAttackState = useCallback<React.Dispatch<React.SetStateAction<AttackState>>>((next) => {
     if (typeof next === "function") {
@@ -132,6 +129,23 @@ export function useGameActions({
 
     dispatchAttackState({ type: "set", nextState: next });
   }, [attackState]);
+
+  const scheduleTimeout = useCallback((callback: () => void, delayMs: number) => {
+    const timeoutId = window.setTimeout(() => {
+      timeoutIdsRef.current = timeoutIdsRef.current.filter((entry) => entry !== timeoutId);
+      callback();
+    }, delayMs);
+
+    timeoutIdsRef.current.push(timeoutId);
+    return timeoutId;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      timeoutIdsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+      timeoutIdsRef.current = [];
+    };
+  }, []);
 
   const resetActionUi = useCallback(() => {
     dispatchAttackState({ type: "reset" });
@@ -243,30 +257,19 @@ export function useGameActions({
         triggerEnemyUnitFlash(unit.instanceId);
         spawnCardFlyEffect(spellCard, targetRect);
 
-        window.setTimeout(() => {
-          const baseDamage = Math.max(0, Number(spellCard.attack) || 0);
-          spawnHitTextEffect(
-            baseDamage > 0 ? `-${baseDamage}` : "Hit",
-            targetRect,
-            spellCard.triad_type.toLowerCase() as HitTextEffect["tone"]
-          );
-        }, SPELL_UNIT_BURST_DELAY_MS - 20);
-
-        window.setTimeout(() => {
+        scheduleTimeout(() => {
           spawnSpellBurstEffect(spellCard.triad_type, targetRect);
         }, SPELL_UNIT_BURST_DELAY_MS);
       }
 
-      window.setTimeout(() => {
-        playMatchCard({
-          matchId: match.matchId,
-          cardId: attackState.originalCardId,
-          actionId: attackState.actionId,
-          version: match.state.version,
-          targetType: "unit",
-          targetId: unit.instanceId,
-        });
-      }, SPELL_VISUAL_LEAD_MS);
+      playMatchCard({
+        matchId: match.matchId,
+        cardId: attackState.originalCardId,
+        actionId: attackState.actionId,
+        version: match.state.version,
+        targetType: "unit",
+        targetId: unit.instanceId,
+      });
 
       resetActionUi();
       return;
@@ -276,11 +279,6 @@ export function useGameActions({
 
     const actionId = `atk-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     triggerEnemyUnitFlash(unit.instanceId);
-    const attackerDamage = Math.max(
-      0,
-      Number(selfStats.board.find((entry) => entry.instanceId === attackState.attackerInstanceId)?.attack) || 0
-    );
-    spawnHitTextEffect(`-${attackerDamage}`, targetRect);
     attackWithUnit({
       matchId: match.matchId,
       unitId: attackState.attackerInstanceId,
@@ -296,9 +294,8 @@ export function useGameActions({
     handCards,
     match,
     resetActionUi,
-    selfStats.board,
+    scheduleTimeout,
     spawnCardFlyEffect,
-    spawnHitTextEffect,
     spawnSpellBurstEffect,
     triggerEnemyUnitFlash,
     triggerEnemyUnitShake,
@@ -321,30 +318,20 @@ export function useGameActions({
         triggerEnemyHeroFlash();
         const targetRect = enemyHeroRef.current?.getBoundingClientRect() ?? null;
         spawnCardFlyEffect(spellCard, targetRect);
-        window.setTimeout(() => {
-          const baseDamage = Math.max(0, Number(spellCard.attack) || 0);
-          spawnHitTextEffect(
-            baseDamage > 0 ? `-${baseDamage}` : "Hit",
-            targetRect,
-            spellCard.triad_type.toLowerCase() as HitTextEffect["tone"]
-          );
-        }, SPELL_HERO_BURST_DELAY_MS - 40);
 
-        window.setTimeout(() => {
+        scheduleTimeout(() => {
           spawnSpellBurstEffect(spellCard.triad_type, targetRect);
         }, SPELL_HERO_BURST_DELAY_MS);
       }
 
-      window.setTimeout(() => {
-        playMatchCard({
-          matchId: match.matchId,
-          cardId: attackState.originalCardId,
-          actionId: attackState.actionId,
-          version: match.state.version,
-          targetType: "hero",
-          targetId: enemyHeroId,
-        });
-      }, SPELL_VISUAL_LEAD_MS);
+      playMatchCard({
+        matchId: match.matchId,
+        cardId: attackState.originalCardId,
+        actionId: attackState.actionId,
+        version: match.state.version,
+        targetType: "hero",
+        targetId: enemyHeroId,
+      });
 
       resetActionUi();
       return;
@@ -359,12 +346,6 @@ export function useGameActions({
 
     const actionId = `atk-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     triggerEnemyHeroFlash();
-
-    const targetRect = enemyHeroRef.current?.getBoundingClientRect() ?? null;
-    spawnHitTextEffect(
-      `-${Math.max(0, Number(selfStats.board.find((entry) => entry.instanceId === attackState.attackerInstanceId)?.attack) || 0)}`,
-      targetRect
-    );
 
     attackWithUnit({
       matchId: match.matchId,
@@ -383,10 +364,9 @@ export function useGameActions({
     isSameUser,
     match,
     resetActionUi,
-    selfStats.board,
+    scheduleTimeout,
     setMatchError,
     spawnCardFlyEffect,
-    spawnHitTextEffect,
     spawnSpellBurstEffect,
     triggerEnemyHeroFlash,
     triggerEnemyHeroShake,
