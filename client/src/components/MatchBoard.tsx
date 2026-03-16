@@ -5,6 +5,8 @@ import "./MatchBoard.css";
 type MatchBoardProps = {
   selfUnits: ReactNode;
   enemyUnits: ReactNode;
+  selfPlayedHistory?: ReactNode;
+  enemyPlayedHistory?: ReactNode;
   selfUnitsRef?: (element: HTMLDivElement | null) => void;
   enemyHint?: ReactNode;
   enemyTargeting?: boolean;
@@ -16,6 +18,8 @@ type MatchBoardProps = {
 export default function MatchBoard({
   selfUnits,
   enemyUnits,
+  selfPlayedHistory = null,
+  enemyPlayedHistory = null,
   selfUnitsRef,
   enemyHint = null,
   enemyTargeting = false,
@@ -38,22 +42,40 @@ export default function MatchBoard({
         </div>
       )}
 
-      <div className="battlefield-enemy-col">
-        {enemyHint}
-        <div className={`battlefield-row battlefield-row--enemy app-scrollbar${enemyTargeting ? " battlefield-row--enemy-targeting" : ""}`}>
-          <p className="battlefield-col-title">Enemy Units</p>
-          {enemyUnits}
+      <div className="game-battlefield-main">
+        <div className="battlefield-enemy-col">
+          {enemyHint}
+          <div className={`battlefield-row battlefield-row--enemy app-scrollbar${enemyTargeting ? " battlefield-row--enemy-targeting" : ""}`}>
+            <p className="battlefield-col-title">Enemy Units</p>
+            {enemyUnits}
+          </div>
+        </div>
+
+        <div className="game-battlefield__divider" />
+
+        <div className="battlefield-self-col">
+          <div className="battlefield-row battlefield-row--self app-scrollbar" ref={selfUnitsRef}>
+            <p className="battlefield-col-title">My Units</p>
+            {selfUnits}
+          </div>
         </div>
       </div>
 
-      <div className="game-battlefield__divider" />
+      <aside className="battlefield-history-col">
+        <section className="battlefield-history-panel card-panel">
+          <p className="battlefield-col-title">Opponent Played</p>
+          <div className="battlefield-history-list app-scrollbar">
+            {enemyPlayedHistory || <span className="battlefield-empty">No cards</span>}
+          </div>
+        </section>
 
-      <div className="battlefield-self-col">
-        <div className="battlefield-row battlefield-row--self app-scrollbar" ref={selfUnitsRef}>
-          <p className="battlefield-col-title">My Units</p>
-          {selfUnits}
-        </div>
-      </div>
+        <section className="battlefield-history-panel card-panel">
+          <p className="battlefield-col-title">My Played</p>
+          <div className="battlefield-history-list app-scrollbar">
+            {selfPlayedHistory || <span className="battlefield-empty">No cards</span>}
+          </div>
+        </section>
+      </aside>
     </section>
   );
 }

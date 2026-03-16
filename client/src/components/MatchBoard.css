@@ -29,7 +29,96 @@
     inset 0 1px 0 rgba(255, 214, 214, 0.14);
 }
 
+.game-battlefield-main {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.battlefield-history-col {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+  flex: 0 0 300;
+}
+
+.battlefield-history-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 0;
+  padding: 10px 8px;
+  background: rgba(19, 15, 11, 0.438);
+}
+
+.battlefield-history-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 4px 4px 8px 0;
+}
+
+.battlefield-history-card {
+  display: flex;
+  justify-content: center;
+  position: relative;
+  transition: transform 0.18s ease;
+}
+
+.battlefield-history-card + .battlefield-history-card {
+  margin-top: -168px;
+}
+
+.battlefield-history-card:hover {
+  z-index: 999 !important;
+}
+
+.battlefield-history-card .game-card--small {
+  width: 150px;
+  height: 200px;
+}
+
+.battlefield-history-card .game-card.is-disabled {
+  opacity: 1;
+}
+
 @media (max-width: 768px) {
+  .battlefield-history-col {
+    width: 100%;
+    max-width: none;
+    flex: 0 0 auto;
+  }
+
+  .battlefield-history-panel {
+    min-height: 180px;
+  }
+
+  .battlefield-history-list {
+    flex-direction: row;
+    align-items: flex-start;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 8px;
+    padding-right: 0;
+    padding-bottom: 4px;
+  }
+
+  .battlefield-history-card {
+    flex: 0 0 auto;
+  }
+
+  .battlefield-history-card + .battlefield-history-card {
+    margin-top: 0;
+  }
+
   .game-spell-notice-overlay {
     left: 50%;
     top: 50%;

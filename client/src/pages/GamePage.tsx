@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
@@ -25,6 +25,7 @@ import BattlefieldUnitCard from "../components/BattlefieldUnitCard";
 import BattleEffectsLayer from "../components/BattleEffectsLayer";
 import GameTopHud from "../components/GameTopHud";
 import GameBottomHud from "../components/GameBottomHud";
+import { GameCard } from "../components/Card";
 
 // ─── Attack flow state ────────────────────────────────────────────────────────
 
@@ -319,6 +320,22 @@ export default function GamePage() {
     isSameUser,
   });
 
+  const enemyPlayedHistory = useMemo(
+    () =>
+      playedCards
+        .filter((entry) => entry.playerId != null && !isSameUser(entry.playerId))
+        .slice(-10),
+    [isSameUser, playedCards],
+  );
+
+  const selfPlayedHistory = useMemo(
+    () =>
+      playedCards
+        .filter((entry) => entry.playerId != null && isSameUser(entry.playerId))
+        .slice(-10),
+    [isSameUser, playedCards],
+  );
+
   // ── Card play ─────────────────────────────────────────────────────────────────
 
   const {
@@ -470,6 +487,24 @@ export default function GamePage() {
             spellNotice={boardNotice}
             spellNoticeFading={isBoardNoticeFading}
             spellNoticeTone={boardNoticeTone}
+            enemyPlayedHistory={enemyPlayedHistory.map((entry, index) => (
+              <div
+                key={`${entry.playerId ?? "enemy"}-${entry.card.id}-${index}`}
+                className="battlefield-history-card"
+                style={{ zIndex: index + 1 }}
+              >
+                <GameCard card={entry.card} size="small" disabled />
+              </div>
+            ))}
+            selfPlayedHistory={selfPlayedHistory.map((entry, index) => (
+              <div
+                key={`${entry.playerId ?? "self"}-${entry.card.id}-${index}`}
+                className="battlefield-history-card"
+                style={{ zIndex: index + 1 }}
+              >
+                <GameCard card={entry.card} size="small" disabled />
+              </div>
+            ))}
             selfUnitsRef={(element) => {
               selfUnitsZoneRef.current = element;
             }}
