@@ -9,6 +9,7 @@ import "antd/dist/reset.css"
 import "./styles/index.css"
 import { themeConfig } from "./theme/themeConfig"
 import { ConfigProvider, theme as antdTheme } from "antd"
+import './global.css'
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>

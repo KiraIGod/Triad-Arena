@@ -31,11 +31,6 @@ export function useMatchBoard() {
     if (!Array.isArray(events) || !events.length) return;
 
     for (const event of events) {
-      if (event?.type === "TURN_ENDED") {
-        setPlayedCards([]);
-        continue;
-      }
-
       if (event?.type !== "CARD_PLAYED") continue;
       const payload = event.payload || {};
       if (!payload.card) continue;

@@ -85,6 +85,29 @@
   font-weight: 900;
   text-transform: uppercase;
   letter-spacing: 0.15em;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+
+.link {
+  text-decoration: none;
+  cursor: pointer;
+  display: block;
+}
+
+.link .title {
+  color: #ffffff;
+}
+
+.link:hover .title {
+  color: var(--gold);
+  text-shadow:
+    0 0 8px rgba(201, 169, 98, 0.8),
+    0 0 16px rgba(201, 169, 98, 0.6);
+}
+
+.link:focus,
+.link:focus-visible {
+  outline: none;
 }
 
 .subtitle {
@@ -222,4 +245,65 @@
     order: -1;
     padding: 0.4rem 0;
   }
+}
+
+.inviteBanner {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  padding: 16px 24px;
+  border: 2px solid var(--gold);
+  background: rgba(14, 14, 14, 0.95);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  animation: inviteSlideUp 0.3s ease-out;
+}
+
+@keyframes inviteSlideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+.inviteContent {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.inviteText {
+  margin: 0;
+  font-size: 0.9rem;
+  letter-spacing: 0.08em;
+  color: var(--foreground);
+  white-space: nowrap;
+}
+
+.inviteActions {
+  display: flex;
+  gap: 8px;
+}
+
+.btnInviteAccept {
+  padding: 6px 18px;
+  border: 2px solid var(--ink);
+  background: linear-gradient(180deg, #c9a962 0%, #8f7440 100%);
+  color: #1a1612;
+  font-weight: 900;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.btnInviteDecline {
+  padding: 6px 18px;
+  border: 2px solid var(--ink);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--foreground);
+  font-weight: 700;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
 }

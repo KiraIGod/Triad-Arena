@@ -12,10 +12,14 @@ type MatchmakingPanelProps = {
   error: string | null;
   activeMatchId: string | null;
   searchTimeLeft: number;
+  roomCode?: string | null;
+  isWaitingPrivate?: boolean;
   onFindMatch: () => void;
   onCreateArena: () => void;
   onCancelSearch: () => void;
   onReconnect: () => void;
+  onJoinByCode?: (code: string) => void;
+  onCancelRoom?: () => void;
 };
 
 function ReconnectBanner({ onReconnect }: { onReconnect: () => void }) {
@@ -72,6 +76,42 @@ function SearchOverlay({
   );
 }
 
+function WaitingRoom({
+  roomCode,
+  onCancel,
+}: {
+  roomCode: string;
+  onCancel: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(roomCode).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  return (
+    <div className={styles.waitingRoom}>
+      <span className={styles.searchSpinner} aria-hidden />
+      <p className={styles.waitingTitle}>Waiting for opponent...</p>
+      <p className={styles.waitingSubtitle}>Share this code with a friend</p>
+      <div className={styles.roomCodeDisplay} onClick={handleCopy} title="Click to copy">
+        <span className={styles.roomCodeValue}>{roomCode}</span>
+        <span className={styles.roomCodeCopy}>{copied ? "Copied!" : "Copy"}</span>
+      </div>
+      <button
+        type="button"
+        className={styles.btnCancel}
+        onClick={onCancel}
+      >
+        Cancel Room
+      </button>
+    </div>
+  );
+}
+
 export function MatchmakingPanel({
   gameMode,
   deck,
@@ -80,16 +120,20 @@ export function MatchmakingPanel({
   error,
   activeMatchId,
   searchTimeLeft,
+  roomCode = null,
+  isWaitingPrivate = false,
   onFindMatch,
   onCreateArena,
   onCancelSearch,
   onReconnect,
+  onJoinByCode,
+  onCancelRoom,
 }: MatchmakingPanelProps) {
   const isDeckReady = deck != null && deck.cardsTotal >= deck.cardsMax;
   const isSearching = isJoiningArena || isCreatingArena;
   const hasActiveMatch = activeMatchId !== null;
   const isBlocked = isSearching || !isDeckReady || hasActiveMatch;
-  const [roomCode, setRoomCode] = useState("");
+  const [inputCode, setInputCode] = useState("");
 
   if (isJoiningArena) {
     return (
@@ -138,6 +182,15 @@ export function MatchmakingPanel({
   }
 
   if (gameMode === "private") {
+    if (isWaitingPrivate && roomCode) {
+      return (
+        <div className={styles.panel}>
+          <WaitingRoom roomCode={roomCode} onCancel={onCancelRoom ?? (() => {})} />
+          {error && <p className={styles.errorText}>{error}</p>}
+        </div>
+      );
+    }
+
     return (
       <div className={styles.panel}>
         {reconnectBanner}
@@ -180,16 +233,16 @@ export function MatchmakingPanel({
             type="text"
             className={styles.roomCodeInput}
             placeholder="Room Code"
-            value={roomCode}
-            onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+            value={inputCode}
+            onChange={(e) => setInputCode(e.target.value.toUpperCase())}
             maxLength={8}
             disabled={hasActiveMatch}
           />
           <button
             type="button"
-            className={`${styles.btnSecondary} ${isBlocked || !roomCode.trim() ? styles.btnDimmed : ""}`}
-            disabled={isBlocked || !roomCode.trim()}
-            onClick={onFindMatch}
+            className={`${styles.btnSecondary} ${isBlocked || !inputCode.trim() ? styles.btnDimmed : ""}`}
+            disabled={isBlocked || !inputCode.trim()}
+            onClick={() => onJoinByCode?.(inputCode)}
           >
             Join
           </button>

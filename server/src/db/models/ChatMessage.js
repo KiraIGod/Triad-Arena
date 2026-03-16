@@ -4,7 +4,6 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class ChatMessage extends Model {
     static associate(models) {
-
       ChatMessage.belongsTo(models.User, {
         foreignKey: 'senderId',
         as: 'sender'
@@ -34,6 +33,11 @@ module.exports = (sequelize, DataTypes) => {
     },
     text: {
       type: DataTypes.TEXT,
+      allowNull: false
+    },
+    isRead: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
       allowNull: false
     }
   },

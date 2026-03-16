@@ -442,7 +442,19 @@ async function handleJoin(io, socket, payload = {}) {
     throw createSocketError("MATCH_FULL", "Match is full");
   }
 
+  // Cancel the disconnect-defeat timer if the player is rejoining.
+  const pendingTimer = reconnectTimers.get(String(matchId));
+  if (pendingTimer) {
+    clearTimeout(pendingTimer);
+    reconnectTimers.delete(String(matchId));
+  }
+
+  // Guard against stale disconnect firing after this join.
+  reconnectedPlayers.add(String(playerId));
+  setTimeout(() => reconnectedPlayers.delete(String(playerId)), 10_000);
+
   socket.join(String(matchId));
+  socket.data.inMatch = true;
   socket.emit("match:state", buildMatchStatePayload(match, safeState));
 
   // Start the timer on first join (arena path), or sync current remaining to the joining socket.
@@ -567,6 +579,8 @@ async function handlePlayCard(io, socket, payload = {}) {
       playerId,
       cardId,
       actionId: actionId || null,
+      targetType: targetType || "hero",
+      targetId: targetId || null,
       card: {
         id: cardData.id,
         name: cardData.name,

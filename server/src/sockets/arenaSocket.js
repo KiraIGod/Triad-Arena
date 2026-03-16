@@ -1,8 +1,33 @@
-const { randomUUID } = require("crypto");
+const { randomUUID, randomBytes } = require("crypto");
 const jwt = require("jsonwebtoken");
-const { User, Card, DeckCard, Match } = require("../db/models");
+const { User, Card, DeckCard, Match, Friend } = require("../db/models");
+const { Op } = require("sequelize");
 const { getActiveDeckId } = require("../services/deckBuilderService");
 const { registerActiveMatch } = require("../services/activeMatchTracker");
+function lazyGetSocketByUserId(io, userId) {
+  const { getSocketByUserId } = require("./index");
+  return getSocketByUserId(io, userId);
+}
+
+function generateRoomCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = randomBytes(6);
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += chars[bytes[i] % chars.length];
+  }
+  return code;
+}
+
+function findArenaByRoomCode(activeGames, roomCode) {
+  const upper = String(roomCode).toUpperCase();
+  for (const [arenaId, arena] of activeGames.entries()) {
+    if (arena?.roomCode === upper && arena?.status === "waiting" && !arena.matchId) {
+      return { arenaId, arena };
+    }
+  }
+  return null;
+}
 
 
 async function getNicknameFromSocket(socket) {
@@ -19,6 +44,7 @@ async function getNicknameFromSocket(socket) {
 }
 
 function pickWaitingArena(activeGames, gameMode = "normal", excludeUserId = null) {
+  if (gameMode === "private") return null;
   for (const [arenaId, arena] of activeGames.entries()) {
     if (
       arena?.status === "waiting" &&
@@ -72,7 +98,25 @@ async function ensurePlayerDeckId(userId) {
   return deckId;
 }
 
+const PRIVATE_ARENA_TTL_MS = 5 * 60 * 1000;
+
+function cleanupStalePrivateArenas(activeGames) {
+  const now = Date.now();
+  for (const [arenaId, arena] of activeGames.entries()) {
+    if (
+      arena?.gameMode === "private" &&
+      arena?.status === "waiting" &&
+      !arena.matchId &&
+      (now - arena.createdAt) > PRIVATE_ARENA_TTL_MS
+    ) {
+      activeGames.delete(arenaId);
+    }
+  }
+}
+
 module.exports = function registerArenaSocket(io, activeGames) {
+  const cleanupInterval = setInterval(() => cleanupStalePrivateArenas(activeGames), 60_000);
+
   io.on("connection", (socket) => {
     socket.on("arena:create", async (payload, ack) => {
       const callback = typeof payload === "function" ? payload : ack;
@@ -81,13 +125,23 @@ module.exports = function registerArenaSocket(io, activeGames) {
 
       const hostNickname = (await getNicknameFromSocket(socket)) || "UNKNOWN";
       try {
+        if (gameMode === "private") {
+          const userId = socket.data?.userId;
+          if (findPlayerWaitingArena(activeGames, userId, "private")) {
+            if (typeof callback === "function") callback({ error: "You already have an active private room" });
+            return;
+          }
+        }
+
         const arenaId = randomUUID();
+        const roomCode = gameMode === "private" ? generateRoomCode() : null;
 
         activeGames.set(arenaId, {
           id: arenaId,
           hostSocketId: socket.id,
           status: "waiting",
           gameMode,
+          roomCode,
           createdAt: Date.now(),
           updatedAt: Date.now(),
           players: [{ socketId: socket.id, userId: socket.data?.userId || null, nickname: hostNickname }]
@@ -96,7 +150,7 @@ module.exports = function registerArenaSocket(io, activeGames) {
         socket.join(arenaId);
 
         if (typeof callback === "function") {
-          callback({ arenaId });
+          callback({ arenaId, roomCode });
         }
       } catch (error) {
         console.error("[arena:create] failed:", error?.message || error);
@@ -259,6 +313,156 @@ module.exports = function registerArenaSocket(io, activeGames) {
           }
           socket.leave(arenaId);
         }
+      }
+    });
+
+    socket.on("arena:join-by-code", async (payload, ack) => {
+      const callback = typeof payload === "function" ? payload : ack;
+      const options = typeof payload === "object" && payload !== null && typeof payload !== "function" ? payload : {};
+      const roomCode = String(options.roomCode || "").trim().toUpperCase();
+
+      if (!roomCode) {
+        if (typeof callback === "function") callback({ error: "Room code is required" });
+        return;
+      }
+
+      try {
+        const found = findArenaByRoomCode(activeGames, roomCode);
+        if (!found) {
+          if (typeof callback === "function") callback({ error: "Room not found" });
+          return;
+        }
+
+        const { arenaId, arena } = found;
+        if (!Array.isArray(arena.players) || arena.players.length >= 2) {
+          if (typeof callback === "function") callback({ error: "Room is full" });
+          return;
+        }
+
+        if (arena.hostSocketId === socket.id) {
+          if (typeof callback === "function") callback({ error: "Cannot join your own room" });
+          return;
+        }
+
+        const userId = socket.data?.userId;
+        if (arena.players.some(p => String(p?.userId) === String(userId))) {
+          if (typeof callback === "function") callback({ error: "Already in this room" });
+          return;
+        }
+
+        const joinerNickname = (await getNicknameFromSocket(socket)) || "UNKNOWN";
+        const hostNickname = arena.players[0]?.nickname || "UNKNOWN";
+
+        arena.players.push({
+          socketId: socket.id,
+          userId: userId || null,
+          nickname: joinerNickname
+        });
+
+        if (arena.players.length === 2 && !arena.matchId) {
+          const hostUserId = arena.players[0]?.userId;
+          const joinerUserId = arena.players[1]?.userId;
+
+          if (!hostUserId || !joinerUserId) {
+            if (typeof callback === "function") callback({ error: "Player identity is missing" });
+            return;
+          }
+
+          const [playerOneDeckId, playerTwoDeckId] = await Promise.all([
+            ensurePlayerDeckId(hostUserId),
+            ensurePlayerDeckId(joinerUserId)
+          ]);
+
+          const match = await Match.create({
+            player_one_id: hostUserId,
+            player_two_id: joinerUserId,
+            player_one_deck_id: playerOneDeckId,
+            player_two_deck_id: playerTwoDeckId,
+            game_mode: arena.gameMode || "private",
+            status: "active",
+            started_at: new Date()
+          });
+
+          arena.matchId = String(match.id);
+          registerActiveMatch(match);
+          arena.status = "ready";
+        }
+
+        arena.updatedAt = Date.now();
+        socket.join(arenaId);
+
+        if (typeof callback === "function") {
+          callback({ arenaId, opponentNickname: hostNickname, matchId: arena.matchId || null });
+        }
+
+        io.to(arenaId).emit("arena:ready", {
+          arenaId,
+          matchId: arena.matchId || null,
+          players: arena.players
+        });
+      } catch (error) {
+        console.error("[arena:join-by-code] failed:", error?.message || error);
+        if (typeof callback === "function") callback({ error: "Failed to join room" });
+      }
+    });
+
+    socket.on("arena:invite", async (payload, ack) => {
+      const callback = typeof payload === "function" ? payload : ack;
+      const options = typeof payload === "object" && payload !== null && typeof payload !== "function" ? payload : {};
+      const { arenaId, targetUserId } = options;
+
+      if (!arenaId || !targetUserId) {
+        if (typeof callback === "function") callback({ error: "arenaId and targetUserId required" });
+        return;
+      }
+
+      try {
+        const userId = socket.data?.userId;
+        const arena = activeGames.get(arenaId);
+
+        if (!arena || arena.gameMode !== "private" || arena.status !== "waiting") {
+          if (typeof callback === "function") callback({ error: "Room not available" });
+          return;
+        }
+
+        if (!arena.players?.some(p => String(p?.userId) === String(userId))) {
+          if (typeof callback === "function") callback({ error: "Not your room" });
+          return;
+        }
+
+        const friendship = await Friend.findOne({
+          where: {
+            status: "accepted",
+            [Op.or]: [
+              { userId, friendId: targetUserId },
+              { userId: targetUserId, friendId: userId }
+            ]
+          }
+        });
+
+        if (!friendship) {
+          if (typeof callback === "function") callback({ error: "Not on your friend list" });
+          return;
+        }
+
+        const targetSocket = lazyGetSocketByUserId(io, targetUserId);
+        if (!targetSocket) {
+          if (typeof callback === "function") callback({ error: "Friend is offline" });
+          return;
+        }
+
+        const hostNickname = arena.players[0]?.nickname || "UNKNOWN";
+        targetSocket.emit("arena:invitation", {
+          arenaId,
+          roomCode: arena.roomCode || null,
+          hostNickname,
+          hostUserId: userId
+        });
+
+        if (typeof callback === "function") callback({ success: true });
+      } catch (error) {
+        console.error("[arena:invite] failed:", error?.message || error);
+        if (typeof callback === "function") callback({ error: "Failed to send invite" });
       }
     });
 

@@ -1,10 +1,37 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '../components/shared/LanguageSwitcher'
+import { useAppSelector } from '../store'
 import './LandingPage.css'
 
 const LandingPage = () => {
-  const { t } = useTranslation();
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+
+  const token = useAppSelector((state) => state.auth.token)
+
+  const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+  const backendUrl = rawApiUrl.replace(/\/api\/?$/, '')
+
+  const handlePlayClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault()
+    if (token) {
+      navigate('/lobby')
+    }
+    else {
+      navigate('/login')
+    }
+  }
+
+  const handleLoginClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    if (token) {
+      navigate('/lobby')
+    }
+    else {
+      navigate('/register')
+    }
+  }
 
   return (
     <div className="lp-root">
@@ -20,8 +47,15 @@ const LandingPage = () => {
           }}>
           <LanguageSwitcher />
 
-          <Link to="/login" className="lp-btn-ghost">{t('nav.login')}</Link>
-          <Link to="/register" className="lp-btn-red">{t('nav.join')}</Link>
+          <Link to={token ? "/lobby" : "/login"} className="lp-btn-red" onClick={handlePlayClick}>
+            {token ? t('nav.lobby') : t('nav.join')}
+          </Link>
+
+          {!token && (
+            <Link to="/login" className="lp-btn-ghost" onClick={handleLoginClick}>
+              {t('nav.login')}
+            </Link>
+          )}
         </div>
       </header>
 
@@ -55,12 +89,15 @@ const LandingPage = () => {
           </p>
 
           <div className="lp-cta-group">
-            <Link to="/register" className="lp-btn-red lp-btn-large">
-              ✕ {t('hero.enterBattle')}
+            <Link to={token ? "/lobby" : "/login"} className="lp-btn-red lp-btn-large" onClick={handlePlayClick}>
+              ⚔️ {token ? t('hero.enterLobby') : t('hero.enterBattle')} ⚔️
             </Link>
-            <Link to="/login" className="lp-btn-dark lp-btn-large">
-              + {t('hero.createAccount')}
-            </Link>
+
+            {!token && (
+              <Link to="/register" className="lp-btn-dark lp-btn-large" onClick={handleLoginClick}>
+                + {t('hero.createAccount')}
+              </Link>
+            )}
           </div>
 
           <div className="lp-stats">
@@ -70,7 +107,7 @@ const LandingPage = () => {
             </div>
             <div className="lp-stat-divider">◆</div>
             <div className="lp-stat-item">
-              <span className="lp-stat-value">100+</span>
+              <span className="lp-stat-value">20</span>
               <span className="lp-stat-label">{t('hero.stats.cards')}</span>
             </div>
             <div className="lp-stat-divider">◆</div>
@@ -96,6 +133,15 @@ const LandingPage = () => {
             <div className="lp-faction-body">
               <div className="lp-faction-label assault-label">{t('factions.assault.label')}</div>
               <h3 className="lp-faction-name">{t('factions.assault.name')}</h3>
+
+              <div className="lp-faction-image-wrapper">
+                <img
+                  src={`${backendUrl}/static/iron_warden.png`}
+                  alt="Assault"
+                  className="lp-faction-image"
+                />
+              </div>
+
               <p className="lp-faction-desc">{t('factions.assault.desc')}</p>
               <div className="lp-faction-tags">
                 <span className="lp-tag">{t('factions.assault.tag1')}</span>
@@ -112,6 +158,15 @@ const LandingPage = () => {
             <div className="lp-faction-body">
               <div className="lp-faction-label precision-label">{t('factions.precision.label')}</div>
               <h3 className="lp-faction-name">{t('factions.precision.name')}</h3>
+
+              <div className="lp-faction-image-wrapper">
+                <img
+                  src={`${backendUrl}/static/shadow_archer.png`}
+                  alt="Precision"
+                  className="lp-faction-image"
+                />
+              </div>
+
               <p className="lp-faction-desc">{t('factions.precision.desc')}</p>
               <div className="lp-faction-tags">
                 <span className="lp-tag">{t('factions.precision.tag1')}</span>
@@ -127,6 +182,15 @@ const LandingPage = () => {
             <div className="lp-faction-body">
               <div className="lp-faction-label arcane-label">{t('factions.arcane.label')}</div>
               <h3 className="lp-faction-name">{t('factions.arcane.name')}</h3>
+
+              <div className="lp-faction-image-wrapper">
+                <img
+                  src={`${backendUrl}/static/void_seer.png`}
+                  alt="Arcane"
+                  className="lp-faction-image"
+                />
+              </div>
+
               <p className="lp-faction-desc">{t('factions.arcane.desc')}</p>
               <div className="lp-faction-tags">
                 <span className="lp-tag">{t('factions.arcane.tag1')}</span>
@@ -180,9 +244,11 @@ const LandingPage = () => {
           </div>
           <h2 className="lp-final-title">{t('final.title')}</h2>
           <p className="lp-final-sub">{t('final.sub')}</p>
-          <Link to="/register" className="lp-btn-red lp-btn-large">
-            ✕ {t('final.btn')}
+
+          <Link to={token ? "/lobby" : "/register"} className="lp-btn-red lp-btn-large" onClick={handlePlayClick}>
+            ✕ {token ? t('hero.enterLobby') : t('final.btn')}
           </Link>
+
           <div className="lp-divider" style={{ marginTop: '40px' }}>
             <span className="lp-divider-line" />
             <span className="lp-diamond accent">◆</span>

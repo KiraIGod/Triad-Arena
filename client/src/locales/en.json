@@ -1,7 +1,8 @@
 {
   "nav": {
+    "join": "PLAY",
     "login": "LOGIN",
-    "join": "JOIN NOW"
+    "lobby": "LOBBY"
   },
 
    "brand": {
@@ -16,6 +17,7 @@
     "desc2": "Build a deck. Enter the arena. Prove your supremacy.",
     "enterBattle": "ENTER BATTLE",
     "createAccount": "CREATE ACCOUNT",
+    "enterLobby": "ENTER LOBBY",
     "stats": {
       "factions": "FACTIONS",
       "cards": "CARDS",
