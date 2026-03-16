@@ -360,67 +360,6 @@
   box-shadow: 0 1px 0 rgba(168, 62, 54, 0.3);
 }
 
-.game-board {
-  /* position: absolute; */
-  /* inset: 24px 300px 24px 300px; */
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-/* Center: empty, fly target for card animation only */
-.game-board__center {
-  display: block;
-  min-height: 2px;
-  height: 2px;
-  padding: 0;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.game-board__card-slot {
-  opacity: 0;
-  animation: game-board-card-appear 280ms ease-out forwards;
-  animation-delay: var(--card-enter-delay, 0ms);
-  will-change: transform, opacity;
-}
-
-.game-board__card-slot .game-card--small {
-  width: 121.6px;
-  height: 185.6px;
-}
-
-.game-board__card-slot .game-card.is-disabled {
-  opacity: 1;
-}
-
-.game-board__center .game-board__card-slot {
-  position: relative;
-}
-
-.game-board__center .game-board__card-slot:hover {
-  z-index: 1;
-}
-
-@keyframes game-board-card-appear {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .game-board__card-slot {
-    animation: none;
-    opacity: 1;
-  }
-}
-
 .game-log {
   position: absolute;
   top: 50%;
@@ -638,13 +577,6 @@
     display: none;
   }
 
-  .game-board {
-    position: relative;
-    inset: auto;
-    margin: 8px 12px;
-    min-height: 120px;
-  }
-
   .game-deck-panel {
     width: 100%;
     margin: 0;
@@ -683,8 +615,32 @@
     grid-template-rows: auto;
   }
 
+<<<<<<< HEAD
   .battlefield-board {
     padding: 4px 8px;
+=======
+  .game-battlefield-layout > .battlefield-enemy-col {
+    order: 1;
+  }
+  .game-battlefield-layout > .game-battlefield__divider:first-of-type {
+    order: 2;
+  }
+  .game-battlefield-layout > .battlefield-self-col {
+    order: 3;
+  }
+
+  .game-battlefield-layout > .battlefield-self-col,
+  .game-battlefield-layout > .battlefield-enemy-col {
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .battlefield-row {
+    min-height: 90px;
+    flex-direction: row;
+    overflow: visible;
+>>>>>>> 2f52c3cec94f51663ea4021bfe36d1a4a27a4e06
   }
 
   .game-top-row {
@@ -783,6 +739,7 @@
   justify-content: center;
 }
 
+<<<<<<< HEAD
 /* Typography for board cards (reduced size) */
 .battlefield-unit-card .game-card__name,
 .game-board__card-slot .game-card__name {
@@ -819,6 +776,23 @@
   padding: 6px 4px;
   background: rgba(0, 0, 0, 0.88);
   border-top: 1px solid rgba(201, 169, 98, 0.4);
+=======
+/* Smaller typography for board cards only */
+.battlefield-unit-card .game-card__name {
+  font-size: 12px;
+}
+
+.battlefield-unit-card .game-card__description {
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.battlefield-unit-card .game-card__type {
+  font-size: 11px;
+}
+
+.battlefield-unit-card .game-card__mana-value {
+>>>>>>> 2f52c3cec94f51663ea4021bfe36d1a4a27a4e06
   font-size: 14px;
   font-weight: 800;
   color: #f0e6d2;

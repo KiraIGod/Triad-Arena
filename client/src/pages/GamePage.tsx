@@ -1,47 +1,33 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAppSelector } from "../store";
-import type { CardModel } from "../components/Card";
 import HandCards from "../components/HandCards";
 import socket from "../shared/socket/socket";
 import {
-  attackWithUnit,
-  endMatchTurn,
   leaveMatch,
-  playMatchCard,
   syncMatch,
   type MatchErrorPayload,
   type MatchFinishPayload,
   type MatchStatePayload,
   type MatchTimerPayload,
-  type UnitInstance
 } from "../shared/socket/matchSocket";
 import { useMatchBoard } from "../features/customHooks/useMatchBoard";
 import { useGameMatchSession } from "../features/customHooks/useGameMatchSession";
 import { useTimedNotice } from "../features/customHooks/useTimedNotice";
 import { useGameViewModel } from "../features/customHooks/useGameViewModel";
+import { useBattleEffects } from "../features/customHooks/useBattleEffects";
+import { useGameActions } from "../features/customHooks/useGameActions";
 import "./GamePage.css";
-import TurnCountdown from "../components/TurnCountdown";
 import LeaveArenaConfirmModal from "../components/LeaveArenaConfirmModal";
 import MatchBoard from "../components/MatchBoard";
 import BattlefieldUnitCard from "../components/BattlefieldUnitCard";
-import BattleEffectsLayer, {
-  type BattleEffect,
-  type CardFlyEffect,
-  type HitTextEffect,
-  type SpellBurstEffect,
-} from "../components/BattleEffectsLayer";
+import BattleEffectsLayer from "../components/BattleEffectsLayer";
+import GameTopHud from "../components/GameTopHud";
+import GameBottomHud from "../components/GameBottomHud";
 
 
 // ─── Attack flow state ────────────────────────────────────────────────────────
-
-type AttackState =
-  | { mode: "idle" }
-  | { mode: "selectingTarget"; attackerInstanceId: string }
-  | { mode: "selectingSpellTarget"; spellCardId: string; originalCardId: string; actionId: string };
-
-type StatusView = { type: string; turns?: number; amount?: number };
 
 function mapMatchErrorMessage(type?: string, fallback?: string): string {
   const normalized = String(type || "").toUpperCase();
@@ -59,10 +45,6 @@ function mapMatchErrorMessage(type?: string, fallback?: string): string {
   return fallback || "Match action failed.";
 }
 
-const MAX_BOARD_UNITS = 5;
-const SPELL_VISUAL_LEAD_MS = 90;
-const SPELL_UNIT_BURST_DELAY_MS = 120;
-const SPELL_HERO_BURST_DELAY_MS = 180;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -107,26 +89,7 @@ export default function GamePage() {
   const [finishReason, setFinishReason] = useState<string | null>(null);
   const [ratingChange, setRatingChange] = useState<number | null>(null);
   const [finishGameMode, setFinishGameMode] = useState<string | null>(null);
-  const [attackState, setAttackState] = useState<AttackState>({ mode: "idle" });
   const [timerRemaining, setTimerRemaining] = useState(45);
-  const [battleEffects, setBattleEffects] = useState<BattleEffect[]>([]);
-  const [pendingPlayedCardIds, setPendingPlayedCardIds] = useState<string[]>([]);
-  const [enemyHeroShakeToken, setEnemyHeroShakeToken] = useState(0);
-  const [enemyHeroFlashToken, setEnemyHeroFlashToken] = useState(0);
-  const [enemyUnitShake, setEnemyUnitShake] = useState<{ id: string | null; token: number }>({
-    id: null,
-    token: 0,
-  });
-  const [enemyUnitFlash, setEnemyUnitFlash] = useState<{ id: string | null; token: number }>({
-    id: null,
-    token: 0,
-  });
-  const handCardElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
-  const selfUnitsZoneRef = useRef<HTMLDivElement | null>(null);
-  const selfPlayedZoneRef = useRef<HTMLDivElement | null>(null);
-  const enemyHeroRef = useRef<HTMLDivElement | null>(null);
-  const enemyUnitElementsRef = useRef<Record<string, HTMLDivElement | null>>({});
-
   const [isMobileView, setIsMobileView] = useState(
     () => typeof window !== "undefined" && window.innerWidth <= 768
   );
@@ -149,44 +112,27 @@ export default function GamePage() {
     show: showHandHint,
     hide: hideHandHint,
   } = useTimedNotice();
+  const {
+    battleEffects,
+    enemyHeroShakeToken,
+    enemyHeroFlashToken,
+    enemyUnitShake,
+    enemyUnitFlash,
+    handCardElementsRef,
+    selfUnitsZoneRef,
+    enemyHeroRef,
+    spawnCardFlyEffect,
+    spawnSpellBurstEffect,
+    spawnHitTextEffect,
+    triggerEnemyHeroShake,
+    triggerEnemyHeroFlash,
+    triggerEnemyUnitShake,
+    triggerEnemyUnitFlash,
+    completeEffect,
+  } = useBattleEffects();
 
   const isSameUser = useCallback((value: string | number | null | undefined) =>
     String(value ?? "").trim().toLowerCase() === String(userIdStr ?? "").trim().toLowerCase(), [userIdStr]);
-
-  const formatStatusLabel = (status: StatusView): string => {
-    const type = String(status?.type || "unknown").toUpperCase();
-    const hasTurns = Number.isFinite(status?.turns);
-    const hasAmount = Number.isFinite(status?.amount);
-
-    if (type === "SHIELD" && hasAmount && hasTurns) return `${type} +${status.amount} \u2022 ${status.turns}t`;
-    if (type === "SHIELD" && hasAmount) return `${type} +${status.amount}`;
-    if (hasTurns) return `${type} x${status.turns}`;
-    return type;
-  };
-
-  const getStatusBadgeClass = (statusType?: string): string => {
-    const type = String(statusType || "").toLowerCase();
-    if (type === "burn") return "game-status-badge game-status-badge--burn";
-    if (type === "weak") return "game-status-badge game-status-badge--weak";
-    if (type === "stun") return "game-status-badge game-status-badge--stun";
-    if (type === "shield") return "game-status-badge game-status-badge--shield";
-    return "game-status-badge";
-  };
-
-  const renderStatuses = (statuses?: StatusView[]) => {
-    if (!Array.isArray(statuses) || statuses.length === 0) {
-      return "None";
-    }
-
-    return statuses.map((status, index) => (
-      <span
-        key={`${status.type}-${status.turns ?? "na"}-${status.amount ?? "na"}-${index}`}
-        className={getStatusBadgeClass(status.type)}
-      >
-        {formatStatusLabel(status)}
-      </span>
-    ));
-  };
 
   const showSpellNotice = useCallback((events?: MatchStatePayload["events"]) => {
     if (!Array.isArray(events) || events.length === 0) return;
@@ -314,7 +260,6 @@ export default function GamePage() {
     oppStats,
     handCards,
     selfDeckCount,
-    selfDiscardCount,
     matchResultLabel,
     isMatchFinished,
     boardNotice,
@@ -340,332 +285,43 @@ export default function GamePage() {
 
   // ── Card play ─────────────────────────────────────────────────────────────────
 
-  const getCardDisabledReason = (card: CardModel): string | null => {
-    if (!match || !userIdStr) return "Match is not ready";
-    if (selfIndex < 0) return "You are not part of this match";
-    if (match.state.finished) return "Match already finished";
-    if (!isMyTurn) return "Wait for your turn";
-    if (card.type === "UNIT" && (selfStats.board?.length ?? 0) >= MAX_BOARD_UNITS) {
-      return "Board is full";
-    }
-    if (playedCardIdsThisTurn.size >= 3) return "Card limit reached (3 cards per turn)";
-    if (playedCardIdsThisTurn.has(card.id.split(":")[0])) return "Card already played this turn";
-    if (currentEnergy < card.mana_cost) return "Not enough energy";
-    const statuses = selfStats.statuses || [];
-    if (statuses.some((status) => status?.type === "stun")) return "You are stunned";
-    return null;
-  };
+  const {
+    attackState,
+    setAttackState,
+    getCardDisabledReason,
+    canPlayCard,
+    handleCardClick,
+    handleMyUnitClick,
+    handleEnemyUnitClick,
+    handleEnemyHeroClick,
+    handleEndTurnClick,
+  } = useGameActions({
+    match,
+    userIdStr,
+    isMyTurn,
+    selfIndex,
+    selfStats,
+    currentEnergy,
+    handCards,
+    playedCardIdsThisTurn,
+    isSameUser,
+    enemyHeroRef,
+    hideBattlefieldHint,
+    showBattlefieldHint,
+    hideHandHint,
+    showHandHint,
+    spawnCardFlyEffect,
+    spawnSpellBurstEffect,
+    spawnHitTextEffect,
+    triggerEnemyHeroShake,
+    triggerEnemyHeroFlash,
+    triggerEnemyUnitShake,
+    triggerEnemyUnitFlash,
+    setSelectedCardId,
+    setMatchError,
+  });
 
-  const canPlayCard = (card: CardModel): boolean => getCardDisabledReason(card) === null;
-
-  const spawnCardFlyEffect = useCallback((card: CardModel) => {
-    const fromElement = handCardElementsRef.current[card.id];
-    const toElement = card.type === "UNIT" ? selfUnitsZoneRef.current : selfPlayedZoneRef.current;
-
-    if (!fromElement || !toElement) return;
-
-    const playedCardId = card.id.split(":")[0];
-    const fromRect = fromElement.getBoundingClientRect();
-    const toRect = toElement.getBoundingClientRect();
-
-    setPendingPlayedCardIds((prev) =>
-      prev.includes(playedCardId) ? prev : [...prev, playedCardId]
-    );
-    setBattleEffects((prev) => [
-      ...prev,
-      {
-        id: `fly-${Date.now()}-${card.id}`,
-        type: "card_fly",
-        playedCardId,
-        card,
-        from: {
-          left: fromRect.left,
-          top: fromRect.top,
-          width: fromRect.width,
-          height: fromRect.height,
-        },
-        to: {
-          left: toRect.left + 16,
-          top: toRect.top + 16,
-          width: fromRect.width * 0.8,
-          height: fromRect.height * 0.8,
-        },
-      },
-    ]);
-  }, []);
-
-  const spawnSpellBurstEffect = useCallback((
-    triadType: CardModel["triad_type"],
-    targetRect?: DOMRect | null
-  ) => {
-    if (!targetRect) return;
-
-    setBattleEffects((prev) => [
-      ...prev,
-      {
-        id: `burst-${Date.now()}-${triadType}`,
-        type: "spell_burst",
-        triadType,
-        target: {
-          left: targetRect.left,
-          top: targetRect.top,
-          width: targetRect.width,
-          height: targetRect.height,
-        },
-      } satisfies SpellBurstEffect,
-    ]);
-  }, []);
-
-  const spawnHitTextEffect = useCallback((
-    text: string,
-    targetRect?: DOMRect | null,
-    tone: HitTextEffect["tone"] = "damage"
-  ) => {
-    if (!targetRect) return;
-
-    setBattleEffects((prev) => [
-      ...prev,
-      {
-        id: `hit-text-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        type: "hit_text",
-        text,
-        tone,
-        target: {
-          left: targetRect.left,
-          top: targetRect.top,
-          width: targetRect.width,
-          height: targetRect.height,
-        },
-      } satisfies HitTextEffect,
-    ]);
-  }, []);
-
-  const triggerEnemyHeroShake = useCallback(() => {
-    setEnemyHeroShakeToken((prev) => prev + 1);
-  }, []);
-
-  const triggerEnemyHeroFlash = useCallback(() => {
-    setEnemyHeroFlashToken((prev) => prev + 1);
-  }, []);
-
-  const triggerEnemyUnitShake = useCallback((unitId: string) => {
-    setEnemyUnitShake((prev) => ({
-      id: unitId,
-      token: prev.token + 1,
-    }));
-  }, []);
-
-  const triggerEnemyUnitFlash = useCallback((unitId: string) => {
-    setEnemyUnitFlash((prev) => ({
-      id: unitId,
-      token: prev.token + 1,
-    }));
-  }, []);
-
-  const handleCardClick = (card: CardModel) => {
-    // Clicking the already-selected spell card cancels targeting mode.
-    if (attackState.mode === "selectingSpellTarget" && attackState.spellCardId === card.id) {
-      setAttackState({ mode: "idle" });
-      setSelectedCardId(null);
-      hideBattlefieldHint();
-      hideHandHint();
-      return;
-    }
-
-    setAttackState({ mode: "idle" });
-    hideBattlefieldHint();
-    hideHandHint();
-    setSelectedCardId((prev) => (prev === card.id ? null : card.id));
-    const reason = getCardDisabledReason(card);
-    showHandHint(reason);
-    if (reason || !match) return;
-
-    const originalCardId = card.id.split(":")[0];
-    const actionId = `${Date.now()}-${originalCardId}-${Math.random().toString(36).slice(2)}`;
-
-    if (card.type === "SPELL") {
-      setAttackState({ mode: "selectingSpellTarget", spellCardId: card.id, originalCardId, actionId });
-      showBattlefieldHint("Select a target: enemy unit or enemy hero");
-      return;
-    }
-
-    spawnCardFlyEffect(card);
-    playMatchCard({ matchId: match.matchId, cardId: originalCardId, actionId, version: match.state.version });
-  };
-
-  // ── Attack flow ───────────────────────────────────────────────────────────────
-
-  const handleMyUnitClick = useCallback((unit: UnitInstance) => {
-    if (!isMyTurn || !match) return;
-
-    // Clicking any own unit while selecting a spell target cancels spell mode.
-    if (attackState.mode === "selectingSpellTarget") {
-      setAttackState({ mode: "idle" });
-      setSelectedCardId(null);
-      hideBattlefieldHint();
-      hideHandHint();
-      return;
-    }
-
-    if (attackState.mode === "selectingTarget" && attackState.attackerInstanceId === unit.instanceId) {
-      setAttackState({ mode: "idle" });
-      hideBattlefieldHint();
-      hideHandHint();
-      return;
-    }
-
-    if (!unit.canAttack) {
-      showBattlefieldHint("This unit cannot attack yet");
-      return;
-    }
-
-    setSelectedCardId(null);
-    hideBattlefieldHint();
-    hideHandHint();
-    setAttackState({ mode: "selectingTarget", attackerInstanceId: unit.instanceId });
-  }, [attackState, hideBattlefieldHint, hideHandHint, isMyTurn, match, showBattlefieldHint]);
-
-  const handleEnemyUnitClick = useCallback((unit: UnitInstance, targetRect?: DOMRect) => {
-    if (!match) return;
-
-    if (attackState.mode === "selectingSpellTarget") {
-      const spellCard = handCards.find((card) => card.id === attackState.spellCardId);
-      if (spellCard) {
-        triggerEnemyUnitShake(unit.instanceId);
-        triggerEnemyUnitFlash(unit.instanceId);
-        spawnCardFlyEffect(spellCard);
-        window.setTimeout(() => {
-          const baseDamage = Math.max(0, Number(spellCard.attack) || 0);
-          spawnHitTextEffect(baseDamage > 0 ? `-${baseDamage}` : "Hit", targetRect, spellCard.triad_type.toLowerCase() as HitTextEffect["tone"]);
-        }, SPELL_UNIT_BURST_DELAY_MS - 20);
-        window.setTimeout(() => {
-          spawnSpellBurstEffect(
-            spellCard.triad_type,
-            targetRect
-          );
-        }, SPELL_UNIT_BURST_DELAY_MS);
-      }
-      window.setTimeout(() => {
-        playMatchCard({
-          matchId: match.matchId,
-          cardId: attackState.originalCardId,
-          actionId: attackState.actionId,
-          version: match.state.version,
-          targetType: "unit",
-          targetId: unit.instanceId
-        });
-      }, SPELL_VISUAL_LEAD_MS);
-      setAttackState({ mode: "idle" });
-      hideBattlefieldHint();
-      hideHandHint();
-      setSelectedCardId(null);
-      setMatchError(null);
-      return;
-    }
-
-    if (attackState.mode !== "selectingTarget") return;
-
-    const actionId = `atk-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    triggerEnemyUnitFlash(unit.instanceId);
-    const attackerDamage = Math.max(
-      0,
-      Number(selfStats.board.find((entry) => entry.instanceId === attackState.attackerInstanceId)?.attack) || 0
-    );
-    spawnHitTextEffect(`-${attackerDamage}`, targetRect);
-    attackWithUnit({
-      matchId: match.matchId,
-      unitId: attackState.attackerInstanceId,
-      targetType: "unit",
-      targetId: unit.instanceId,
-      actionId,
-      version: match.state.version
-    });
-    setAttackState({ mode: "idle" });
-    hideBattlefieldHint();
-    hideHandHint();
-    setSelectedCardId(null);
-    setMatchError(null);
-  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, match, selfStats.board, spawnCardFlyEffect, spawnHitTextEffect, spawnSpellBurstEffect, triggerEnemyUnitFlash, triggerEnemyUnitShake]);
-
-  const handleEnemyHeroClick = useCallback(() => {
-    if (!match) return;
-
-    const enemyHeroId = match.players.find((id) => !isSameUser(id));
-
-    if (attackState.mode === "selectingSpellTarget") {
-      if (!enemyHeroId) {
-        setMatchError("Enemy hero target not found");
-        return;
-      }
-      const spellCard = handCards.find((card) => card.id === attackState.spellCardId);
-      if (spellCard) {
-        triggerEnemyHeroShake();
-        triggerEnemyHeroFlash();
-        spawnCardFlyEffect(spellCard);
-        const targetRect = enemyHeroRef.current?.getBoundingClientRect() ?? null;
-        window.setTimeout(() => {
-          const baseDamage = Math.max(0, Number(spellCard.attack) || 0);
-          spawnHitTextEffect(baseDamage > 0 ? `-${baseDamage}` : "Hit", targetRect, spellCard.triad_type.toLowerCase() as HitTextEffect["tone"]);
-        }, SPELL_HERO_BURST_DELAY_MS - 40);
-        window.setTimeout(() => {
-          spawnSpellBurstEffect(spellCard.triad_type, targetRect);
-        }, SPELL_HERO_BURST_DELAY_MS);
-      }
-      window.setTimeout(() => {
-        playMatchCard({
-          matchId: match.matchId,
-          cardId: attackState.originalCardId,
-          actionId: attackState.actionId,
-          version: match.state.version,
-          targetType: "hero",
-          targetId: enemyHeroId
-        });
-      }, SPELL_VISUAL_LEAD_MS);
-      setAttackState({ mode: "idle" });
-      hideBattlefieldHint();
-      hideHandHint();
-      setSelectedCardId(null);
-      setMatchError(null);
-      return;
-    }
-
-    if (attackState.mode !== "selectingTarget") return;
-
-    if (!enemyHeroId) {
-      setMatchError("Enemy hero target not found");
-      return;
-    }
-
-    const actionId = `atk-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    triggerEnemyHeroFlash();
-    const targetRect = enemyHeroRef.current?.getBoundingClientRect() ?? null;
-    spawnHitTextEffect(`-${Math.max(0, Number(selfStats.board.find((entry) => entry.instanceId === attackState.attackerInstanceId)?.attack) || 0)}`, targetRect);
-    attackWithUnit({
-      matchId: match.matchId,
-      unitId: attackState.attackerInstanceId,
-      targetType: "hero",
-      targetId: enemyHeroId,
-      actionId,
-      version: match.state.version
-    });
-    setAttackState({ mode: "idle" });
-    hideBattlefieldHint();
-    hideHandHint();
-    setSelectedCardId(null);
-    setMatchError(null);
-  }, [attackState, handCards, hideBattlefieldHint, hideHandHint, isSameUser, match, selfStats.board, spawnCardFlyEffect, spawnHitTextEffect, spawnSpellBurstEffect, triggerEnemyHeroFlash, triggerEnemyHeroShake]);
-
-  // ── Turn / leave ──────────────────────────────────────────────────────────────
-
-  const handleEndTurnClick = () => {
-    setSelectedCardId(null);
-    hideHandHint();
-    setAttackState({ mode: "idle" });
-    hideBattlefieldHint();
-    if (!match || !userIdStr) return;
-    if (match.state.finished || !isSameUser(match.state.activePlayer)) return;
-    endMatchTurn({ matchId: match.matchId, version: match.state.version });
-  };
+  // ?????? Turn / leave ??????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????????
 
   const handleLeaveArenaClick = () => {
     const leavingMatchId = match?.matchId || arenaMatchId;
@@ -698,131 +354,38 @@ export default function GamePage() {
       <div className="game-screen__texture parchment-texture" />
       <div className="game-screen__vignette darkest-vignette" />
 
-      {/* Opponent header */}
-      <header className="game-hud game-hud--top parchment-panel">
-        <div className="game-hud__identity">
-          <div className="game-hud__accent game-hud__accent--blood" />
-          <div>
-            <p className="game-hud__name comic-text-shadow">{opponentNickname}</p>
-            <p className="game-hud__rank">Rank IV - Cultist</p>
-          </div>
-        </div>
-
-        <div className="game-hp">
-          <div className="game-hp__meta">
-            <span>Death&apos;s Door</span>
-            <strong className="comic-text-shadow">
-              {Math.round(opponentHPPercent)}% | HP {oppStats.hp} | SH {oppStats.shield}
-            </strong>
-          </div>
-          <div className="game-hp__track ink-border-thin">
-            <div
-              className="game-hp__fill game-hp__fill--enemy blood-glow"
-              style={{ width: `${opponentHPPercent}%` }}
-            />
-          </div>
-        </div>
-
-        <div
-          className={`game-state${isAnyTargetingMode ? " game-state--attackable" : ""}`}
-          ref={enemyHeroRef}
-          onClick={handleEnemyHeroClick}
-          title={isSelectingSpellTarget ? "Cast spell on enemy hero" : isSelectingTarget ? "Attack enemy hero" : undefined}
-          style={{ cursor: isAnyTargetingMode ? "crosshair" : undefined }}
-        >
-          <motion.div
-            key={`enemy-hero-shake-${enemyHeroShakeToken}`}
-            initial={{ x: 0 }}
-            animate={enemyHeroShakeToken > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
-            className="game-state__content"
-          >
-            {enemyHeroFlashToken > 0 && (
-              <motion.span
-                key={`enemy-hero-flash-${enemyHeroFlashToken}`}
-                className="game-state__hit-flash"
-                initial={{ opacity: 0, scale: 0.94 }}
-                animate={{ opacity: [0, 0.9, 0], scale: [0.94, 1.04, 1] }}
-                transition={{ duration: 0.34, ease: "easeOut" }}
-              />
-            )}
-            <p className="game-state__label">Opponent Status</p>
-            <p className="game-state__value">
-              {(oppStats.statuses || []).length
-                ? renderStatuses(oppStats.statuses)
-                : isSelectingSpellTarget ? "\u2190 Click to target hero"
-                : isSelectingTarget ? "\u2190 Click to attack hero"
-                : "None"}
-            </p>
-          </motion.div>
-        </div>
-      </header>
-
-      {isReconnecting && (
-        <div className="game-state">
-          <p className="game-state__label">Connection</p>
-          <p className="game-state__value">Reconnecting...</p>
-        </div>
-      )}
-
-      {match && selfIndex < 0 && (
-        <div className="game-state">
-          <p className="game-state__label">Access</p>
-          <p className="game-state__value">You are not part of this match</p>
-        </div>
-      )}
+      <GameTopHud
+        opponentNickname={opponentNickname}
+        opponentHPPercent={opponentHPPercent}
+        oppStats={oppStats}
+        isAnyTargetingMode={isAnyTargetingMode}
+        isSelectingSpellTarget={isSelectingSpellTarget}
+        isSelectingTarget={isSelectingTarget}
+        enemyHeroRef={enemyHeroRef}
+        handleEnemyHeroClick={handleEnemyHeroClick}
+        enemyHeroShakeToken={enemyHeroShakeToken}
+        enemyHeroFlashToken={enemyHeroFlashToken}
+        isReconnecting={isReconnecting}
+        showAccessWarning={Boolean(match && selfIndex < 0)}
+        selfDeckCount={selfDeckCount}
+        handCount={handCards.length}
+        triadComboInfo={triadComboInfo}
+        matchExists={Boolean(match)}
+        isMyTurn={isMyTurn}
+        isMatchFinished={Boolean(match?.state.finished)}
+        timerRemaining={timerRemaining}
+        onLeaveArenaRequest={() => setIsLeaveConfirmOpen(true)}
+      />
 
       <section className="game-content">
-        <div className="game-top-row">
-          <aside className="game-deck-panel">
-            <p className="game-log__entry">Deck: {selfDeckCount}</p>
-            <p className="game-log__entry">Discard: {selfDiscardCount}</p>
-            <p className="game-log__entry">Hand: {handCards.length}</p>
-            
-            {triadComboInfo && (
-              <div className={`game-triad-combo game-triad-combo--${triadComboInfo.type}`}>
-                <span className="game-triad-combo__label">Triad Combo</span>
-                <span className="game-triad-combo__type">
-                  {triadComboInfo.type.toUpperCase()} \u00D7{triadComboInfo.count}
-                </span>
-                <span className="game-triad-combo__bonus">+{triadComboInfo.bonus} DMG</span>
-              </div>
-            )}
-          </aside>
-
-          <div className="game-state game-state--turn">
-            <div className="game-state__turn-row">
-              {match ? (isMyTurn ?
-                <p className="game-hud__name game-state__value--active-turn comic-text-shadow">Your turn</p> :
-                <p className="game-hud__name game-state__value comic-text-shadow">Opponent's turn</p>) : "-"}
-            </div>
-            {match && !match.state.finished ? (isMyTurn ?
-              <p className="game-hud__name game-state__value--active-turn comic-text-shadow">
-                <TurnCountdown remaining={timerRemaining} />
-              </p> :
-              <p className="game-hud__name game-state__value comic-text-shadow">
-                <TurnCountdown remaining={timerRemaining} />
-              </p>) : null}
-          </div>
-
-          <div className="game-state game-state--right">
-            <button type="button" className="game-end-turn stress-warning" onClick={() => setIsLeaveConfirmOpen(true)}>
-              Leave Arena
-            </button>
-          </div>
-        </div>
-
-
         {matchError && (
           <div className="game-attack-banner game-attack-banner--error">
             <span>{matchError}</span>
           </div>
         )}
 
-        <main className="game-battlefield">
+        <main className="game-battlefield app-scrollbar">
           <MatchBoard
-            cards={playedCards}
-            currentUserId={userIdStr}
             enemyHint={isAnyTargetingMode ? (
               <div className="battlefield-target-overlay">
                 <span className="game-state__target-hint">
@@ -834,10 +397,8 @@ export default function GamePage() {
             spellNotice={boardNotice}
             spellNoticeFading={isBoardNoticeFading}
             spellNoticeTone={boardNoticeTone}
-            hiddenSelfCardIds={pendingPlayedCardIds}
-            selfPlayedRef={(element) => {
+            selfUnitsRef={(element) => {
               selfUnitsZoneRef.current = element;
-              selfPlayedZoneRef.current = element;
             }}
             selfUnits={
               selfStats.board.length > 0
@@ -857,7 +418,6 @@ export default function GamePage() {
                           cardCatalog={cardCatalog}
                           onOwnUnitClick={handleMyUnitClick}
                           onEnemyUnitClick={handleEnemyUnitClick}
-                          renderStatuses={renderStatuses}
                         />
                       ))}
                     </AnimatePresence>
@@ -884,10 +444,6 @@ export default function GamePage() {
                           cardCatalog={cardCatalog}
                           onOwnUnitClick={handleMyUnitClick}
                           onEnemyUnitClick={handleEnemyUnitClick}
-                          onMount={(unitId, element) => {
-                            enemyUnitElementsRef.current[unitId] = element;
-                          }}
-                          renderStatuses={renderStatuses}
                         />
                       ))}
                     </AnimatePresence>
@@ -953,58 +509,20 @@ export default function GamePage() {
         }}
       />
 
-      <footer className="game-hud game-hud--bottom parchment-panel">
-        <div className="game-hud__identity">
-          <div className="game-hud__accent game-hud__accent--gold" />
-          <div>
-            <p className="game-hud__name comic-text-shadow">{displayName}</p>
-            <p className="game-hud__rank">Crusader - Level 12</p>
-          </div>
-        </div>
-
-        <div className="game-hp">
-          <div className="game-hp__meta">
-            <span>Death&apos;s Door</span>
-            <strong className="comic-text-shadow">
-              {Math.round(playerHPPercent)}% | HP {selfStats.hp} | SH {selfStats.shield} | EN {currentEnergy}
-            </strong>
-          </div>
-          <div className="game-hp__track ink-border-thin">
-            <div className="game-hp__fill game-hp__fill--player" style={{ width: `${playerHPPercent}%` }} />
-          </div>
-        </div>
-
-        <div className="game-actions">
-          <div className="game-state">
-            <p className="game-state__label">Your Status</p>
-            <p className="game-state__value">
-              {renderStatuses(selfStats.statuses)}
-            </p>
-          </div>
-          <div className="game-energy" aria-label="Resolve">
-            {Array.from({ length: 10 }).map((_, index) => (
-              <span key={index} className={`game-energy__pip ${index < currentEnergy ? "is-active" : ""}`} />
-            ))}
-          </div>
-          <button
-            type="button"
-            className="game-end-turn stress-warning"
-            onClick={handleEndTurnClick}
-            disabled={!isMyTurn || !match || match.state.finished}
-          >
-            End Turn
-          </button>
-        </div>
-      </footer>
+      <GameBottomHud
+        displayName={displayName}
+        playerHPPercent={playerHPPercent}
+        selfStats={selfStats}
+        currentEnergy={currentEnergy}
+        isMyTurn={isMyTurn}
+        matchExists={Boolean(match)}
+        isMatchFinished={Boolean(match?.state.finished)}
+        onEndTurnClick={handleEndTurnClick}
+      />
 
       <BattleEffectsLayer
         effects={battleEffects}
-        onComplete={(effect) => {
-          setBattleEffects((prev) => prev.filter((entry) => entry.id !== effect.id));
-          if (effect.type === "card_fly") {
-            setPendingPlayedCardIds((prev) => prev.filter((cardId) => cardId !== effect.playedCardId));
-          }
-        }}
+        onComplete={completeEffect}
       />
     </div>
   );

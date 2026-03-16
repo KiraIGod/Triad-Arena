@@ -1,9 +1,7 @@
-import type { ReactNode } from "react";
 import { motion } from "motion/react";
 import { GameCard, type CardModel } from "./Card";
+import StatusBadges from "./StatusBadges";
 import type { UnitInstance } from "../shared/socket/matchSocket";
-
-type StatusView = { type: string; turns?: number; amount?: number };
 
 type BattlefieldUnitCardProps = {
   unit: UnitInstance;
@@ -18,7 +16,6 @@ type BattlefieldUnitCardProps = {
   onOwnUnitClick: (unit: UnitInstance) => void;
   onEnemyUnitClick: (unit: UnitInstance, targetRect?: DOMRect) => void;
   onMount?: (unitId: string, element: HTMLDivElement | null) => void;
-  renderStatuses: (statuses?: StatusView[]) => ReactNode;
 };
 
 export default function BattlefieldUnitCard({
@@ -34,7 +31,6 @@ export default function BattlefieldUnitCard({
   onOwnUnitClick,
   onEnemyUnitClick,
   onMount,
-  renderStatuses,
 }: BattlefieldUnitCardProps) {
   const isSelected = isOwn && unit.instanceId === selectedAttackerId;
   const isAttackable = isOwn && isMyTurn && unit.canAttack && !isAnyTargetingMode;
@@ -120,7 +116,7 @@ export default function BattlefieldUnitCard({
         {unitShield > 0 && <span className="battlefield-unit__shield">SH {unitShield}</span>}
         {Array.isArray(unit.statuses) && unit.statuses.length > 0 && (
           <div className="battlefield-unit__statuses">
-            {renderStatuses(unit.statuses)}
+            <StatusBadges statuses={unit.statuses} />
           </div>
         )}
         {isSelected && <span className="battlefield-unit__badge">{"\u2694"}</span>}

@@ -1,15 +1,11 @@
 import type { ReactNode } from "react";
 import { motion } from "motion/react";
-import type { PlayedBoardCard } from "../features/customHooks/useMatchBoard";
 import "./MatchBoard.css";
 
 type MatchBoardProps = {
-  cards: PlayedBoardCard[];
-  currentUserId: string | null;
   selfUnits: ReactNode;
   enemyUnits: ReactNode;
-  hiddenSelfCardIds?: string[];
-  selfPlayedRef?: (element: HTMLDivElement | null) => void;
+  selfUnitsRef?: (element: HTMLDivElement | null) => void;
   enemyHint?: ReactNode;
   enemyTargeting?: boolean;
   spellNotice?: string | null;
@@ -18,17 +14,14 @@ type MatchBoardProps = {
 };
 
 export default function MatchBoard({
-  cards: _cards,
-  currentUserId: _currentUserId,
   selfUnits,
   enemyUnits,
-  hiddenSelfCardIds: _hiddenSelfCardIds,
-  selfPlayedRef,
+  selfUnitsRef,
   enemyHint = null,
   enemyTargeting = false,
   spellNotice = null,
   spellNoticeFading = false,
-  spellNoticeTone = "default"
+  spellNoticeTone = "default",
 }: MatchBoardProps) {
   return (
     <section className="game-battlefield-layout" aria-label="Match board">
@@ -45,19 +38,22 @@ export default function MatchBoard({
         </div>
       )}
 
-
-      <div className={`battlefield-board${enemyTargeting ? " battlefield-board--targeting" : ""}`} ref={selfPlayedRef}>
+      <div className="battlefield-enemy-col">
         {enemyHint}
-        <p className="battlefield-col-title">Enemy Units</p>
-        {enemyUnits}
+        <div className={`battlefield-row battlefield-row--enemy app-scrollbar${enemyTargeting ? " battlefield-row--enemy-targeting" : ""}`}>
+          <p className="battlefield-col-title">Enemy Units</p>
+          {enemyUnits}
+        </div>
+      </div>
 
-        <div className="battlefield-board__divider" />
+      <div className="game-battlefield__divider" />
 
-        <p className="battlefield-col-title">My Units</p>
-        {selfUnits}
+      <div className="battlefield-self-col">
+        <div className="battlefield-row battlefield-row--self app-scrollbar" ref={selfUnitsRef}>
+          <p className="battlefield-col-title">My Units</p>
+          {selfUnits}
+        </div>
       </div>
     </section>
   );
 }
-
-
