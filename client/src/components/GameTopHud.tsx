@@ -1,4 +1,5 @@
-import { motion } from "motion/react";
+import { motion, useAnimationControls } from "motion/react";
+import { useEffect } from "react";
 import type { MutableRefObject } from "react";
 import TurnCountdown from "./TurnCountdown";
 import StatusBadges, { type StatusView } from "./StatusBadges";
@@ -58,6 +59,17 @@ export default function GameTopHud({
   timerRemaining,
   onLeaveArenaRequest,
 }: GameTopHudProps) {
+  const heroShakeControls = useAnimationControls();
+
+  useEffect(() => {
+    if (enemyHeroShakeToken <= 0) return;
+
+    heroShakeControls.start({
+      x: [0, -6, 6, -4, 4, 0],
+      transition: { duration: 0.24, ease: "easeOut" },
+    });
+  }, [enemyHeroShakeToken, heroShakeControls]);
+
   return (
     <>
       <header className="game-hud game-hud--top parchment-panel">
@@ -83,10 +95,8 @@ export default function GameTopHud({
           style={{ cursor: isAnyTargetingMode ? "crosshair" : undefined }}
         >
           <motion.div
-            key={`enemy-hero-shake-${enemyHeroShakeToken}`}
             initial={{ x: 0 }}
-            animate={enemyHeroShakeToken > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
-            transition={{ duration: 0.24, ease: "easeOut" }}
+            animate={heroShakeControls}
             className="game-hp__content"
           >
             {enemyHeroFlashToken > 0 && (

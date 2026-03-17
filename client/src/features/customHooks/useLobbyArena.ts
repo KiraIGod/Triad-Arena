@@ -76,6 +76,7 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
   const checkActiveMatch = useCallback(() => {
     if (!socket.connected) return;
     socket.emit("match:check-active", (res?: CheckActiveResponse) => {
+      console.log("[lobby] match:check-active response", res);
       if (res?.hasActiveMatch && res.matchId) {
         setActiveMatchId(res.matchId);
       } else {
@@ -88,21 +89,25 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
     if (!token) return;
 
     socket.auth = { token };
-    if (socket.connected) {
-      socket.disconnect();
+    if (!socket.connected) {
+      socket.connect();
     }
-    socket.connect();
 
     const onConnect = () => {
+      console.log("[lobby] socket connected", { id: socket.id, gameMode });
       setIsOnline(true);
       checkActiveMatch();
     };
-    const onDisconnect = () => setIsOnline(false);
+    const onDisconnect = (reason?: string) => {
+      console.log("[lobby] socket disconnected", { reason });
+      setIsOnline(false);
+    };
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
 
     if (socket.connected) {
+      setIsOnline(true);
       checkActiveMatch();
     }
 
@@ -136,6 +141,7 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
       matchId?: string;
       players?: Array<{ userId?: string; nickname?: string }>;
     }) => {
+      console.log("[lobby] arena:ready received during search", payload);
       if (!payload?.matchId || joinCancelledRef.current) return;
 
       joinCancelledRef.current = true;
@@ -166,6 +172,7 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
     }
 
     socket.emit("match:check-active", (activeRes?: CheckActiveResponse) => {
+      console.log("[lobby] pre-join active match response", activeRes);
       if (joinCancelledRef.current) return;
 
       if (activeRes?.hasActiveMatch && activeRes.matchId) {
@@ -175,7 +182,9 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
         return;
       }
 
+      console.log("[lobby] emitting arena:join", { gameMode });
       socket.emit("arena:join", { gameMode }, (res?: JoinArenaResponse) => {
+        console.log("[lobby] arena:join ack", res);
         if (joinCancelledRef.current) return;
 
         if (res?.arenaId) {
@@ -206,6 +215,7 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
   const handleJoinArena = () => {
     if (isJoiningArena || activeMatchId) return;
 
+    console.log("[lobby] handleJoinArena", { gameMode, activeMatchId, isJoiningArena });
     joinCancelledRef.current = false;
     setError(null);
     setIsJoiningArena(true);
@@ -247,6 +257,7 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
       matchId?: string;
       players?: Array<{ userId?: string; nickname?: string }>;
     }) => {
+      console.log("[lobby] arena:ready received for private room", payload);
       if (!payload?.matchId) return;
       if (payload.arenaId && payload.arenaId !== privateArenaId) return;
 
@@ -268,6 +279,7 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
   const handleCreateArena = () => {
     if (isCreatingArena || activeMatchId) return;
 
+    console.log("[lobby] handleCreateArena", { gameMode, activeMatchId, isCreatingArena });
     setError(null);
     setIsCreatingArena(true);
 
@@ -276,7 +288,9 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
       setIsCreatingArena(false);
     }, 7000);
 
+    console.log("[lobby] emitting arena:create", { gameMode });
     socket.emit("arena:create", { gameMode }, (res?: CreateArenaResponse) => {
+      console.log("[lobby] arena:create ack", res);
       clearTimeout(timeoutId);
 
       if (!res?.arenaId) {
@@ -302,11 +316,13 @@ export function useLobbyArena(token: string | null, gameMode: GameMode = "normal
   const handleJoinByCode = (code: string) => {
     if (!code.trim() || isJoiningArena || activeMatchId) return;
 
+    console.log("[lobby] handleJoinByCode", { code: code.trim().toUpperCase() });
     joinCancelledRef.current = false;
     setError(null);
     setIsJoiningArena(true);
 
     socket.emit("arena:join-by-code", { roomCode: code.trim() }, (res?: JoinArenaResponse) => {
+      console.log("[lobby] arena:join-by-code ack", res);
       setIsJoiningArena(false);
 
       if (res?.error) {

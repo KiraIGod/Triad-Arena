@@ -1,4 +1,5 @@
-import { motion } from "motion/react";
+import { motion, useAnimationControls } from "motion/react";
+import { useEffect } from "react";
 import type { MutableRefObject } from "react";
 import StatusBadges, { type StatusView } from "./StatusBadges";
 
@@ -33,14 +34,23 @@ export default function GameBottomHud({
   heroShakeToken = 0,
   heroFlashToken = 0,
 }: GameBottomHudProps) {
+  const heroShakeControls = useAnimationControls();
+
+  useEffect(() => {
+    if (heroShakeToken <= 0) return;
+
+    heroShakeControls.start({
+      x: [0, -6, 6, -4, 4, 0],
+      transition: { duration: 0.24, ease: "easeOut" },
+    });
+  }, [heroShakeControls, heroShakeToken]);
+
   return (
     <motion.footer
       className="game-hud game-hud--bottom parchment-panel"
       ref={heroRef}
-      key={`self-hero-shake-${heroShakeToken}`}
       initial={{ x: 0 }}
-      animate={heroShakeToken > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
-      transition={{ duration: 0.24, ease: "easeOut" }}
+      animate={heroShakeControls}
     >
       {heroFlashToken > 0 && (
         <motion.span
