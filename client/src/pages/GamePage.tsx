@@ -98,13 +98,11 @@ export default function GamePage() {
   const [isMobileView, setIsMobileView] = useState(
     () => typeof window !== "undefined" && window.innerWidth <= 768,
   );
-  const lastSpellNoticeEventIdRef = useRef<number | null>(null);
   const lastOpponentPlayVisualEventIdRef = useRef<number | null>(null);
   const { playedCards, cardCatalog, applyEvents, resetBoard } = useMatchBoard();
   const {
     value: spellNotice,
     isFading: spellNoticeFading,
-    show: showSpellNoticeMessage,
   } = useTimedNotice();
   const {
     value: battlefieldHint,
@@ -120,6 +118,7 @@ export default function GamePage() {
   } = useTimedNotice();
   const {
     battleEffects,
+    spawnHitTextEffect,
     selfHeroShakeToken,
     selfHeroFlashToken,
     enemyHeroShakeToken,
@@ -156,33 +155,6 @@ export default function GamePage() {
         .trim()
         .toLowerCase(),
     [userIdStr],
-  );
-
-  const showSpellNotice = useCallback(
-    (events?: MatchStatePayload["events"]) => {
-      if (!Array.isArray(events) || events.length === 0) return;
-
-      const latestSpellEvent = [...events]
-        .reverse()
-        .find(
-          (event) =>
-            String(event?.type || "") === "CARD_PLAYED" &&
-            String(event?.payload?.card?.type || "").toLowerCase() === "spell",
-        );
-
-      if (!latestSpellEvent?.payload?.card?.name) return;
-      if (lastSpellNoticeEventIdRef.current === latestSpellEvent.eventId)
-        return;
-      lastSpellNoticeEventIdRef.current = latestSpellEvent.eventId;
-
-      const ownerLabel = isSameUser(latestSpellEvent.payload.playerId)
-        ? "Your"
-        : "Opponent";
-      showSpellNoticeMessage(
-        `${ownerLabel} spell resolved: ${latestSpellEvent.payload.card.name}`,
-      );
-    },
-    [isSameUser, showSpellNoticeMessage],
   );
 
   const showOpponentPlayVisual = useCallback(
@@ -240,6 +212,9 @@ export default function GamePage() {
       }
 
       spawnOpponentUnitFlyEffect(cardModel, targetRect);
+      if ((Number(cardModel.attack) || 0) > 0) {
+        spawnHitTextEffect(`-${Number(cardModel.attack)}`, targetRect);
+      }
       const burstTargetRect = targetRect;
       window.setTimeout(() => {
         spawnSpellBurstEffect(cardModel.triad_type, burstTargetRect);
@@ -277,16 +252,15 @@ export default function GamePage() {
       hideBattlefieldHint();
       hideHandHint();
       setAttackState({ mode: "idle" });
+      if (payload.events?.length) {
+        showOpponentPlayVisual(payload.events);
+        applyEvents(payload.events);
+      }
       setMatch(payload);
       if (payload.state.finished) setTimerRemaining(0);
       setArenaMatchId(payload.matchId);
-      if (payload.events?.length) {
-        showOpponentPlayVisual(payload.events);
-        showSpellNotice(payload.events);
-        applyEvents(payload.events);
-      }
     },
-    [applyEvents, hideBattlefieldHint, hideHandHint, showOpponentPlayVisual, showSpellNotice],
+    [applyEvents, hideBattlefieldHint, hideHandHint, showOpponentPlayVisual],
   );
 
   const handleMatchUpdatePayload = useCallback(
@@ -295,15 +269,14 @@ export default function GamePage() {
       hideBattlefieldHint();
       hideHandHint();
       setAttackState({ mode: "idle" });
-      setMatch(payload);
-      if (payload.state.finished) setTimerRemaining(0);
       if (payload.events?.length) {
         showOpponentPlayVisual(payload.events);
-        showSpellNotice(payload.events);
         applyEvents(payload.events);
       }
+      setMatch(payload);
+      if (payload.state.finished) setTimerRemaining(0);
     },
-    [applyEvents, hideBattlefieldHint, hideHandHint, showOpponentPlayVisual, showSpellNotice],
+    [applyEvents, hideBattlefieldHint, hideHandHint, showOpponentPlayVisual],
   );
 
   const handleMatchErrorPayload = useCallback(
@@ -453,6 +426,7 @@ export default function GamePage() {
     showHandHint,
     spawnCardFlyEffect,
     spawnSpellBurstEffect,
+    spawnHitTextEffect,
     triggerEnemyHeroShake,
     triggerEnemyHeroFlash,
     triggerEnemyUnitShake,

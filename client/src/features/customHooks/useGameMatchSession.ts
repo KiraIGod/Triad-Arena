@@ -73,12 +73,16 @@ export function useGameMatchSession({
     };
 
     const requestArenaState = () => {
+      console.log("[game-session] requesting arena:get-state", {
+        arenaId,
+        arenaMatchId,
+      });
       socket.emit(
         "arena:get-state",
         { arenaId },
         (res?: { matchId?: string; players?: ArenaPlayer[]; error?: string }) => {
+          console.log("[game-session] arena:get-state ack", res);
           if (res?.error) {
-            // Once matchId is known, the page should not depend on the transient arena entry anymore.
             if (arenaMatchId) return;
             return;
           }
@@ -93,12 +97,18 @@ export function useGameMatchSession({
     }
 
     const onArenaReady = (payload?: { arenaId?: string; matchId?: string; players?: ArenaPlayer[] }) => {
+      console.log("[game-session] arena:ready received", payload);
       if (!payload?.arenaId || payload.arenaId !== arenaId) return;
       updateOpponentFromPlayers(payload.players);
       if (payload.matchId) setArenaMatchId(payload.matchId);
     };
 
     const onConnect = () => {
+      console.log("[game-session] socket connected for arena session", {
+        socketId: socket.id,
+        arenaId,
+        arenaMatchId,
+      });
       socket.emit("join_game", arenaId);
       if (!arenaMatchId) {
         requestArenaState();
@@ -128,11 +138,16 @@ export function useGameMatchSession({
     if (!socket.connected) socket.connect();
 
     const onConnect = () => {
+      console.log("[game-session] socket connected for match sync", {
+        socketId: socket.id,
+        arenaMatchId,
+      });
       onSetReconnecting(false);
       syncMatch();
     };
 
     const onDisconnect = () => {
+      console.log("[game-session] socket disconnected during match session");
       onSetReconnecting(true);
     };
 
@@ -177,11 +192,19 @@ export function useGameMatchSession({
     if (!socket.connected) socket.connect();
 
     if (joinedMatchRef.current !== arenaMatchId) {
+      console.log("[game-session] switching to arenaMatchId", {
+        from: joinedMatchRef.current,
+        to: arenaMatchId,
+      });
       joinedMatchRef.current = arenaMatchId;
       onResetJoinState();
     }
 
     if (currentMatchId !== arenaMatchId) {
+      console.log("[game-session] joinMatch emit", {
+        arenaMatchId,
+        currentMatchId,
+      });
       joinMatch(arenaMatchId);
     }
 

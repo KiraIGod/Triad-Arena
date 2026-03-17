@@ -1,4 +1,5 @@
-import { motion } from "motion/react";
+import { motion, useAnimationControls } from "motion/react";
+import { useEffect } from "react";
 import { GameCard, type CardModel } from "./Card";
 import StatusBadges from "./StatusBadges";
 import type { UnitInstance } from "../shared/socket/matchSocket";
@@ -32,6 +33,17 @@ export default function BattlefieldUnitCard({
   onEnemyUnitClick,
   onMount,
 }: BattlefieldUnitCardProps) {
+  const shakeControls = useAnimationControls();
+
+  useEffect(() => {
+    if (shakeToken <= 0) return;
+
+    shakeControls.start({
+      x: [0, -6, 6, -4, 4, 0],
+      transition: { duration: 0.24, ease: "easeOut" },
+    });
+  }, [shakeControls, shakeToken]);
+
   const isSelected = isOwn && unit.instanceId === selectedAttackerId;
   const isAttackable = isOwn && isMyTurn && unit.canAttack && !isAnyTargetingMode;
   const isTargetable = !isOwn && isAnyTargetingMode;
@@ -95,10 +107,8 @@ export default function BattlefieldUnitCard({
       }}
     >
       <motion.div
-        key={shakeToken > 0 ? `${unit.instanceId}-shake-${shakeToken}` : `${unit.instanceId}-steady`}
         initial={{ x: 0 }}
-        animate={shakeToken > 0 ? { x: [0, -6, 6, -4, 4, 0] } : { x: 0 }}
-        transition={{ duration: 0.24, ease: "easeOut" }}
+        animate={shakeControls}
       >
         <GameCard card={card} size="small" />
         {/* <span className="battlefield-unit__stats-tooltip" aria-hidden>

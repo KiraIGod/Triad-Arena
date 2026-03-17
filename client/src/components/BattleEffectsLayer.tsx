@@ -72,7 +72,7 @@ export default function BattleEffectsLayer({
                 style={{ left, top }}
                 initial={{ opacity: 0, y: 12, scale: 0.92 }}
                 animate={{ opacity: [0, 1, 1, 0], y: [12, -4, -18, -34], scale: [0.92, 1.04, 1, 0.98] }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
+                transition={{ duration: 1.3, ease: "easeOut" }}
                 onAnimationComplete={() => onComplete(effect)}
               >
                 {effect.text}
