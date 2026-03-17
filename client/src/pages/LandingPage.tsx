@@ -187,7 +187,7 @@ const LandingPage = () => {
                 <img
                   src={`${backendUrl}/static/void_seer.png`}
                   alt="Arcane"
-                  className="lp-faction-image"
+                  className="lp-faction-image lp-faction-image-arcane"
                 />
               </div>
 
