@@ -2,7 +2,8 @@
   "nav": {
     "join": "PLAY",
     "login": "LOGIN",
-    "lobby": "LOBBY"
+    "lobby": "LOBBY",
+    "logout": "LOGOUT"
   },
 
    "brand": {

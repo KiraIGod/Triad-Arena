@@ -1,12 +1,14 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '../components/shared/LanguageSwitcher'
-import { useAppSelector } from '../store'
+import { useAppSelector, useAppDispatch } from '../store'
+import { clearCredentials } from '../features/auth/authSlice'
 import './LandingPage.css'
 
 const LandingPage = () => {
   const { t } = useTranslation()
   const navigate = useNavigate()
+  const dispatch = useAppDispatch()
 
   const token = useAppSelector((state) => state.auth.token)
 
@@ -33,6 +35,12 @@ const LandingPage = () => {
     }
   }
 
+
+  const handleLogoutClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    dispatch(clearCredentials())
+  }
+
   return (
     <div className="lp-root">
 
@@ -47,15 +55,12 @@ const LandingPage = () => {
           }}>
           <LanguageSwitcher />
 
-          <Link to={token ? "/lobby" : "/login"} className="lp-btn-red" onClick={handlePlayClick}>
-            {token ? t('nav.lobby') : t('nav.join')}
-          </Link>
-
-          {!token && (
-            <Link to="/login" className="lp-btn-ghost" onClick={handleLoginClick}>
-              {t('nav.login')}
-            </Link>
+          {token && (
+            <button className="lp-btn-ghost" onClick={handleLogoutClick}>
+              {t('nav.logout')}
+            </button>
           )}
+
         </div>
       </header>
 
@@ -245,7 +250,7 @@ const LandingPage = () => {
           <h2 className="lp-final-title">{t('final.title')}</h2>
           <p className="lp-final-sub">{t('final.sub')}</p>
 
-          <Link to={token ? "/lobby" : "/register"} className="lp-btn-red lp-btn-large" onClick={handlePlayClick}>
+          <Link to={token ? "/lobby" : "/register"} className="lp-btn-red lp-btn-large" onClick={handleLoginClick}>
             ✕ {token ? t('hero.enterLobby') : t('final.btn')}
           </Link>
 
