@@ -10,6 +10,7 @@ import {
 } from "../../shared/socket/matchSocket";
 
 const MAX_BOARD_UNITS = 5;
+const SPELL_UNIT_ACTION_DELAY_MS = 240;
 const SPELL_UNIT_BURST_DELAY_MS = 120;
 const SPELL_HERO_BURST_DELAY_MS = 180;
 
@@ -51,6 +52,7 @@ type UseGameActionsParams = {
   showHandHint: (message: string | null) => void;
   spawnCardFlyEffect: (card: CardModel, targetRect?: DOMRect | null) => void;
   spawnSpellBurstEffect: (triadType: CardModel["triad_type"], targetRect?: DOMRect | null) => void;
+  spawnHitTextEffect: (text: string, targetRect?: DOMRect | null) => void;
   triggerEnemyHeroShake: () => void;
   triggerEnemyHeroFlash: () => void;
   triggerEnemyUnitShake: (unitId: string) => void;
@@ -108,6 +110,7 @@ export function useGameActions({
   showHandHint,
   spawnCardFlyEffect,
   spawnSpellBurstEffect,
+  spawnHitTextEffect,
   triggerEnemyHeroShake,
   triggerEnemyHeroFlash,
   triggerEnemyUnitShake,
@@ -256,20 +259,25 @@ export function useGameActions({
         triggerEnemyUnitShake(unit.instanceId);
         triggerEnemyUnitFlash(unit.instanceId);
         spawnCardFlyEffect(spellCard, targetRect);
+        if ((Number(spellCard.attack) || 0) > 0) {
+          spawnHitTextEffect(`-${Number(spellCard.attack)}`, targetRect);
+        }
 
         scheduleTimeout(() => {
           spawnSpellBurstEffect(spellCard.triad_type, targetRect);
         }, SPELL_UNIT_BURST_DELAY_MS);
       }
 
-      playMatchCard({
-        matchId: match.matchId,
-        cardId: attackState.originalCardId,
-        actionId: attackState.actionId,
-        version: match.state.version,
-        targetType: "unit",
-        targetId: unit.instanceId,
-      });
+      scheduleTimeout(() => {
+        playMatchCard({
+          matchId: match.matchId,
+          cardId: attackState.originalCardId,
+          actionId: attackState.actionId,
+          version: match.state.version,
+          targetType: "unit",
+          targetId: unit.instanceId,
+        });
+      }, SPELL_UNIT_ACTION_DELAY_MS);
 
       resetActionUi();
       return;
@@ -279,6 +287,10 @@ export function useGameActions({
 
     const actionId = `atk-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     triggerEnemyUnitFlash(unit.instanceId);
+    const attacker = selfStats.board.find((entry) => entry.instanceId === attackState.attackerInstanceId);
+    if ((Number(attacker?.attack) || 0) > 0) {
+      spawnHitTextEffect(`-${Number(attacker?.attack)}`, targetRect);
+    }
     attackWithUnit({
       matchId: match.matchId,
       unitId: attackState.attackerInstanceId,
@@ -295,7 +307,9 @@ export function useGameActions({
     match,
     resetActionUi,
     scheduleTimeout,
+    selfStats.board,
     spawnCardFlyEffect,
+    spawnHitTextEffect,
     spawnSpellBurstEffect,
     triggerEnemyUnitFlash,
     triggerEnemyUnitShake,
@@ -318,20 +332,25 @@ export function useGameActions({
         triggerEnemyHeroFlash();
         const targetRect = enemyHeroRef.current?.getBoundingClientRect() ?? null;
         spawnCardFlyEffect(spellCard, targetRect);
+        if ((Number(spellCard.attack) || 0) > 0) {
+          spawnHitTextEffect(`-${Number(spellCard.attack)}`, targetRect);
+        }
 
         scheduleTimeout(() => {
           spawnSpellBurstEffect(spellCard.triad_type, targetRect);
         }, SPELL_HERO_BURST_DELAY_MS);
       }
 
-      playMatchCard({
-        matchId: match.matchId,
-        cardId: attackState.originalCardId,
-        actionId: attackState.actionId,
-        version: match.state.version,
-        targetType: "hero",
-        targetId: enemyHeroId,
-      });
+      scheduleTimeout(() => {
+        playMatchCard({
+          matchId: match.matchId,
+          cardId: attackState.originalCardId,
+          actionId: attackState.actionId,
+          version: match.state.version,
+          targetType: "hero",
+          targetId: enemyHeroId,
+        });
+      }, 16);
 
       resetActionUi();
       return;
@@ -346,6 +365,11 @@ export function useGameActions({
 
     const actionId = `atk-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     triggerEnemyHeroFlash();
+    const targetRect = enemyHeroRef.current?.getBoundingClientRect() ?? null;
+    const attacker = selfStats.board.find((entry) => entry.instanceId === attackState.attackerInstanceId);
+    if ((Number(attacker?.attack) || 0) > 0) {
+      spawnHitTextEffect(`-${Number(attacker?.attack)}`, targetRect);
+    }
 
     attackWithUnit({
       matchId: match.matchId,
@@ -366,7 +390,9 @@ export function useGameActions({
     resetActionUi,
     scheduleTimeout,
     setMatchError,
+    selfStats.board,
     spawnCardFlyEffect,
+    spawnHitTextEffect,
     spawnSpellBurstEffect,
     triggerEnemyHeroFlash,
     triggerEnemyHeroShake,
