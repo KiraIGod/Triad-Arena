@@ -76,14 +76,21 @@ export function useGameMatchSession({
       socket.emit(
         "arena:get-state",
         { arenaId },
-        (res?: { matchId?: string; players?: ArenaPlayer[] }) => {
+        (res?: { matchId?: string; players?: ArenaPlayer[]; error?: string }) => {
+          if (res?.error) {
+            // Once matchId is known, the page should not depend on the transient arena entry anymore.
+            if (arenaMatchId) return;
+            return;
+          }
           updateOpponentFromPlayers(res?.players);
           if (res?.matchId) setArenaMatchId(res.matchId);
         }
       );
     };
 
-    requestArenaState();
+    if (!arenaMatchId) {
+      requestArenaState();
+    }
 
     const onArenaReady = (payload?: { arenaId?: string; matchId?: string; players?: ArenaPlayer[] }) => {
       if (!payload?.arenaId || payload.arenaId !== arenaId) return;
@@ -93,7 +100,9 @@ export function useGameMatchSession({
 
     const onConnect = () => {
       socket.emit("join_game", arenaId);
-      requestArenaState();
+      if (!arenaMatchId) {
+        requestArenaState();
+      }
     };
 
     const pollId = window.setInterval(() => {
