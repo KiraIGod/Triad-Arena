@@ -4,6 +4,7 @@ export type UnitInstance = {
   instanceId: string;
   cardId: string;
   ownerId: string;
+  mana_cost?: number | null;
   attack: number;
   hp: number;
   summonedTurn: number;

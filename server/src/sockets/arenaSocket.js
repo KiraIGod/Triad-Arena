@@ -41,7 +41,11 @@ async function getNicknameFromSocket(socket) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "dev_secret");
-    const user = await User.findByPk(decoded.userId, { attributes: ["id", "nickname"] });
+    // Согласуем с логикой socket auth в `server/src/sockets/index.js`
+    // где userId может лежать в разных полях токена.
+    const userId = decoded?.id ?? decoded?.userId ?? decoded?.user_id;
+    if (!userId) return null;
+    const user = await User.findByPk(userId, { attributes: ["id", "nickname"] });
     return user?.nickname || null;
   } catch {
     return null;
@@ -545,7 +549,7 @@ module.exports = function registerArenaSocket(io, activeGames) {
       }
     });
 
-    socket.on("arena:get-state", (payload, ack) => {
+    socket.on("arena:get-state", async (payload, ack) => {
       try {
         const arenaId = String(payload?.arenaId || "");
         console.log("[arena:get-state] request", {
@@ -578,6 +582,58 @@ module.exports = function registerArenaSocket(io, activeGames) {
           return;
         }
 
+        const rawPlayers = Array.isArray(arena.players) ? arena.players : [];
+
+        // При рекконекте никнеймы иногда приходят как "UNKNOWN" из-за того,
+        // что они были сохранены в памяти на более раннем этапе.
+        // Подтягиваем никнеймы из БД, если они отсутствуют/заглушка.
+        const missingNicknameUserIds = rawPlayers
+          .map((p) => p?.userId)
+          .filter((id) => id != null)
+          .filter((id) => {
+            const player = rawPlayers.find((p) => String(p?.userId) === String(id));
+            const nickname = player?.nickname;
+            return !nickname || String(nickname).trim().length === 0 || String(nickname).trim().toUpperCase() === "UNKNOWN";
+          });
+
+        const uniqueMissingUserIds = Array.from(
+          new Set(missingNicknameUserIds.map((id) => String(id))),
+        );
+
+        let nicknameByUserId = new Map();
+        if (uniqueMissingUserIds.length > 0) {
+          const users = await User.findAll({
+            where: { id: uniqueMissingUserIds },
+            attributes: ["id", "nickname"],
+          });
+
+          nicknameByUserId = new Map(
+            users.map((u) => {
+              const plain = u.get({ plain: true });
+              return [String(plain.id), plain.nickname];
+            }),
+          );
+        }
+
+        const enrichedPlayers = rawPlayers.map((p) => {
+          const userId = p?.userId;
+          if (userId == null) return p;
+
+          const currentNickname = p?.nickname;
+          const isUnknown =
+            !currentNickname ||
+            String(currentNickname).trim().length === 0 ||
+            String(currentNickname).trim().toUpperCase() === "UNKNOWN";
+
+          if (!isUnknown) return p;
+
+          const nextNickname = nicknameByUserId.get(String(userId));
+          return {
+            ...p,
+            nickname: nextNickname ?? "UNKNOWN",
+          };
+        });
+
         if (typeof ack === "function") {
           console.log("[arena:get-state] success", {
             requestedArenaId: arenaId,
@@ -590,7 +646,7 @@ module.exports = function registerArenaSocket(io, activeGames) {
             arenaId: resolvedArenaId,
             matchId: arena.matchId || null,
             status: arena.status,
-            players: Array.isArray(arena.players) ? arena.players : []
+            players: enrichedPlayers
           });
         }
       } catch (error) {

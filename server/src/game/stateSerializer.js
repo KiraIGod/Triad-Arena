@@ -19,7 +19,9 @@ function normalizeUnit(unit, cardMap) {
     // has to fall back to a potentially empty cardCatalog.
     name: cardMeta?.name ?? null,
     image: cardMeta?.image ?? null,
-    triad_type: cardMeta?.triad_type ?? null
+    triad_type: cardMeta?.triad_type ?? null,
+    // Needed for stable unit rendering (mana cost) after page reload/reconnect.
+    mana_cost: cardMeta?.mana_cost ?? null
   };
 }
 
