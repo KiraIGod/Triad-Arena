@@ -669,16 +669,6 @@ export default function GamePage() {
             <span className="comic-text-shadow">
               {matchResultLabel ?? "Match finished"}
             </span>
-            {finishReason === "disconnect" && (
-              <p style={{ marginTop: 8, textAlign: "center" }}>
-                Opponent disconnected
-              </p>
-            )}
-            {finishReason === "opponent_left" && (
-              <p style={{ marginTop: 8, textAlign: "center" }}>
-                Opponent fled the arena
-              </p>
-            )}
             {finishGameMode === "ranked" && ratingChange !== null && (
               <p
                 className="comic-text-shadow"
