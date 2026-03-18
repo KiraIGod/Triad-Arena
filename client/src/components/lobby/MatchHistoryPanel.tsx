@@ -1,21 +1,21 @@
-import type { MatchHistoryEntry } from "../../shared/api/lobbyApi";
-import styles from "./MatchHistoryPanel.module.css";
+import type { MatchHistoryEntry } from "../../shared/api/lobbyApi"
+import styles from "./MatchHistoryPanel.module.css"
 
 type MatchHistoryPanelProps = {
-  matches: MatchHistoryEntry[];
-  loading: boolean;
-  error: string | null;
-};
+  matches: MatchHistoryEntry[]
+  loading: boolean
+  error: string | null
+}
 
 function formatDate(dateStr: string | null): string {
-  if (!dateStr) return "—";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return "—";
+  if (!dateStr) return "—"
+  const d = new Date(dateStr)
+  if (isNaN(d.getTime())) return "—"
   return d.toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
-  });
+  })
 }
 
 export function MatchHistoryPanel({
@@ -94,5 +94,5 @@ export function MatchHistoryPanel({
           ))}
       </div>
     </section>
-  );
+  )
 }

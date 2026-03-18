@@ -52,11 +52,11 @@ const ChatModal = ({ friend, onClose }: ChatModalProps) => {
 
   useEffect(() => {
     const loadHistory = async () => {
-      if (!token || !friend.id) return;
+      if (!token || !friend.id) return
 
       try {
         setIsLoadingHistory(true);
-        const history = await fetchChatHistory(token, friend.id);
+        const history = await fetchChatHistory(token, friend.id)
 
         const formattedHistory = history.map((msg) => ({
           id: msg.id,
@@ -67,10 +67,10 @@ const ChatModal = ({ friend, onClose }: ChatModalProps) => {
 
         setMessages(formattedHistory)
       }
-      catch (error) {
+        catch (error) {
         console.error('Ошибка загрузки истории чата:', error)
       }
-      finally {
+        finally {
         setIsLoadingHistory(false)
       }
     }
@@ -92,8 +92,6 @@ const ChatModal = ({ friend, onClose }: ChatModalProps) => {
     })
 
     socketInstance.on('connect', () => {
-      console.log('✅ [ФРОНТ] Сокет ПОДКЛЮЧЕН! ID:', socketInstance.id)
-
       socketInstance.emit('join_private_chat', {
         friendId: friend.id,
         myId: myUserId
@@ -101,22 +99,12 @@ const ChatModal = ({ friend, onClose }: ChatModalProps) => {
     })
 
     socketInstance.on('receive_private_message', (message: Message) => {
-      console.log('✅ [ФРОНТ] Прилетело сообщение от сервера:', message)
       setMessages((prev) => [...prev, message])
-    })
-
-    socketInstance.on('disconnect', (reason) => {
-      console.log('❌ [ФРОНТ] Сокет ОТКЛЮЧИЛСЯ! Причина:', reason)
-    })
-
-    socketInstance.on('connect_error', (err) => {
-      console.error('🚨 [ФРОНТ] Ошибка подключения к сокету:', err.message)
     })
 
     socketRef.current = socketInstance
 
     return () => {
-      console.log('🧹 [ФРОНТ] Очистка компонента: отключаем сокет');
       socketInstance.disconnect();
       socketRef.current = null
     }
@@ -128,22 +116,15 @@ const ChatModal = ({ friend, onClose }: ChatModalProps) => {
     if (isInitialScroll.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'auto' })
       isInitialScroll.current = false;
-    } else {
+    }
+      else {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages])
 
   const sendMessage = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!inputText.trim()) return
-
-    console.log("👉 [ФРОНТ] Клик по кнопке 'Отправить'. Текст:", inputText)
-    console.log("👉 [ФРОНТ] Состояние сокета (connected):", socketRef.current?.connected)
-
-    if (!socketRef.current?.connected) {
-      console.error("🚨 [ФРОНТ] ОШИБКА: Попытка отправить в мертвый сокет!")
-      return
-    }
+    if (!inputText.trim() || !socketRef.current?.connected) return
 
     socketRef.current.emit('send_private_message', {
       friendId: friend.id,
@@ -151,7 +132,6 @@ const ChatModal = ({ friend, onClose }: ChatModalProps) => {
       myId: myUserId
     })
 
-    console.log("👉 [ФРОНТ] Событие send_private_message улетело на сервер!")
     setInputText('')
   }
 
@@ -196,7 +176,6 @@ const ChatModal = ({ friend, onClose }: ChatModalProps) => {
         padding: 0,
         position: 'absolute'
       }}
-
       modalRender={(modal) => (
         <Draggable
           disabled={disabled}

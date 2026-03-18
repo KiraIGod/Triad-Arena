@@ -1,22 +1,22 @@
-import { useState } from "react";
-import type { DeckBuilderCard } from "../../types/deckBuilder";
-import { toStaticUrl } from "../../shared/lib/toStaticUrl";
+import { useState } from "react"
+import type { DeckBuilderCard } from "../../types/deckBuilder"
+import { toStaticUrl } from "../../shared/lib/toStaticUrl"
 
 type CurrentDeckProps = {
-  deckByCardId: Record<string, number>;
-  cardsById: Record<string, DeckBuilderCard>;
-  totalCards: number;
-  maxCards: number;
-  onRemoveCard: (cardId: string) => void;
-};
+  deckByCardId: Record<string, number>
+  cardsById: Record<string, DeckBuilderCard>
+  totalCards: number
+  maxCards: number
+  onRemoveCard: (cardId: string) => void
+}
 
 function triadLabel(triad: string): string {
   const map: Record<string, string> = {
     assault: "Assault",
     precision: "Precision",
     arcane: "Arcane",
-  };
-  return map[triad] ?? triad;
+  }
+  return map[triad] ?? triad
 }
 
 export default function CurrentDeck({
@@ -26,8 +26,8 @@ export default function CurrentDeck({
   maxCards,
   onRemoveCard,
 }: CurrentDeckProps) {
-  const [hoveredCard, setHoveredCard] = useState<DeckBuilderCard | null>(null);
-  const [tooltipY, setTooltipY] = useState(0);
+  const [hoveredCard, setHoveredCard] = useState<DeckBuilderCard | null>(null)
+  const [tooltipY, setTooltipY] = useState(0)
 
   const entries = Object.entries(deckByCardId)
     .filter(([, quantity]) => quantity > 0)
@@ -41,20 +41,20 @@ export default function CurrentDeck({
       (a, b) =>
         a.card.mana_cost - b.card.mana_cost ||
         a.card.name.localeCompare(b.card.name),
-    );
+    )
 
-  const isFull = totalCards >= maxCards;
+  const isFull = totalCards >= maxCards
 
   const handleMouseEnter = (card: DeckBuilderCard, e: React.MouseEvent) => {
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    setTooltipY(rect.top);
-    setHoveredCard(card);
-  };
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+    setTooltipY(rect.top)
+    setHoveredCard(card)
+  }
 
   const showStats =
     hoveredCard &&
     hoveredCard.type !== "SPELL" &&
-    (hoveredCard.attack !== null || hoveredCard.hp !== null);
+    (hoveredCard.attack !== null || hoveredCard.hp !== null)
 
   return (
     <section className="currentDeck">
@@ -121,5 +121,5 @@ export default function CurrentDeck({
         </div>
       )}
     </section>
-  );
+  )
 }

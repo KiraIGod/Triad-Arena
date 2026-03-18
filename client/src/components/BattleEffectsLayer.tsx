@@ -1,57 +1,57 @@
-import { AnimatePresence, motion } from "motion/react";
-import { GameCard, type CardModel } from "./Card";
-import "./BattleEffectsLayer.css";
+import { AnimatePresence, motion } from "motion/react"
+import { GameCard, type CardModel } from "./Card"
+import "./BattleEffectsLayer.css"
 
 export type CardFlyEffect = {
-  id: string;
-  type: "card_fly";
-  playedCardId: string;
-  card: CardModel;
+  id: string
+  type: "card_fly"
+  playedCardId: string
+  card: CardModel
   from: {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  };
+    left: number
+    top: number
+    width: number
+    height: number
+  }
   to: {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  };
-};
+    left: number
+    top: number
+    width: number
+    height: number
+  }
+}
 
 export type SpellBurstEffect = {
-  id: string;
-  type: "spell_burst";
-  triadType: "ASSAULT" | "PRECISION" | "ARCANE";
+  id: string
+  type: "spell_burst"
+  triadType: "ASSAULT" | "PRECISION" | "ARCANE"
   target: {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  };
-};
+    left: number
+    top: number
+    width: number
+    height: number
+  }
+}
 
 export type HitTextEffect = {
-  id: string;
-  type: "hit_text";
-  text: string;
-  tone?: "damage" | "assault" | "precision" | "arcane";
+  id: string
+  type: "hit_text"
+  text: string
+  tone?: "damage" | "assault" | "precision" | "arcane"
   target: {
-    left: number;
-    top: number;
-    width: number;
-    height: number;
-  };
-};
+    left: number
+    top: number
+    width: number
+    height: number
+  }
+}
 
-export type BattleEffect = CardFlyEffect | SpellBurstEffect | HitTextEffect;
+export type BattleEffect = CardFlyEffect | SpellBurstEffect | HitTextEffect
 
 type BattleEffectsLayerProps = {
-  effects: BattleEffect[];
-  onComplete: (effect: BattleEffect) => void;
-};
+  effects: BattleEffect[]
+  onComplete: (effect: BattleEffect) => void
+}
 
 export default function BattleEffectsLayer({
   effects,
@@ -77,7 +77,7 @@ export default function BattleEffectsLayer({
               >
                 {effect.text}
               </motion.div>
-            );
+            )
           }
 
           if (effect.type === "spell_burst") {
@@ -106,7 +106,7 @@ export default function BattleEffectsLayer({
                 transition={{ duration: 0.65, ease: "easeOut" }}
                 onAnimationComplete={() => onComplete(effect)}
               />
-            );
+            )
           }
 
           return (
@@ -137,9 +137,9 @@ export default function BattleEffectsLayer({
             >
               <GameCard card={effect.card} size="normal" />
             </motion.div>
-          );
+          )
         })}
       </AnimatePresence>
     </div>
-  );
+  )
 }

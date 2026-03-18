@@ -1,26 +1,26 @@
-import { useEffect } from "react";
-import type { DeckBuilderCard } from "../../types/deckBuilder";
-import { toStaticUrl } from "../../shared/lib/toStaticUrl";
+import { useEffect } from "react"
+import type { DeckBuilderCard } from "../../types/deckBuilder"
+import { toStaticUrl } from "../../shared/lib/toStaticUrl"
 
 type CardModalProps = {
-  card: DeckBuilderCard | null;
-  isOpen: boolean;
-  canAdd: boolean;
-  canRemove: boolean;
-  inDeck: number;
-  owned: number;
-  onClose: () => void;
-  onAdd: () => void;
-  onRemove: () => void;
-};
+  card: DeckBuilderCard | null
+  isOpen: boolean
+  canAdd: boolean
+  canRemove: boolean
+  inDeck: number
+  owned: number
+  onClose: () => void
+  onAdd: () => void
+  onRemove: () => void
+}
 
 function triadLabel(triad: string): string {
   const map: Record<string, string> = {
     assault: "Assault",
     precision: "Precision",
     arcane: "Arcane",
-  };
-  return map[triad] ?? triad;
+  }
+  return map[triad] ?? triad
 }
 
 export default function CardModal({
@@ -35,19 +35,19 @@ export default function CardModal({
   onRemove,
 }: CardModalProps) {
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen) return
 
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") onClose()
     };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [isOpen, onClose]);
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [isOpen, onClose])
 
-  if (!isOpen || !card) return null;
+  if (!isOpen || !card) return null
 
   const showStats =
-    card.type !== "SPELL" && (card.attack !== null || card.hp !== null);
+    card.type !== "SPELL" && (card.attack !== null || card.hp !== null)
 
   return (
     <div
@@ -141,5 +141,5 @@ export default function CardModal({
         </div>
       </div>
     </div>
-  );
+  )
 }

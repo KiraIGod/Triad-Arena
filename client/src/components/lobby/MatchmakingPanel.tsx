@@ -1,26 +1,26 @@
-import { useState } from "react";
-import type { DeckSummary } from "../../types/lobby";
-import styles from "./MatchmakingPanel.module.css";
+import { useState } from "react"
+import type { DeckSummary } from "../../types/lobby"
+import styles from "./MatchmakingPanel.module.css"
 
-type GameMode = "normal" | "ranked" | "private";
+type GameMode = "normal" | "ranked" | "private"
 
 type MatchmakingPanelProps = {
-  gameMode: GameMode;
-  deck: DeckSummary | null;
-  isCreatingArena: boolean;
-  isJoiningArena: boolean;
-  error: string | null;
-  activeMatchId: string | null;
-  searchTimeLeft: number;
-  roomCode?: string | null;
-  isWaitingPrivate?: boolean;
-  onFindMatch: () => void;
-  onCreateArena: () => void;
-  onCancelSearch: () => void;
-  onReconnect: () => void;
-  onJoinByCode?: (code: string) => void;
-  onCancelRoom?: () => void;
-};
+  gameMode: GameMode
+  deck: DeckSummary | null
+  isCreatingArena: boolean
+  isJoiningArena: boolean
+  error: string | null
+  activeMatchId: string | null
+  searchTimeLeft: number
+  roomCode?: string | null
+  isWaitingPrivate?: boolean
+  onFindMatch: () => void
+  onCreateArena: () => void
+  onCancelSearch: () => void
+  onReconnect: () => void
+  onJoinByCode?: (code: string) => void
+  onCancelRoom?: () => void
+}
 
 function ReconnectBanner({ onReconnect }: { onReconnect: () => void }) {
   return (
@@ -38,21 +38,21 @@ function ReconnectBanner({ onReconnect }: { onReconnect: () => void }) {
         Reconnect
       </button>
     </div>
-  );
+  )
 }
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
+  return `${m}:${s.toString().padStart(2, "0")}`
 }
 
 function SearchOverlay({
   timeLeft,
   onCancel,
 }: {
-  timeLeft: number;
-  onCancel: () => void;
+  timeLeft: number
+  onCancel: () => void
 }) {
   return (
     <div className={styles.searchOverlay}>
@@ -73,24 +73,24 @@ function SearchOverlay({
         Cancel Search
       </button>
     </div>
-  );
+  )
 }
 
 function WaitingRoom({
   roomCode,
   onCancel,
 }: {
-  roomCode: string;
-  onCancel: () => void;
+  roomCode: string
+  onCancel: () => void
 }) {
-  const [copied, setCopied] = useState(false);
+  const [copied, setCopied] = useState(false)
 
   const handleCopy = () => {
     navigator.clipboard.writeText(roomCode).then(() => {
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    });
-  };
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   return (
     <div className={styles.waitingRoom}>
@@ -109,7 +109,7 @@ function WaitingRoom({
         Cancel Room
       </button>
     </div>
-  );
+  )
 }
 
 export function MatchmakingPanel({
@@ -129,29 +129,29 @@ export function MatchmakingPanel({
   onJoinByCode,
   onCancelRoom,
 }: MatchmakingPanelProps) {
-  const isDeckReady = deck != null && deck.cardsTotal >= deck.cardsMax;
-  const isSearching = isJoiningArena || isCreatingArena;
-  const hasActiveMatch = activeMatchId !== null;
-  const isBlocked = isSearching || !isDeckReady || hasActiveMatch;
-  const [inputCode, setInputCode] = useState("");
+  const isDeckReady = deck != null && deck.cardsTotal >= deck.cardsMax
+  const isSearching = isJoiningArena || isCreatingArena
+  const hasActiveMatch = activeMatchId !== null
+  const isBlocked = isSearching || !isDeckReady || hasActiveMatch
+  const [inputCode, setInputCode] = useState("")
 
   if (isJoiningArena) {
     return (
       <div className={styles.panel}>
         <SearchOverlay timeLeft={searchTimeLeft} onCancel={onCancelSearch} />
       </div>
-    );
+    )
   }
 
   const deckWarning = !isDeckReady && deck !== null && !hasActiveMatch && (
     <div className={styles.deckWarning}>
       ⚠&nbsp;&nbsp;Incomplete deck — fill it before entering the arena
     </div>
-  );
+  )
 
   const reconnectBanner = hasActiveMatch && (
     <ReconnectBanner onReconnect={onReconnect} />
-  );
+  )
 
   if (gameMode === "ranked") {
     return (
@@ -178,7 +178,7 @@ export function MatchmakingPanel({
 
         {error && <p className={styles.errorText}>{error}</p>}
       </div>
-    );
+    )
   }
 
   if (gameMode === "private") {
@@ -188,7 +188,7 @@ export function MatchmakingPanel({
           <WaitingRoom roomCode={roomCode} onCancel={onCancelRoom ?? (() => {})} />
           {error && <p className={styles.errorText}>{error}</p>}
         </div>
-      );
+      )
     }
 
     return (
@@ -250,7 +250,7 @@ export function MatchmakingPanel({
 
         {error && <p className={styles.errorText}>{error}</p>}
       </div>
-    );
+    )
   }
 
   return (
@@ -295,5 +295,5 @@ export function MatchmakingPanel({
 
       {error && <p className={styles.errorText}>{error}</p>}
     </div>
-  );
+  )
 }
