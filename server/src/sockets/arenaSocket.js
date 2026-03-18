@@ -9,6 +9,11 @@ function lazyGetSocketByUserId(io, userId) {
   return getSocketByUserId(io, userId);
 }
 
+function isUserOnlineByUserId(userId) {
+  const { isUserOnline } = require("./index");
+  return isUserOnline(userId);
+}
+
 function generateRoomCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const bytes = randomBytes(6);
@@ -513,14 +518,15 @@ module.exports = function registerArenaSocket(io, activeGames) {
           return;
         }
 
-        const targetSocket = lazyGetSocketByUserId(io, targetUserId);
-        if (!targetSocket) {
+        // Важно: у пользователя может быть несколько socket-коннектов (например, чат/лобби),
+        // поэтому не выбираем "один" socket по connectedUsers, а шлём всем сокетам в room userId.
+        if (!isUserOnlineByUserId(targetUserId)) {
           if (typeof callback === "function") callback({ error: "Friend is offline" });
           return;
         }
 
         const hostNickname = arena.players[0]?.nickname || "UNKNOWN";
-        targetSocket.emit("arena:invitation", {
+        io.to(String(targetUserId)).emit("arena:invitation", {
           arenaId,
           roomCode: arena.roomCode || null,
           hostNickname,
