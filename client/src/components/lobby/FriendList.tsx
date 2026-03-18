@@ -36,21 +36,25 @@ export const FriendList: React.FC<FriendListProps> = ({ privateArenaId, onSendIn
 
   const loadFriends = useCallback(async () => {
     if (!token) return
+    setLoading(true)
     try {
-      setLoading(true)
-      const [data, counts] = await Promise.all([
-        fetchFriendsList(token),
-        fetchUnreadCounts(token)
-      ])
-
+      const data = await fetchFriendsList(token)
       setFriends(data.friends)
       setRequests(data.requests)
-      setUnreadCounts(counts)
-    }
-      catch (error) {
-      console.error('Failed to load friends or unread counts', error)
-    }
-      finally {
+
+      // Не ломаем загрузку списка друзей из-за проблем с unread-счетчиками.
+      // Сервер может временно падать (например, таблица чата не создана),
+      // а заявки/друзья должны все равно отображаться.
+      try {
+        const counts = await fetchUnreadCounts(token)
+        setUnreadCounts(counts)
+      } catch (error) {
+        console.error('Failed to load unread counts', error)
+        setUnreadCounts({})
+      }
+    } catch (error) {
+      console.error('Failed to load friends', error)
+    } finally {
       setLoading(false)
     }
   }, [token])
