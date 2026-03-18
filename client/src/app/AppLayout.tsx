@@ -1,33 +1,33 @@
-import { Layout } from "antd";
-import { useEffect, useState, type PropsWithChildren } from "react";
-import { useAppSelector } from "../store";
-import socket from "../shared/socket/socket";
+import { Layout } from "antd"
+import { useEffect, useState, type PropsWithChildren } from "react"
+import { useAppSelector } from "../store"
+import socket from "../shared/socket/socket"
 
-const { Content } = Layout;
+const { Content } = Layout
 
 export default function AppLayout({ children }: PropsWithChildren) {
-  const [, setIsOnline] = useState(socket.connected);
-  const token = useAppSelector((state) => state.auth.token);
+  const [, setIsOnline] = useState(socket.connected)
+  const token = useAppSelector((state) => state.auth.token)
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) return
 
-    socket.auth = { token };
+    socket.auth = { token }
     if (!socket.connected) {
-      socket.connect();
+      socket.connect()
     }
 
-    const onConnect = () => setIsOnline(true);
-    const onDisconnect = () => setIsOnline(false);
+    const onConnect = () => setIsOnline(true)
+    const onDisconnect = () => setIsOnline(false)
 
-    socket.on("connect", onConnect);
-    socket.on("disconnect", onDisconnect);
+    socket.on("connect", onConnect)
+    socket.on("disconnect", onDisconnect)
 
     return () => {
-      socket.off("connect", onConnect);
-      socket.off("disconnect", onDisconnect);
+      socket.off("connect", onConnect)
+      socket.off("disconnect", onDisconnect)
     };
-  }, [token]);
+  }, [token])
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -35,5 +35,5 @@ export default function AppLayout({ children }: PropsWithChildren) {
 
       <Content style={{ padding: 0 }}>{children}</Content>
     </Layout>
-  );
+  )
 }

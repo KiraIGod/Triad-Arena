@@ -1,25 +1,25 @@
-import { useCallback, useEffect, useState } from "react";
-import type { DeckBuilderCard } from "../../types/deckBuilder";
-import { toStaticUrl } from "../../shared/lib/toStaticUrl";
+import { useCallback, useEffect, useState } from "react"
+import type { DeckBuilderCard } from "../../types/deckBuilder"
+import { toStaticUrl } from "../../shared/lib/toStaticUrl"
 
 type CardViewerProps = {
-  cards: DeckBuilderCard[];
-  collectionByCardId: Record<string, number>;
-  deckByCardId: Record<string, number>;
-  onAddCard: (cardId: string) => void;
-  onRemoveCard: (cardId: string) => void;
-  canAddCard: (cardId: string) => boolean;
-  canRemoveCard: (cardId: string) => boolean;
-  onClose: () => void;
-};
+  cards: DeckBuilderCard[]
+  collectionByCardId: Record<string, number>
+  deckByCardId: Record<string, number>
+  onAddCard: (cardId: string) => void
+  onRemoveCard: (cardId: string) => void
+  canAddCard: (cardId: string) => boolean
+  canRemoveCard: (cardId: string) => boolean
+  onClose: () => void
+}
 
 function triadLabel(triad: string): string {
   const map: Record<string, string> = {
     assault: "Assault",
     precision: "Precision",
     arcane: "Arcane",
-  };
-  return map[triad] ?? triad;
+  }
+  return map[triad] ?? triad
 }
 
 export default function CardViewer({
@@ -32,41 +32,41 @@ export default function CardViewer({
   canRemoveCard,
   onClose,
 }: CardViewerProps) {
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0)
 
   const goNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % cards.length);
-  }, [cards.length]);
+    setCurrentIndex((prev) => (prev + 1) % cards.length)
+  }, [cards.length])
 
   const goPrev = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + cards.length) % cards.length);
-  }, [cards.length]);
+    setCurrentIndex((prev) => (prev - 1 + cards.length) % cards.length)
+  }, [cards.length])
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       switch (e.key) {
         case "Escape":
-          onClose();
-          break;
+          onClose()
+          break
         case "ArrowRight":
-          goNext();
-          break;
+          goNext()
+          break
         case "ArrowLeft":
-          goPrev();
-          break;
+          goPrev()
+          break
       }
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [onClose, goNext, goPrev]);
+    }
+    window.addEventListener("keydown", handleKey)
+    return () => window.removeEventListener("keydown", handleKey)
+  }, [onClose, goNext, goPrev])
 
-  if (cards.length === 0) return null;
+  if (cards.length === 0) return null
 
-  const card = cards[currentIndex];
-  const owned = collectionByCardId[card.id] ?? 0;
-  const inDeck = deckByCardId[card.id] ?? 0;
+  const card = cards[currentIndex]
+  const owned = collectionByCardId[card.id] ?? 0
+  const inDeck = deckByCardId[card.id] ?? 0
   const showStats =
-    card.type !== "SPELL" && (card.attack !== null || card.hp !== null);
+    card.type !== "SPELL" && (card.attack !== null || card.hp !== null)
 
   return (
     <div
@@ -169,5 +169,5 @@ export default function CardViewer({
         </div>
       </div>
     </div>
-  );
+  )
 }

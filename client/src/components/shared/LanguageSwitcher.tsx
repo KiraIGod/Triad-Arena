@@ -20,7 +20,7 @@ export const LanguageSwitcher: React.FC = () => {
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng)
     setIsOpen(false)
-  };
+  }
 
   return (
     <div className="lang-dropdown" ref={dropdownRef}>

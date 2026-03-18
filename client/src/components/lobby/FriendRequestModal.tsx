@@ -1,15 +1,12 @@
-import React from "react";
-import "./FriendList.css";
-import {
-  FriendRequest,
-  respondToFriendRequest,
-} from "../../shared/api/friendsApi";
+import React from "react"
+import "./FriendList.css"
+import { FriendRequest,respondToFriendRequest, } from "../../shared/api/friendsApi"
 
 interface FriendRequestsModalProps {
-  onClose: () => void;
-  requests: FriendRequest[];
-  onRespond: () => void;
-  token: string | null;
+  onClose: () => void
+  requests: FriendRequest[]
+  onRespond: () => void
+  token: string | null
 }
 
 export const FriendRequestsModal: React.FC<FriendRequestsModalProps> = ({
@@ -22,15 +19,16 @@ export const FriendRequestsModal: React.FC<FriendRequestsModalProps> = ({
     requestId: string,
     action: "accept" | "decline",
   ) => {
-    if (!token) return;
+    if (!token) return
     try {
-      await respondToFriendRequest(token, requestId, action);
-      onRespond();
-    } catch (error) {
-      console.error(`Failed to ${action} request`, error);
-      alert(`Failed to ${action} request`);
+      await respondToFriendRequest(token, requestId, action)
+      onRespond()
     }
-  };
+      catch (error) {
+      console.error(`Failed to ${action} request`, error)
+      alert(`Failed to ${action} request`)
+    }
+  }
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -79,5 +77,5 @@ export const FriendRequestsModal: React.FC<FriendRequestsModalProps> = ({
         </div>
       </div>
     </div>
-  );
-};
+  )
+}

@@ -1,17 +1,17 @@
-import type { DeckSummary } from "../../types/lobby";
-import type { PlayerStats } from "../../shared/api/lobbyApi";
-import styles from "./PlayerPanel.module.css";
-import { FriendList } from "./FriendList";
+import type { DeckSummary } from "../../types/lobby"
+import type { PlayerStats } from "../../shared/api/lobbyApi"
+import styles from "./PlayerPanel.module.css"
+import { FriendList } from "./FriendList"
 
 type PlayerPanelProps = {
-  nickname: string;
-  stats: PlayerStats | null;
-  deck: DeckSummary | null;
-  onEditDeck: () => void;
-  privateArenaId?: string | null;
-  onSendInvite?: (arenaId: string, targetUserId: string) => Promise<{ error?: string }>;
-  onInviteResult?: (res: { error?: string }) => void;
-};
+  nickname: string
+  stats: PlayerStats | null
+  deck: DeckSummary | null
+  onEditDeck: () => void
+  privateArenaId?: string | null
+  onSendInvite?: (arenaId: string, targetUserId: string) => Promise<{ error?: string }>
+  onInviteResult?: (res: { error?: string }) => void
+}
 
 export function PlayerPanel({
   nickname,
@@ -29,16 +29,16 @@ export function PlayerPanel({
     assault: 0,
     precision: 0,
     arcane: 0,
-  };
-  const isDeckReady = d.cardsTotal >= d.cardsMax;
+  }
+  const isDeckReady = d.cardsTotal >= d.cardsMax
 
   const winrate =
     stats && stats.games_played > 0
       ? ((stats.wins / stats.games_played) * 100).toFixed(1)
-      : "0.0";
+      : "0.0"
 
-  const ratingDisplay = stats ? stats.rating.toLocaleString() : "—";
-  const rankDisplay = stats?.rank != null ? `#${stats.rank}` : "—";
+  const ratingDisplay = stats ? stats.rating.toLocaleString() : "—"
+  const rankDisplay = stats?.rank != null ? `#${stats.rank}` : "—"
 
   return (
     <section className={`${styles.panel} app-scrollbar`}>
@@ -101,5 +101,5 @@ export function PlayerPanel({
         <FriendList privateArenaId={privateArenaId} onSendInvite={onSendInvite} onInviteResult={onInviteResult} />
       </div>
     </section>
-  );
+  )
 }

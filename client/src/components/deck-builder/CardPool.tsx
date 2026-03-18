@@ -1,27 +1,27 @@
-import { useMemo, useState, useEffect } from "react";
-import type { DeckBuilderCard } from "../../types/deckBuilder";
-import { toStaticUrl } from "../../shared/lib/toStaticUrl";
+import { useMemo, useState, useEffect } from "react"
+import type { DeckBuilderCard } from "../../types/deckBuilder"
+import { toStaticUrl } from "../../shared/lib/toStaticUrl"
 
 type CardPoolProps = {
-  cards: DeckBuilderCard[];
-  collectionByCardId: Record<string, number>;
-  deckByCardId: Record<string, number>;
-  maxDeckSize: number;
-  maxCopiesPerCard: number;
-  totalCards: number;
-  onAddCard: (cardId: string) => void;
-};
+  cards: DeckBuilderCard[]
+  collectionByCardId: Record<string, number>
+  deckByCardId: Record<string, number>
+  maxDeckSize: number
+  maxCopiesPerCard: number
+  totalCards: number
+  onAddCard: (cardId: string) => void
+}
 
-type SortKey = "mana" | "type" | "nameDesc";
-type TriadType = "assault" | "precision" | "arcane";
+type SortKey = "mana" | "type" | "nameDesc"
+type TriadType = "assault" | "precision" | "arcane"
 
 function triadModifier(triad: string): string {
   const map: Record<string, string> = {
     assault: "assault",
     precision: "precision",
     arcane: "arcane",
-  };
-  return map[triad] ?? "";
+  }
+  return map[triad] ?? ""
 }
 
 export default function CardPool({
@@ -33,47 +33,47 @@ export default function CardPool({
   totalCards,
   onAddCard,
 }: CardPoolProps) {
-  const [sortKey, setSortKey] = useState<SortKey>("mana");
+  const [sortKey, setSortKey] = useState<SortKey>("mana")
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
 
-  const [selectedManas, setSelectedManas] = useState<number[]>([]);
-  const [selectedTriads, setSelectedTriads] = useState<TriadType[]>([]);
+  const [selectedManas, setSelectedManas] = useState<number[]>([])
+  const [selectedTriads, setSelectedTriads] = useState<TriadType[]>([])
 
-  const manaOptions = [1, 2, 3, 4, 5];
+  const manaOptions = [1, 2, 3, 4, 5]
   const triadOptions: { value: TriadType; label: string; color: string }[] = [
     { value: "assault", label: "Assault", color: "#a83232" },
     { value: "precision", label: "Precision", color: "#b8962e" },
     { value: "arcane", label: "Arcane", color: "#7b3daa" },
-  ];
+  ]
 
   useEffect(() => {
     const timerId = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-    }, 300);
+    }, 300)
 
     return () => {
-      clearTimeout(timerId);
+      clearTimeout(timerId)
     };
-  }, [searchQuery]);
+  }, [searchQuery])
 
   const toggleMana = (mana: number) => {
     setSelectedManas((prev) =>
       prev.includes(mana) ? prev.filter((m) => m !== mana) : [...prev, mana],
-    );
-  };
+    )
+  }
 
   const toggleTriad = (triad: TriadType) => {
     setSelectedTriads((prev) =>
       prev.includes(triad) ? prev.filter((t) => t !== triad) : [...prev, triad],
-    );
-  };
+    )
+  }
 
   const filteredAndSortedCards = useMemo(() => {
     const filtered = cards.filter((card) => {
       if (sortKey === "mana" && selectedManas.length > 0) {
-        if (!selectedManas.includes(card.mana_cost)) return false;
+        if (!selectedManas.includes(card.mana_cost)) return false
       }
 
       if (sortKey === "type" && selectedTriads.length > 0) {
@@ -83,42 +83,42 @@ export default function CardPool({
           return false;
       }
 
-      const query = debouncedSearchQuery.trim().toLowerCase();
+      const query = debouncedSearchQuery.trim().toLowerCase()
 
-      if (!query) return true;
+      if (!query) return true
 
-      const isNumber = /^\d+$/.test(query);
+      const isNumber = /^\d+$/.test(query)
 
       if (isNumber) {
-        return card.mana_cost === parseInt(query, 10);
+        return card.mana_cost === parseInt(query, 10)
       }
 
       if (query === "spell" || query === "unit" || query === "artifact") {
-        return card.type.toLowerCase() === query;
+        return card.type.toLowerCase() === query
       }
 
-      return card.name.toLowerCase().includes(query);
-    });
+      return card.name.toLowerCase().includes(query)
+    })
 
     switch (sortKey) {
       case "mana":
-        return filtered.sort((a, b) => a.mana_cost - b.mana_cost);
+        return filtered.sort((a, b) => a.mana_cost - b.mana_cost)
 
       case "type":
         return filtered.sort((a, b) => {
           if (a.type === b.type) {
-            return a.name.localeCompare(b.name);
+            return a.name.localeCompare(b.name)
           }
-          return a.type.localeCompare(b.type);
-        });
+          return a.type.localeCompare(b.type)
+        })
 
       case "nameDesc":
-        return filtered.sort((a, b) => a.name.localeCompare(b.name));
+        return filtered.sort((a, b) => a.name.localeCompare(b.name))
 
       default:
-        return filtered;
+        return filtered
     }
-  }, [cards, sortKey, debouncedSearchQuery, selectedManas, selectedTriads]);
+  }, [cards, sortKey, debouncedSearchQuery, selectedManas, selectedTriads])
   return (
     <section className="cardPool">
       <div className="cardPool__header">
@@ -360,9 +360,9 @@ export default function CardPool({
 
       <div className="cardPool__grid">
         {filteredAndSortedCards.map((card) => {
-          const owned = collectionByCardId[card.id] ?? 0;
+          const owned = collectionByCardId[card.id] ?? 0
           const inDeck = deckByCardId[card.id] ?? 0;
-          const modifier = triadModifier(card.triad_type);
+          const modifier = triadModifier(card.triad_type)
 
           return (
             <button
@@ -405,9 +405,9 @@ export default function CardPool({
                 Owned: {owned} &middot; In deck: <span>{inDeck}</span>
               </div>
             </button>
-          );
+          )
         })}
       </div>
     </section>
-  );
+  )
 }
