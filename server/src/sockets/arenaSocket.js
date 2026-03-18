@@ -520,7 +520,12 @@ module.exports = function registerArenaSocket(io, activeGames) {
 
         // Важно: у пользователя может быть несколько socket-коннектов (например, чат/лобби),
         // поэтому не выбираем "один" socket по connectedUsers, а шлём всем сокетам в room userId.
-        if (!isUserOnlineByUserId(targetUserId)) {
+        // Проверяем наличие активных сокетов именно в room с именем userId.
+        // Это корректно работает при множественных socket-коннектах на одного пользователя.
+        const room = io.sockets.adapter.rooms.get(String(targetUserId));
+        const hasTargetSockets = Boolean(room && room.size > 0);
+
+        if (!hasTargetSockets) {
           if (typeof callback === "function") callback({ error: "Friend is offline" });
           return;
         }
