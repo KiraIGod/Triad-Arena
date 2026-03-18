@@ -66,7 +66,7 @@ export default function BattlefieldUnitCard({
     name: unit.name || base?.name || "Unknown Unit",
     type: String(base?.type || "UNIT").toUpperCase() as CardModel["type"],
     triad_type: String(unit.triad_type || base?.triad_type || "ASSAULT").toUpperCase() as CardModel["triad_type"],
-    mana_cost: base?.mana_cost ?? 0,
+    mana_cost: unit.mana_cost ?? base?.mana_cost ?? 0,
     attack: unit.attack,
     hp: unit.hp,
     description: base?.description || "Unit on the battlefield",

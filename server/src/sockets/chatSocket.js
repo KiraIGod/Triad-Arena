@@ -1,5 +1,6 @@
 const db = require('../db/models')
 const ChatMessage = db.ChatMessage
+const { randomUUID } = require("crypto");
 
 function registerChatSocket(io, socket) {
   if (socket.data?.userId) {
@@ -62,9 +63,22 @@ function registerChatSocket(io, socket) {
       socket.to(friendId).emit('new_message_notification', {
         senderId: myId
       })
-    }
-      catch (error) {
+    } catch (error) {
+      // Если таблица/миграция отсутствуют (например, нет ChatMessages),
+      // всё равно отправляем сообщение в комнату, чтобы чат работал.
       console.error('[ChatSocket Error] Ошибка БД:', error)
+
+      const messageData = {
+        id: randomUUID(),
+        senderId: myId,
+        text: text,
+        timestamp: new Date().toISOString(),
+      }
+
+      io.to(roomName).emit("receive_private_message", messageData)
+      socket.to(friendId).emit('new_message_notification', {
+        senderId: myId
+      })
     }
   })
 }
