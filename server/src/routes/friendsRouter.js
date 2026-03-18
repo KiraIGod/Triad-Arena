@@ -1,7 +1,6 @@
 const express = require('express')
 const { Op } = require('sequelize')
 const db = require('../db/models')
-console.log('=== ЗАГРУЖЕННЫЕ МОДЕЛИ ===', Object.keys(db))
 const User = db.User
 const Friend = db.Friend
 const ChatMessage = db.ChatMessage || db.chatMessage
