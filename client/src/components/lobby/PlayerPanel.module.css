@@ -211,7 +211,7 @@
   letter-spacing: 0.18em;
   font-size: 0.9rem;
   padding: 0.9rem;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: filter 0.2s ease;
   margin-bottom: 0.6rem;
 }
@@ -230,7 +230,7 @@
   letter-spacing: 0.18em;
   font-size: 0.85rem;
   padding: 0.7rem;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: color 0.2s ease, background 0.2s ease;
 }
 

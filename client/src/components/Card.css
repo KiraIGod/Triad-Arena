@@ -19,11 +19,11 @@
 }
 
 .game-card.is-interactive {
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .game-card:not(.is-interactive) {
-  cursor: default;
+  cursor: var(--cursor-default);
 }
 
 .game-card.is-disabled {

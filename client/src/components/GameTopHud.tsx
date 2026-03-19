@@ -82,7 +82,7 @@ export default function GameTopHud({
         </div>
 
         <div
-          className={`game-hp${isAnyTargetingMode ? " game-hp--attackable" : ""}`}
+          className={`game-hp${isAnyTargetingMode ? " game-hp--attackable game-target-cursor" : ""}`}
           ref={enemyHeroRef}
           onClick={handleEnemyHeroClick}
           title={
@@ -92,7 +92,6 @@ export default function GameTopHud({
                 ? "Attack enemy hero"
                 : undefined
           }
-          style={{ cursor: isAnyTargetingMode ? "crosshair" : undefined }}
         >
           <motion.div
             initial={{ x: 0 }}

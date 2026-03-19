@@ -10,7 +10,7 @@
   font-family: 'Cinzel', serif;
   font-size: 0.9rem;
   letter-spacing: 2px;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   text-transform: uppercase;
   padding: 5px 10px;
   transition: color 0.3s ease;
@@ -43,7 +43,7 @@
   color: #ede0c8;
   font-family: 'Cinzel', serif;
   padding: 8px 12px;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   text-align: center;
   transition: background 0.2s, color 0.2s;
 }
