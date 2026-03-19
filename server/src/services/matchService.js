@@ -118,19 +118,25 @@ async function buildInitialGameState(match) {
 
 async function ensureMatchState(match) {
   const where = { match_id: match.id };
-  let matchState = await db.MatchState.findOne({ where });
 
-  if (matchState) {
-    return matchState;
-  }
+  // Fast path: most of the time the state already exists (e.g. after the
+  // second client calls match:join on an already-initialised match).
+  let matchState = await db.MatchState.findOne({ where });
+  if (matchState) return matchState;
 
   const gameState = await buildInitialGameState(match);
-  matchState = await db.MatchState.create({
-    match_id: match.id,
-    game_state: gameState
+
+  // Use findOrCreate so that concurrent calls from two sockets joining the
+  // same fresh match (e.g. match:sync + match:join racing) are handled
+  // safely: only one INSERT succeeds; the loser gets the winner's record.
+  // This prevents SequelizeUniqueConstraintError ("Validation error") that
+  // was being surfaced to both clients immediately on match start.
+  const [result] = await db.MatchState.findOrCreate({
+    where,
+    defaults: { game_state: gameState }
   });
 
-  return matchState;
+  return result;
 }
 
 async function loadMatchState(matchId) {
