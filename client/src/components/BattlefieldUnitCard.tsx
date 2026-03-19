@@ -59,6 +59,8 @@ export default function BattlefieldUnitCard({
   if (isAttackable) unitClass += " battlefield-unit--can-attack";
   if (isTargetable) unitClass += " battlefield-unit--targetable";
   if (isSick) unitClass += " battlefield-unit--sick";
+  if (isAttackable || isTargetable) unitClass += " game-target-cursor";
+
 
   const base = cardCatalog[unit.cardId];
   const card: CardModel = {
@@ -99,9 +101,9 @@ export default function BattlefieldUnitCard({
           ease: "easeOut",
         },
       }}
-      whileHover={isAttackable || isTargetable ? { y: -2 } : undefined}
+      whileHover={isAttackable || isTargetable ? { y: -5 } : undefined}
       transition={{
-        duration: 0.28,
+        duration: 0.1,
         ease: "easeOut",
         delay: enterIndex * 0.06,
       }}
@@ -111,9 +113,6 @@ export default function BattlefieldUnitCard({
         animate={shakeControls}
       >
         <GameCard card={card} size="small" />
-        {/* <span className="battlefield-unit__stats-tooltip" aria-hidden>
-          ATK {unit.attack} | HP {unit.hp}
-        </span> */}
         {flashToken > 0 && (
           <motion.span
             key={`${unit.instanceId}-flash-${flashToken}`}

@@ -31,3 +31,15 @@
 }
 
 
+html,
+body,
+#root {
+  cursor: url("/cursors/default-target.png") 3 3, auto;
+}
+
+button,
+a,
+[role="button"],
+.game-card.is-interactive {
+  cursor: url("/cursors/game-pointer.png") 24 24, pointer;
+}

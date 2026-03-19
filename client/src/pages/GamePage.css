@@ -120,8 +120,8 @@
     background 0.18s ease;
 }
 
-.game-hp--attackable {
-  cursor: crosshair;
+.game-target-cursor {
+  cursor: url("/cursors/spell-target.png") 3 3, crosshair;
 }
 
 .game-hp--attackable .game-hp__content {
@@ -643,6 +643,19 @@
   user-select: none;
 }
 
+.battlefield-unit-card.game-target-cursor {
+  cursor: url("/cursors/spell-target.png") 128 128, crosshair;
+}
+
+.battlefield-unit-card.game-target-cursor .game-card {
+  cursor: url("/cursors/spell-target.png") 3 3, crosshair;
+}
+
+.battlefield-unit-card .game-card,
+.battlefield-unit-card article {
+  cursor: inherit;
+}
+
 .battlefield-unit-card > div {
   width: 100%;
   height: 100%;
@@ -785,7 +798,7 @@
 }
 
 .battlefield-unit--targetable:hover {
-  box-shadow: 0 0 18px rgba(220, 60, 60, 0.65);
+  box-shadow: 0 0 18px rgba(220, 60, 60, 0.89);
 }
 
 .battlefield-unit--sick {

@@ -81,7 +81,7 @@ export default function BattleEffectsLayer({
           }
 
           if (effect.type === "spell_burst") {
-            const size = Math.max(effect.target.width, effect.target.height, 96);
+            const size = Math.max(effect.target.width, effect.target.height, 4);
             const left = effect.target.left + effect.target.width / 2 - size / 2;
             const top = effect.target.top + effect.target.height / 2 - size / 2;
 
@@ -101,7 +101,7 @@ export default function BattleEffectsLayer({
                 }}
                 animate={{
                   opacity: [0, 1, 0],
-                  scale: [0.2, 1.1, 1.55],
+                  scale: [0.2, 0.9, 0.7],
                 }}
                 transition={{ duration: 0.65, ease: "easeOut" }}
                 onAnimationComplete={() => onComplete(effect)}
