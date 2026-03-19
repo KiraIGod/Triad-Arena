@@ -236,7 +236,7 @@
   justify-content: center;
   position: relative;
   transform: scale(0.9);
-  cursor: url("/cursors/default-target.png") 24 24, pointer;
+  cursor: var(--cursor-pointer);
   transition: transform 0.18s ease;
 }
 
@@ -256,7 +256,7 @@
 }
 
 .battlefield-history-card .game-card {
-  cursor: url("/cursors/default-target.png") 24 24, pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .battlefield-history-card .game-card.is-disabled {

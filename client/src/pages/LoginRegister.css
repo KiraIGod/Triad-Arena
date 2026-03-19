@@ -178,6 +178,14 @@
     0 0 28px rgba(127, 30, 29, 0.7),
     inset 0 3px 6px rgba(0, 0, 0, 0.55),
     inset 0 -2px 3px rgba(255, 255, 255, 0.08);
+  cursor: var(--cursor-pointer);
+}
+
+.authSubmit,
+.authSubmit *,
+.registerForm .ant-btn,
+.registerForm .ant-btn * {
+  cursor: var(--cursor-pointer);
 }
 
 .authPage .auth-form .ant-btn.authSubmit:hover {
@@ -201,7 +209,7 @@
   margin-top: 24px;
   text-align: center;
   font-family: var(--font-body);
-  font-size: 13px;
+  font-size: 17px;
   letter-spacing: 0.05em;
 }
 

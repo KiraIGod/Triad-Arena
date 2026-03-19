@@ -52,7 +52,7 @@
 
 .stress-warning:disabled {
   opacity: 0.58;
-  cursor: not-allowed;
+  cursor: var(--cursor-not-allowed);
   filter: grayscale(0.2);
 }
 

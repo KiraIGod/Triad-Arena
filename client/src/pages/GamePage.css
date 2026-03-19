@@ -120,10 +120,6 @@
     background 0.18s ease;
 }
 
-.game-target-cursor {
-  cursor: url("/cursors/spell-target.png") 3 3, crosshair;
-}
-
 .game-hp--attackable .game-hp__content {
   border-color: rgba(220, 60, 60, 0.72);
   box-shadow:
@@ -466,7 +462,7 @@
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: var(--foreground);
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .game-end-turn--small {
@@ -538,11 +534,11 @@
 }
 
 .game-hand__slot[draggable="true"] {
-  cursor: grab;
+  cursor: var(--cursor-grab);
 }
 
 .game-hand__slot[draggable="true"]:active {
-  cursor: grabbing;
+  cursor: var(--cursor-grabbing);
 }
 
 .game-hand .game-card--normal {
@@ -635,7 +631,7 @@
   min-width: 120px;
   width: 120px;
   height: 184px;
-  cursor: default;
+  cursor: var(--cursor-default);
   transition:
     box-shadow 0.15s,
     transform 0.1s,
@@ -644,11 +640,11 @@
 }
 
 .battlefield-unit-card.game-target-cursor {
-  cursor: url("/cursors/spell-target.png") 128 128, crosshair;
+  cursor: var(--cursor-target);
 }
 
 .battlefield-unit-card.game-target-cursor .game-card {
-  cursor: url("/cursors/spell-target.png") 3 3, crosshair;
+  cursor: var(--cursor-target);
 }
 
 .battlefield-unit-card .game-card,
@@ -663,7 +659,7 @@
 }
 
 .battlefield-board .battlefield-unit-card {
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .battlefield-unit-card .game-card--small,
@@ -780,7 +776,7 @@
 /* States */
 
 .battlefield-unit--can-attack {
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   box-shadow: 0 0 12px rgba(232, 136, 58, 0.45);
 }
 
@@ -793,7 +789,7 @@
 }
 
 .battlefield-unit--targetable {
-  cursor: crosshair;
+  cursor: var(--cursor-target);
   box-shadow: 0 0 12px rgba(220, 60, 60, 0.45);
 }
 
@@ -828,7 +824,7 @@
 }
 
 .game-state--attackable {
-  cursor: crosshair;
+  cursor: var(--cursor-target);
   outline: 1px dashed rgba(220, 60, 60, 0.5);
   border-radius: 4px;
 }

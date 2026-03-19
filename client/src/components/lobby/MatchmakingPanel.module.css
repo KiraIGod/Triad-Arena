@@ -38,7 +38,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   box-shadow: 0 0 0 1px rgba(168, 62, 54, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: transform 0.14s ease, filter 0.2s ease, box-shadow 0.2s ease;
 }
@@ -50,7 +50,7 @@
 }
 
 .btnPrimary:disabled {
-  cursor: not-allowed;
+  cursor: var(--cursor-not-allowed);
 }
 
 /* Dimmed state for incomplete deck */
@@ -70,7 +70,7 @@
   letter-spacing: 0.2em;
   text-transform: uppercase;
   padding: 0.65rem;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: color 0.2s ease;
 }
 
@@ -114,7 +114,7 @@
   align-items: center;
   justify-content: center;
   gap: 0.6rem;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: color 0.2s ease, filter 0.2s ease;
 }
 
@@ -124,7 +124,7 @@
 }
 
 .btnSecondary:disabled {
-  cursor: not-allowed;
+  cursor: var(--cursor-not-allowed);
 }
 
 .btnIcon {
@@ -270,7 +270,7 @@
   letter-spacing: 0.22em;
   text-transform: uppercase;
   padding: 1.1rem 1rem;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   box-shadow: 0 0 0 1px rgba(201, 169, 98, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition: transform 0.14s ease, filter 0.2s ease, box-shadow 0.2s ease;
 }
@@ -369,7 +369,7 @@
   padding: 12px 20px;
   border: 2px solid var(--gold);
   background: rgba(201, 169, 98, 0.08);
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: background 0.15s;
   user-select: all;
 }

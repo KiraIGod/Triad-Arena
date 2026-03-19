@@ -70,7 +70,7 @@
   padding: 6px 16px;
   border: 1px solid var(--ta-border);
   background: transparent;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: all 0.2s;
 }
 
@@ -90,7 +90,7 @@
   padding: 8px 20px;
   background: linear-gradient(180deg, #b52020 0%, #7a1010 100%);
   border: 1px solid var(--ta-red);
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: all 0.2s;
   text-shadow: 0 1px 2px rgba(0,0,0,0.6);
   box-shadow: 0 0 16px rgba(192, 57, 43, 0.35);
@@ -116,7 +116,7 @@
   padding: 8px 20px;
   background: linear-gradient(180deg, #2a1a0d 0%, #160c05 100%);
   border: 1px solid rgba(139, 90, 40, 0.5);
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: all 0.2s;
   display: inline-block;
 }

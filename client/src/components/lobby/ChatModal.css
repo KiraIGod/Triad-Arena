@@ -69,7 +69,7 @@
 
 .chat-modal-drag-handle {
   width: 100%;
-  cursor: move;
+  cursor: var(--cursor-move);
   color: #e0e0e0;
 }
 
@@ -85,7 +85,7 @@
   height: 15px;
   bottom: 0;
   right: 0;
-  cursor: nwse-resize !important;
+  cursor: var(--cursor-resize) !important;
   background: transparent;
   z-index: 99999;
 }
@@ -181,7 +181,7 @@
   padding: 0 15px;
   margin-left: 8px;
   border-radius: 4px;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   font-weight: bold;
 }
 

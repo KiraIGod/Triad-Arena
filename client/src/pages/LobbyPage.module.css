@@ -90,7 +90,7 @@
 
 .link {
   text-decoration: none;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   display: block;
 }
 
@@ -159,7 +159,7 @@
   letter-spacing: 0.16em;
   font-size: 0.8rem;
   padding: 0.5rem 1.1rem;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   transition: filter 0.2s ease;
 }
 
@@ -196,7 +196,7 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   padding: 0.75rem 0.6rem;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -293,7 +293,7 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }
 
 .btnInviteDecline {
@@ -305,5 +305,5 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  cursor: pointer;
+  cursor: var(--cursor-pointer);
 }

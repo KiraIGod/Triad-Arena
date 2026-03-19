@@ -132,7 +132,7 @@
   background: rgba(0, 0, 0, 0.28);
   padding: 0.85rem 0.8rem;
   transition: background 0.15s ease;
-  cursor: default;
+  cursor: var(--cursor-default);
 }
 
 .matchCard:hover {

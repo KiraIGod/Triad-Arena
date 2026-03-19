@@ -4,6 +4,17 @@
 @import "./tailwind.css";
 @import "./layout.css";
 
+:root {
+  --cursor-default: url("/cursors/default-target.png") 3 3, auto;
+  --cursor-pointer: url("/cursors/game-pointer.png") 24 24, pointer;
+  --cursor-target: url("/cursors/spell-target.png") 3 3, crosshair;
+  --cursor-not-allowed: not-allowed;
+  --cursor-grab: grab;
+  --cursor-grabbing: grabbing;
+  --cursor-move: move;
+  --cursor-resize: nwse-resize;
+}
+
 .app-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: rgba(201, 169, 98, 0.55) rgba(18, 14, 10, 0.35);
@@ -34,12 +45,36 @@
 html,
 body,
 #root {
-  cursor: url("/cursors/default-target.png") 3 3, auto;
+  cursor: var(--cursor-default);
+}
+
+.game-default-cursor {
+  cursor: var(--cursor-default);
+}
+
+.game-pointer-cursor {
+  cursor: var(--cursor-pointer);
+}
+
+.game-target-cursor {
+  cursor: var(--cursor-target);
+}
+
+.game-disabled-cursor {
+  cursor: var(--cursor-not-allowed);
+}
+
+.game-grab-cursor {
+  cursor: var(--cursor-grab);
+}
+
+.game-grabbing-cursor {
+  cursor: var(--cursor-grabbing);
 }
 
 button,
 a,
 [role="button"],
 .game-card.is-interactive {
-  cursor: url("/cursors/game-pointer.png") 24 24, pointer;
+  cursor: var(--cursor-pointer);
 }
