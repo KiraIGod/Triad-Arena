@@ -63,7 +63,17 @@ function createSocketError(type, message) {
 
 function emitSocketError(socket, error) {
   const type = error?.type || INVALID_ACTION;
-  const message = error?.message || "Match action failed";
+
+  // Do not forward raw Sequelize/database error messages to the client.
+  // SequelizeUniqueConstraintError and SequelizeValidationError both carry
+  // the message "Validation error" which is meaningless and confusing to
+  // the user.  Map them to a safe generic message instead.
+  const isSequelizeError =
+    typeof error?.name === "string" && error.name.startsWith("Sequelize");
+  const message = isSequelizeError
+    ? "Match action failed"
+    : error?.message || "Match action failed";
+
   socket.emit("match:error", { type, message });
 }
 

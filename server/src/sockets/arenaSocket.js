@@ -4,6 +4,7 @@ const { User, Card, DeckCard, Match, Friend } = require("../db/models");
 const { Op } = require("sequelize");
 const { getActiveDeckId } = require("../services/deckBuilderService");
 const { registerActiveMatch } = require("../services/activeMatchTracker");
+const { loadMatchState } = require("../services/matchService");
 function lazyGetSocketByUserId(io, userId) {
   const { getSocketByUserId } = require("./index");
   return getSocketByUserId(io, userId);
@@ -117,6 +118,20 @@ async function ensurePlayerDeckId(userId) {
   }
 
   return deckId;
+}
+
+// Pre-create and cache the initial MatchState right after the Match record is
+// inserted.  This mirrors what handleQueue does and prevents the race condition
+// where two concurrent socket events (match:sync + match:join) from the same
+// player both attempt to INSERT the state simultaneously, producing a
+// SequelizeUniqueConstraintError that surfaces as "Validation error" on the
+// client.
+async function preCacheMatchState(match) {
+  try {
+    await loadMatchState(match.id);
+  } catch (err) {
+    console.error("[arena] Failed to pre-cache match state:", err?.message || err);
+  }
 }
 
 const PRIVATE_ARENA_TTL_MS = 5 * 60 * 1000;
@@ -303,6 +318,11 @@ module.exports = function registerArenaSocket(io, activeGames) {
 
             arena.matchId = String(match.id);
             registerActiveMatch(match);
+
+            // Pre-create and cache the MatchState so that concurrent
+            // match:sync + match:join events from both clients do not race
+            // to INSERT the initial state simultaneously.
+            await preCacheMatchState(match);
           }
 
           arena.status = "ready";
@@ -449,6 +469,10 @@ module.exports = function registerArenaSocket(io, activeGames) {
 
           arena.matchId = String(match.id);
           registerActiveMatch(match);
+
+          // Pre-create and cache the MatchState to prevent the race condition.
+          await preCacheMatchState(match);
+
           arena.status = "ready";
         }
 
