@@ -804,6 +804,62 @@ module.exports = function registerMatchSocket(io) {
 
     socket.on("match:queue", wrapSocketHandler(socket, () => handleQueue(io, socket)));
 
+    socket.on("match:get-player-nicknames", async (payload, ack) => {
+      const callback = typeof ack === "function" ? ack : null;
+      const matchId = String(payload?.matchId ?? "");
+
+      if (!matchId) {
+        if (callback) callback({ error: "matchId is required" });
+        return;
+      }
+
+      try {
+        const match = await db.Match.findByPk(matchId);
+        if (!match) {
+          if (callback) callback({ error: "Match not found" });
+          return;
+        }
+
+        const playerOneId = match.player_one_id;
+        const playerTwoId = match.player_two_id;
+
+        const users = await db.User.findAll({
+          where: { id: [playerOneId, playerTwoId] },
+          attributes: ["id", "nickname"],
+        });
+
+        const nicknameById = new Map(
+          users.map((u) => {
+            const plain = u.get({ plain: true });
+            return [String(plain.id), plain.nickname];
+          })
+        );
+
+        if (callback) {
+          // eslint-disable-next-line no-console
+          console.log("[match:get-player-nicknames]", {
+            matchId,
+            playerOneId,
+            playerTwoId,
+            nicknames: {
+              p1: nicknameById.get(String(playerOneId)) ?? "UNKNOWN",
+              p2: nicknameById.get(String(playerTwoId)) ?? "UNKNOWN",
+            },
+          });
+
+          callback({
+            players: [
+              { userId: playerOneId, nickname: nicknameById.get(String(playerOneId)) ?? "UNKNOWN" },
+              { userId: playerTwoId, nickname: nicknameById.get(String(playerTwoId)) ?? "UNKNOWN" },
+            ],
+          });
+        }
+      } catch (err) {
+        console.error("[match:get-player-nicknames] failed:", err?.message || err);
+        if (callback) callback({ error: "Failed to get player nicknames" });
+      }
+    });
+
     socket.on("match:cancel", () => {
       if (
         waitingQueueEntry?.socketId === socket.id ||

@@ -10,6 +10,7 @@ const matchesRoutes = require("./routes/matches")
 const playersRoutes = require("./routes/players")
 const { initSocket } = require("./sockets/index")
 const friendsRouter = require('./routes/friendsRouter')
+const db = require("./db/models")
 
 dotenv.config()
 
@@ -34,6 +35,13 @@ app.use('/api/friends', friendsRouter)
 
 const io = initSocket(server)
 app.set('io', io)
+
+// В dev-среде бывает, что миграции не применились (или таблица не создалась),
+// и чат/счетчики падают из-за отсутствующей таблицы "ChatMessages".
+// Создаём/подгоняем схему минимально для ChatMessage при старте сервера.
+db.ChatMessage.sync({ alter: true }).catch((err) => {
+  console.error("[db] ChatMessage sync failed:", err?.message || err)
+})
 
 const PORT = process.env.PORT || 3001
 server.listen(PORT, () => {
